@@ -60,11 +60,12 @@ object TileRenderer {
         isTutorialHighlight: Boolean = false,
         highlightFreeTiles: Boolean = false,
         showCornerIndex: Boolean = false,
+        glare: Float = 0f,
     ) {
         if (boardTile.isRemoved) return
 
-        val depthX = width * 0.08f
-        val depthY = height * 0.08f
+        val depthX = width * BoardTransform.LAYER_SHIFT_FACTOR_X
+        val depthY = height * BoardTransform.LAYER_SHIFT_FACTOR_Y
         val cornerR = width * 0.085f
         val corner = CornerRadius(cornerR, cornerR)
         val layerZ = boardTile.z
@@ -198,6 +199,40 @@ object TileRenderer {
                 topLeft = Offset(x, y),
                 size = Size(width, height),
                 cornerRadius = corner,
+            )
+        }
+
+        // Glossy enamel: light comes from the lamp above and slightly behind the far edge, so
+        // each face is a touch brighter towards its top, the top bevel catches a fine highlight,
+        // and faces near the lamp's mirror point show a soft reflection of it
+        scope.drawRoundRect(
+            brush = Brush.verticalGradient(
+                0f to Color.White.copy(alpha = 0.22f),
+                0.35f to Color.White.copy(alpha = 0.04f),
+                1f to Color.Black.copy(alpha = 0.06f),
+                startY = faceTopLeft.y,
+                endY = faceTopLeft.y + faceSize.height,
+            ),
+            topLeft = faceTopLeft,
+            size = faceSize,
+            cornerRadius = faceCorner,
+        )
+        scope.drawLine(
+            color = Color.White.copy(alpha = 0.55f),
+            start = Offset(faceTopLeft.x + cornerR, faceTopLeft.y + width * 0.006f),
+            end = Offset(faceTopLeft.x + faceSize.width - cornerR, faceTopLeft.y + width * 0.006f),
+            strokeWidth = width * 0.012f,
+        )
+        if (glare > 0.02f) {
+            val glareCentre = Offset(faceTopLeft.x + faceSize.width * 0.5f, faceTopLeft.y + faceSize.height * 0.3f)
+            scope.drawOval(
+                brush = Brush.radialGradient(
+                    listOf(Color.White.copy(alpha = 0.5f * glare), Color.Transparent),
+                    center = glareCentre,
+                    radius = faceSize.width * 0.55f,
+                ),
+                topLeft = Offset(faceTopLeft.x + faceSize.width * 0.05f, faceTopLeft.y),
+                size = Size(faceSize.width * 0.9f, faceSize.height * 0.62f),
             )
         }
 

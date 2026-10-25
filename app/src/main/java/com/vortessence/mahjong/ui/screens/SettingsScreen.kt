@@ -303,6 +303,15 @@ fun SettingsScreen(
                             )
                         }
                     }
+                    if (settings.tableSurface == TableSurface.THAI_STRAW) {
+                        // Required attribution for the CC BY-SA mat photograph (also in NOTICE.md)
+                        Text(
+                            text = "Mat photo: Willuconquer · CC BY-SA 4.0 · Wikimedia Commons",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 

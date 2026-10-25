@@ -42,9 +42,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val prefsRepo = PreferencesRepository(application)
     val audioManager = AudioManager(application)
 
-    // Dark Mahjong is landscape-only, so levels always use the wide classic layouts
-    // (upstream's portrait level set only suits a phone held upright)
-    private val useWideLayouts = true
+    // Dark Mahjong is portrait-only, so levels use upstream's tall, phone-shaped layouts
+    // (most mahjong layouts are taller than wide); the wide classics stay under Layouts
+    private val useWideLayouts = false
 
     val currentLevelConstellations: List<Constellation>
         get() = ConstellationRepository.getLevelConstellations(useWideLayouts)

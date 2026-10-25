@@ -25,7 +25,7 @@ Classic mahjong solitaire, unchanged from upstream: remove pairs of identical *f
 | minSdk | 30 (Android 11) | **33 (Android 13)** — AGSL `RuntimeShader` for backgrounds, tile sheen and glows; `RenderEffect` blur behind dialogs. The Pixel 9 Pro far exceeds this. |
 | targetSdk / compileSdk | 37 | 37 |
 | App name / ID | Mahjong Solitaire / `com.vortessence.mahjong` | **Dark Mahjong** / `com.formlessform.darkmahjong` **(proposed)**, so it installs alongside upstream |
-| Orientation | portrait + landscape | **landscape only**, full-screen (system bars hidden; swipe from the edge to show them) |
+| Orientation | portrait + landscape | **portrait only** (since M2: most layouts are taller than wide), full-screen (system bars hidden; swipe from the edge to show them) |
 | UI | Compose, single Activity | same; board stays a single `Canvas` |
 
 ## Look & feel
@@ -52,15 +52,23 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 
 ### Title screen
 
-- **Photo:** full-bleed, darkened, misty Chinese mountains: *Sanqing Mountain is surrounded by clouds and mists* (Huangdan2060, CC0, Wikimedia Commons), mirrored so the pine stands on the right. It is cropped to the screen's shape and scaled uniformly, never stretched. A soft dark fade on the left holds the menu, plus a light vignette. A tiny courtesy credit sits bottom-right.
-- **Name seal:** **暗夜麻將** ("dark-night mahjong") in genuine seal script (篆書, from Taiwan's CNS 11643 說文解字 font, subset to four characters). It is white on deep vermilion, read right column first, with a subtle carved-stone wear pass in AGSL.
-- **Title:** "DARK MAHJONG" in **Cinzel** (Roman inscriptional capitals), 17sp, wide letter-spacing.
-- **Menu:** left-aligned text in the same font and size, with capital initials and small capitals (Cinzel has no true lowercase). Each item is preceded by ">" (gold on the main action), with no button chrome. A full-height row is the tap target; it brightens while pressed and plays a soft click (a quiet, slightly higher tile tick plus a light haptic, following the sound and vibration settings). Items: Continue (when a game is saved) · Play · Layouts · Settings.
-- The earlier shader-generated karst scene was dropped in favour of a real photograph.
+- **Photo:** full-bleed, darkened, misty Chinese mountains, cropped to a tall portrait frame with the lone pine in the middle: *Sanqing Mountain is surrounded by clouds and mists* (Huangdan2060, CC0, Wikimedia Commons). Scaled uniformly and never stretched, with subtle film grain (AGSL). A tiny courtesy credit sits bottom-right.
+- **Drifting fog:** two layers of soft, warped AGSL noise drift slowly sideways at different speeds, reshaping as they go and thickest in the valley band. Redrawn at about 30 fps.
+- **Top, over the misty sky:** the **暗夜麻將** name seal (seal script, from Taiwan's CNS 11643 說文解字 font, subset; white on deep vermilion with carved-stone wear) and "DARK MAHJONG" in **Cinzel**, 19sp.
+- **Bottom, over the dark forest:** a plain text menu in Cinzel 17sp, left-aligned (Continue · Play · Layouts · Settings). Items brighten while pressed and give a soft click plus a light haptic.
+
+### The table: tilted camera, lamp light
+
+- **Camera:** about 20° away from overhead (`TableCamera`). The board is laid out flat and projected to the screen through one homography. The tabletop shader uses the exact inverse, so tiles and table always agree, and taps are mapped back through it. Tile thickness shows mostly on the front edge, and upper layers shift up the table to match.
+- **Lamp:** one warm lamp hangs over the middle of the table and the room falls away into darkness. Tiles are modulated by the same radial falloff, full under the lamp but never too dark to read. Their glossy faces brighten towards the top, catch a fine bevel highlight, and near the lamp's mirror point show a soft reflection of it.
+- **Tabletops:** all are drawn by one full-screen AGSL shader in true perspective.
+  - **Green Mat:** fine felt fibres and soft mottling, matte.
+  - **Walnut:** procedural narrow boards with uneven straight grain, heartwood streaks, tiny pores, fine seams and a glossy clearcoat reflecting the lamp.
+  - **Thai Straw:** a real photograph of a woven sedge mat (Willuconquer, CC BY-SA 4.0), graded to soft natural tones and tiled seamlessly by mirroring.
 
 ### Winning: fireworks and a warm message
 
-Clearing a board sets off a short **sparkly fireworks light show** over the board: soft-glowing bursts in the theme's jade, amber and moon tones, with trailing sparks that fade. It is bright enough to feel celebratory, never harsh, and respects the animations toggle. Alongside it, a **warm congratulations message**, drawn from a large hand-written pool through a no-repeat shuffle that persists across sessions, so you see every message before any comes round again. Some are context-aware (first win of the day, tutorial, a chapter finished, a late-night win). Then a big **Next** button.
+Clearing a board sets off a fireworks light show **seen from directly above**. There are no rockets, since their climb is straight towards the viewer. Each shell bursts as a disc of sparks, densest at its rim, that expands, slows, shrinks and twinkles out. Bursts overlap densely, about 30 over 4 seconds, in widely varied colours: any hue, plus gold and silver. Styles are peony, ring, chrysanthemum (colour-shifting), willow (slow gold) and crackle. It respects the animations toggle. Alongside it, a **warm congratulations message** is drawn from a large hand-written pool through a no-repeat shuffle that persists across sessions; some messages are context-aware (first win of the day, tutorial, late night, morning). Then big **Next** / **Replay** / **Menu** buttons.
 
 ### Tile sets
 
@@ -74,18 +82,18 @@ Clearing a board sets off a short **sparkly fireworks light show** over the boar
 - **Pinch-to-zoom + pan** (one-finger drag pans once zoomed), double-tap to zoom in/out, a big **Fit** button, and upstream's auto-fit as the board empties. A generous touch slop keeps a pan from ever selecting a tile.
 - **Highlight free tiles** (dim blocked tiles), on by default for early levels.
 - **Larger text:** 100 / 130 / 160 % on top of the system font size.
-- **Big buttons:** in landscape the controls live in a **side rail (proposed: right side, with a left-handed option)**, keeping full height for the board. Four large labelled buttons: Hint · Undo · Shuffle · Menu, each at least 72 dp, icon plus word. Menus use big cards.
+- **Big buttons:** in portrait the controls live in a **bottom bar** under the board (planned for M2b). Four large labelled buttons: Hint · Undo · Shuffle · Menu, each at least 72 dp, icon plus word. Menus use big cards.
 - Sounds, music and haptics stay, each with its own toggle.
 
-## Screens (all landscape)
+## Screens (all portrait)
 
 1. **Home:** one big primary button, **"Continue — Level 37"**, then **Today's Puzzle** (ticked once done), **Quick Game** and **Settings**.
 2. **Journey map:** a **horizontally scrolling** winding path of level nodes across painted (shader) scenery, in chapters of 20; completed nodes ticked, the current one glowing. Tap a node to play it (any completed or current level can be replayed).
 3. **Today's Puzzle:** **today only**. A month calendar shows the days you completed with a tick; past days can't be played. No streak counter.
 4. **Quick Game:** pick **Easy / Medium / Hard / Expert** and get a fresh randomised board at that difficulty. **(Proposed)** A secondary "Choose layout" option lets you pick a specific layout.
-5. **Game:** the board, the side rail, and a small level label. On a win: a short celebration, then a big **Next** button.
+5. **Game:** the board, the bottom button bar, and a small level label. On a win: a short celebration, then a big **Next** button.
 6. **Settings:** tile set, tile size, text size, highlight free tiles, rail side, background motion, sound, music, haptics, animations.
-7. **Tutorial:** upstream's guided tutorial, kept as Level 0 (re-laid-out for landscape).
+7. **Tutorial:** upstream's guided tutorial, kept as Level 0.
 
 ## Journey & difficulty (300 levels)
 
@@ -97,10 +105,9 @@ Each journey level is **fixed**: level *N* always deals the same board (layout +
 - **Openness:** how many free pairs the board starts with.
 
 **Layout pool:**
-- upstream's 12 classic layouts (already landscape);
-- the 84 ffalt/mah layouts (all 144-tile landscape boards);
-- for the early levels, smaller boards *derived* from those: e.g. the bottom layer or two, or a centred section, trimmed to an even count;
-- upstream's 12 portrait levels, rotated 90°.
+- upstream's 12 portrait level layouts (tall, phone-shaped) and 12 classic layouts (wide);
+- the 84 ffalt/mah layouts (all 144-tile wide boards, so mostly for Layouts / later levels, or rotated 90° to suit portrait);
+- for the early levels, smaller boards *derived* from those: e.g. the bottom layer or two, or a centred section, trimmed to an even count.
 
 **Ordering by measured difficulty:** a JVM tool plays every candidate (layout, seed, face count) thousands of times with a simple random-greedy player. It records how often the player hits a dead end and how many choices it has per move, then picks 300 boards that ramp smoothly. The result is checked into the repo as data, so levels never change between builds.
 
@@ -138,6 +145,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 
 - JVM unit tests: generator determinism (same seed → same board), solvability, level-table ordering, daily seed per date.
 - Builds via `./gradlew`, memory-capped through `systemd-run --user` (peak 5.4 GB on the first build).
+- **Screenshot tour** (`ScreenshotTour`, Robolectric + Roborazzi): renders the real Compose screens, AGSL shaders and render effects included, at the Pixel's portrait size and density into `app/build/screenshots`. No device or emulator is needed (this machine's BIOS has virtualisation off, so no emulator).
 - The Pixel 9 Pro over **Wireless debugging** (no cable): I install with `adb install -r`, read crashes with `adb logcat`, and take screenshots with `adb exec-out screencap` so we can both see what changed.
 
 ## Milestones
@@ -146,7 +154,8 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 |---|---|
 | M0 | Toolchain + unmodified upstream running on the Pixel ✅ done 2026-10-25 (adb over Tailscale) |
 | M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/moves/Ko-fi; photo title screen with name seal; win fireworks + varied messages ✅ 2026-10-25 (win celebration not yet seen on the phone) |
-| M2 | Board renderer: tile atlas, soft lighting, pinch/pan zoom, tile-size setting, side rail |
+| M2 | Portrait refocus; fireworks seen from above; tilted camera; walnut / green mat / Thai straw (photo) tabletops; shiny lamp-lit tiles in the dark; drifting title fog; JVM screenshot tests ✅ 2026-10-26 |
+| M2b | Board renderer: tile atlas, pinch/pan zoom, tile-size setting, big-button bar |
 | M3 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
 | M4 | Layout conversion (ffalt/mah), difficulty tool, 300-level table, journey map |
 | M5 | Today's Puzzle + calendar, Quick Game |
@@ -156,4 +165,4 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 
 ## Remaining decisions
 
-The **(proposed)** items above: the app ID, the inverted High Contrast set, a "Choose layout" option inside Quick Game, and the side rail on the right with a left-handed option. Say if any of those should change; otherwise they stand.
+The **(proposed)** items above: the app ID, the inverted High Contrast set and a "Choose layout" option inside Quick Game. Approved 2026-10-25. The landscape side rail was superseded by the portrait refocus on 2026-10-26.

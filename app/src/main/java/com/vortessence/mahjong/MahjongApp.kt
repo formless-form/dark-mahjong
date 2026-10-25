@@ -34,8 +34,8 @@ fun MahjongApp(viewModel: MahjongViewModel) {
 
     MahjongTheme(tableSurface = settings.tableSurface) {
         Crossfade(targetState = currentScreen, label = "ScreenTransition") { screen ->
-            // In landscape the camera cutout sits on a long edge; every screen but the title
-            // (whose scenery runs full-bleed) keeps its content clear of it
+            // Every screen but the title (whose scenery runs full-bleed) keeps its content clear
+            // of the camera cutout
             val contentModifier = if (screen is Screen.MainMenu) {
                 Modifier.fillMaxSize()
             } else {

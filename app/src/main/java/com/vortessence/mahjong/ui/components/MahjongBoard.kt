@@ -28,6 +28,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -288,12 +291,19 @@ private fun BoardContent(
     val latestTransform by rememberUpdatedState(currentTransform)
     val latestOnTileClick by rememberUpdatedState(onTileClick)
 
+    // Flat table layout -> screen through the tilted camera, and back again for taps
+    val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
+    val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
+    val tileLight = remember(canvasW, canvasH) { lampLightBrush(canvasW, canvasH) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    val tappedId = findTappedTileId(offset.x, offset.y, latestTiles, latestTransform)
+                    val p = floatArrayOf(offset.x, offset.y)
+                    screenToPlane.mapPoints(p)
+                    val tappedId = findTappedTileId(p[0], p[1], latestTiles, latestTransform)
                     if (tappedId != null) {
                         latestOnTileClick(tappedId)
                     }
@@ -312,6 +322,15 @@ private fun BoardContent(
             val sortedTiles = gameState.tiles
                 .filter { !it.isRemoved }
                 .sortedWith(TileDrawOrder)
+
+            val nativeCanvas = drawContext.canvas.nativeCanvas
+            nativeCanvas.save()
+            nativeCanvas.concat(planeMatrix)
+            // One layer for everything on the table, so the lamp light can be applied to it whole
+            drawContext.canvas.saveLayer(
+                Rect(-canvasW * 0.25f, -canvasH * 0.25f, canvasW * 1.25f, canvasH * 1.25f),
+                Paint(),
+            )
 
             for (tile in sortedTiles) {
                 val px = currentTransform.tilePixelX(tile.x, tile.z)
@@ -332,7 +351,8 @@ private fun BoardContent(
                     isBlockedHighlight = isBlockedFlash,
                     isTutorialHighlight = tile.id in highlightedTileIds,
                     highlightFreeTiles = settings.highlightFreeTiles,
-                    showCornerIndex = settings.showCornerIndex
+                    showCornerIndex = settings.showCornerIndex,
+                    glare = tileGlare(px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, canvasW, canvasH),
                 )
             }
 
@@ -345,9 +365,38 @@ private fun BoardContent(
                     showCornerIndex = settings.showCornerIndex
                 )
             }
+
+            // Lamp light: multiplies everything drawn on the table (alpha untouched), full and
+            // warm under the lamp, falling off towards the dark edges
+            drawRect(
+                brush = tileLight,
+                topLeft = Offset(-canvasW * 0.25f, -canvasH * 0.25f),
+                size = Size(canvasW * 1.5f, canvasH * 1.5f),
+                blendMode = BlendMode.Modulate,
+            )
+            drawContext.canvas.restore()
+            nativeCanvas.restore()
         }
     }
 }
+
+/**
+ * Radial light from the lamp in flat table pixels: warm and nearly full under the lamp, falling
+ * off towards the edges but never so dark that a tile's face stops being readable.
+ */
+private fun lampLightBrush(w: Float, h: Float): Brush {
+    val centre = Offset(w / 2f, h / 2f - 0.06f * h)
+    val stops = (0..8).map { i ->
+        val d = i / 8f * 0.95f
+        val light = (0.30f + 0.70f * kotlin.math.exp(-d * d * 3.2f)) * 0.9f
+        (i / 8f) to Color(light, light * 0.95f, light * 0.88f)
+    }.toTypedArray()
+    return Brush.radialGradient(*stops, center = centre, radius = 0.95f * h)
+}
+
+/** How strongly a tile's glossy face reflects the lamp, by its centre in flat table pixels. */
+private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float): Float =
+    TableSurfaceRenderer.lampGlare((cx - w / 2f) / h, (h / 2f - cy) / h)
 
 private fun DrawScope.drawSmashAnimation(
     smash: SmashAnimationItem,
@@ -567,8 +616,10 @@ data class BoardTransform(
 
     companion object {
         const val ASPECT_RATIO = 1.333f // Mahjong tile ratio (width : height = 3 : 4)
-        const val LAYER_SHIFT_FACTOR_X = 0.08f
-        const val LAYER_SHIFT_FACTOR_Y = 0.08f
+        // The camera looks slightly up the table, so each tile's thickness shows mostly on its
+        // front (lower) edge and only a sliver on its right; stacked tiles shift the same way
+        const val LAYER_SHIFT_FACTOR_X = 0.03f
+        const val LAYER_SHIFT_FACTOR_Y = 0.13f
     }
 }
 
@@ -578,7 +629,8 @@ private fun computeBoardTransform(
     availableHeight: Float,
     paddingPx: Float,
     maxZoomFactor: Float = 1f,
-    baseUnitX: Float = 0f
+    baseUnitX: Float = 0f,
+    widthSqueeze: Float = TableCamera.nearEdgeScale(),
 ): BoardTransform {
     val aspectRatio = BoardTransform.ASPECT_RATIO
 
@@ -610,8 +662,9 @@ private fun computeBoardTransform(
     val totalNormW = max(1f, maxNormX - minNormX)
     val totalNormH = max(1f, maxNormY - minNormY)
 
-    val contentW = max(10f, availableWidth - paddingPx * 2f)
+    val contentW = max(10f, (availableWidth - paddingPx * 2f) / widthSqueeze)
     val contentH = max(10f, availableHeight - paddingPx * 2f)
+    val paddingX = (availableWidth - contentW) * 0.5f
 
     var unitX = min(contentW / totalNormW, contentH / totalNormH)
     if (baseUnitX > 0f && maxZoomFactor > 1f) {
@@ -627,7 +680,7 @@ private fun computeBoardTransform(
     val boardPixelW = totalNormW * unitX
     val boardPixelH = totalNormH * unitX
 
-    val startX = paddingPx + (contentW - boardPixelW) * 0.5f - minNormX * unitX
+    val startX = paddingX + (contentW - boardPixelW) * 0.5f - minNormX * unitX
     val startY = paddingPx + (contentH - boardPixelH) * 0.5f - minNormY * unitX
 
     return BoardTransform(

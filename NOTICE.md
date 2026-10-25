@@ -2,8 +2,8 @@
 
 > **Dark Mahjong** is a modified fork of [PcmciaKai/mahjong_solitaire](https://github.com/PcmciaKai/mahjong_solitaire)
 > (Copyright (C) 2026 PcmciaKai), changed from 2026-10-25 by Gareth (github.com/formless-form):
-> rebranded, landscape-only, dark theme, stats/timer/support dialog removed, new title screen,
-> win celebration. The licences below cover the original assets and those added by the fork.
+> rebranded, portrait-only, dark theme, stats/timer/support dialog removed, new title screen,
+> win celebration, tilted-camera table with shader-lit tiles and tabletops. The licences below cover the original assets and those added by the fork.
 
 This repository uses a multi-license model to clearly separate source code permissions from media asset rights and third-party attributions.
 
@@ -77,10 +77,17 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 
 ### Title-screen photograph
 
-* **File:** `app/src/main/res/drawable-nodpi/title_mountains.webp`
+* **File:** `app/src/main/res/drawable-nodpi/title_mountains.webp` (portrait crop)
 * **Original:** [Sanqing Mountain is surrounded by clouds and mists](https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg) by **Huangdan2060**, via Wikimedia Commons
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication)
-* **Changes:** mirrored horizontally, cropped to a wide landscape frame without distortion, darkened and colour-graded. No attribution is required; the title screen carries a small courtesy credit.
+* **Changes:** cropped to a tall portrait frame without distortion, darkened and colour-graded. No attribution is required; the title screen carries a small courtesy credit.
+
+### Thai straw mat texture
+
+* **File:** `app/src/main/res/drawable-nodpi/thai_mat.webp`
+* **Original:** [Cambodian mat motifs](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg) by **Willuconquer**, via Wikimedia Commons: a woven sedge mat of the kind made and sold across Cambodia and Thailand
+* **License:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+* **Changes:** downscaled, desaturated and warmed towards natural straw. The modified image is likewise released under CC BY-SA 4.0. Settings shows the credit whenever the Thai Straw table is selected.
 
 ### Name seal (seal script)
 
