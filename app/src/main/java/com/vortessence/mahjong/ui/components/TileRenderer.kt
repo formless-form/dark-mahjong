@@ -13,6 +13,10 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -48,6 +52,38 @@ object TileRenderer {
      * engraved intaglio details, and corner indices faithful to classic vintage Mahjong sets.
      */
     fun drawTile(
+        scope: DrawScope,
+        boardTile: BoardTile,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        isSelected: Boolean = false,
+        isHinted: Boolean = false,
+        isBlockedHighlight: Boolean = false,
+        isTutorialHighlight: Boolean = false,
+        highlightFreeTiles: Boolean = false,
+        showCornerIndex: Boolean = false,
+        glare: Float = 0f,
+    ) {
+        if (boardTile.isRemoved) return
+        // Real tiles never sit perfectly square: a fraction of a degree and a pixel or two off
+        val (jx, jy, rotation) = TileWear.jitter(boardTile.id)
+        scope.withTransform(
+            transformBlock = {
+                translate(jx * width, jy * width)
+                rotate(rotation, Offset(x + width / 2f, y + height / 2f))
+            },
+            drawBlock = {
+                drawTileBody(
+                    scope, boardTile, x, y, width, height, isSelected, isHinted, isBlockedHighlight,
+                isTutorialHighlight, highlightFreeTiles, showCornerIndex, glare,
+                )
+            },
+        )
+    }
+
+    private fun drawTileBody(
         scope: DrawScope,
         boardTile: BoardTile,
         x: Float,
@@ -202,37 +238,14 @@ object TileRenderer {
             )
         }
 
-        // Glossy enamel: light comes from the lamp above and slightly behind the far edge, so
-        // each face is a touch brighter towards its top, the top bevel catches a fine highlight,
-        // and faces near the lamp's mirror point show a soft reflection of it
-        scope.drawRoundRect(
-            brush = Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.22f),
-                0.35f to Color.White.copy(alpha = 0.04f),
-                1f to Color.Black.copy(alpha = 0.06f),
-                startY = faceTopLeft.y,
-                endY = faceTopLeft.y + faceSize.height,
-            ),
-            topLeft = faceTopLeft,
-            size = faceSize,
-            cornerRadius = faceCorner,
-        )
-        scope.drawLine(
-            color = Color.White.copy(alpha = 0.55f),
-            start = Offset(faceTopLeft.x + cornerR, faceTopLeft.y + width * 0.006f),
-            end = Offset(faceTopLeft.x + faceSize.width - cornerR, faceTopLeft.y + width * 0.006f),
-            strokeWidth = width * 0.012f,
-        )
-        if (glare > 0.02f) {
-            val glareCentre = Offset(faceTopLeft.x + faceSize.width * 0.5f, faceTopLeft.y + faceSize.height * 0.3f)
-            scope.drawOval(
-                brush = Brush.radialGradient(
-                    listOf(Color.White.copy(alpha = 0.5f * glare), Color.Transparent),
-                    center = glareCentre,
-                    radius = faceSize.width * 0.55f,
-                ),
-                topLeft = Offset(faceTopLeft.x + faceSize.width * 0.05f, faceTopLeft.y),
-                size = Size(faceSize.width * 0.9f, faceSize.height * 0.62f),
+        // Ivory ages unevenly: some tiles crisp, some warmly yellowed
+        val ageing = TileWear.ageing(boardTile.id)
+        if (ageing > 0.01f) {
+            scope.drawRoundRect(
+                color = Color(0xFFB08A4A).copy(alpha = ageing),
+                topLeft = faceTopLeft,
+                size = faceSize,
+                cornerRadius = faceCorner,
             )
         }
 
@@ -251,6 +264,124 @@ object TileRenderer {
         getTileVector(tile)?.let { vector ->
             drawVectorTile(scope, vector, cx, cy, innerW, innerH)
         }
+
+        // 7. Wear from years of play: grime, hairline scratches, dings, fingerprint haze
+        drawWear(scope, boardTile.id, faceTopLeft, faceSize)
+
+        // 8. The clear glaze, over everything painted on the face. The lamp hangs above and
+        // slightly beyond the far edge: each face brightens towards its top, a reflection band
+        // of the lamp shade crosses its upper part (strongest near the lamp's mirror point, with
+        // a hotspot there), and the bevels glint
+        drawGlaze(scope, faceTopLeft, faceSize, cornerR, faceCorner, width, glare)
+    }
+
+    private fun drawWear(scope: DrawScope, id: Int, topLeft: Offset, size: Size) {
+        val wear = TileWear.overlay(id) ?: return
+        val pivot = Offset(topLeft.x + size.width / 2f, topLeft.y + size.height / 2f)
+        val (sx, sy) = when (TileWear.orientation(id)) {
+            1 -> -1f to 1f
+            2 -> 1f to -1f
+            3 -> -1f to -1f
+            else -> 1f to 1f
+        }
+        scope.withTransform(
+            transformBlock = { scale(sx, sy, pivot) },
+            drawBlock = {
+                drawImage(
+                    image = wear,
+                    srcOffset = IntOffset.Zero,
+                    srcSize = IntSize(TileWear.WIDTH, TileWear.HEIGHT),
+                    dstOffset = IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()),
+                    dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                    filterQuality = FilterQuality.Medium,
+                )
+            },
+        )
+    }
+
+    private fun drawGlaze(
+        scope: DrawScope,
+        topLeft: Offset,
+        size: Size,
+        cornerR: Float,
+        corner: CornerRadius,
+        width: Float,
+        glare: Float,
+    ) {
+        scope.drawRoundRect(
+            brush = Brush.verticalGradient(
+                0f to Color.White.copy(alpha = 0.26f),
+                0.3f to Color.White.copy(alpha = 0.05f),
+                0.75f to Color.Transparent,
+                1f to Color.Black.copy(alpha = 0.08f),
+                startY = topLeft.y,
+                endY = topLeft.y + size.height,
+            ),
+            topLeft = topLeft,
+            size = size,
+            cornerRadius = corner,
+        )
+        val band = 0.13f + 0.27f * glare
+        val bandTopLeft = Offset(topLeft.x + size.width * 0.06f, topLeft.y + size.height * 0.03f)
+        val bandSize = Size(size.width * 0.88f, size.height * 0.34f)
+        scope.drawOval(
+            brush = Brush.radialGradient(
+                0f to Color.White.copy(alpha = band),
+                0.55f to Color.White.copy(alpha = band * 0.45f),
+                1f to Color.Transparent,
+                center = Offset(bandTopLeft.x + bandSize.width / 2f, bandTopLeft.y + bandSize.height * 0.42f),
+                radius = bandSize.width * 0.5f,
+            ),
+            topLeft = bandTopLeft,
+            size = bandSize,
+        )
+        // A crisp, mirror-like reflection of the lamp's opening: hard-edged like real glaze
+        val mirror = 0.1f + 0.22f * glare
+        val mirrorTopLeft = Offset(topLeft.x + size.width * 0.14f, topLeft.y + size.height * 0.05f)
+        val mirrorSize = Size(size.width * 0.72f, size.height * 0.13f)
+        scope.drawRoundRect(
+            brush = Brush.verticalGradient(
+                0f to Color.White.copy(alpha = mirror),
+                0.7f to Color.White.copy(alpha = mirror * 0.75f),
+                1f to Color.White.copy(alpha = 0f),
+                startY = mirrorTopLeft.y,
+                endY = mirrorTopLeft.y + mirrorSize.height,
+            ),
+            topLeft = mirrorTopLeft,
+            size = mirrorSize,
+            cornerRadius = CornerRadius(mirrorSize.height * 0.5f),
+        )
+        if (glare > 0.05f) {
+            val hot = Offset(topLeft.x + size.width * 0.5f, topLeft.y + size.height * 0.15f)
+            scope.drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(Color.White.copy(alpha = 0.5f * glare), Color.Transparent),
+                    center = hot,
+                    radius = size.width * 0.2f,
+                ),
+                radius = size.width * 0.2f,
+                center = hot,
+            )
+        }
+        // Bevel glints: bright along the top edge, softer down the left, a touch of shade below
+        scope.drawLine(
+            color = Color.White.copy(alpha = 0.7f),
+            start = Offset(topLeft.x + cornerR, topLeft.y + width * 0.006f),
+            end = Offset(topLeft.x + size.width - cornerR, topLeft.y + width * 0.006f),
+            strokeWidth = width * 0.013f,
+        )
+        scope.drawLine(
+            color = Color.White.copy(alpha = 0.28f),
+            start = Offset(topLeft.x + width * 0.006f, topLeft.y + cornerR),
+            end = Offset(topLeft.x + width * 0.006f, topLeft.y + size.height - cornerR),
+            strokeWidth = width * 0.01f,
+        )
+        scope.drawLine(
+            color = Color.Black.copy(alpha = 0.12f),
+            start = Offset(topLeft.x + cornerR, topLeft.y + size.height - width * 0.006f),
+            end = Offset(topLeft.x + size.width - cornerR, topLeft.y + size.height - width * 0.006f),
+            strokeWidth = width * 0.012f,
+        )
     }
 
     private fun getTileVector(tile: Tile): ImageVector? = when (tile.suit) {

@@ -22,6 +22,7 @@ import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.ui.components.TableSurfaceRenderer
+import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.components.fireworksSnapshot
 import com.vortessence.mahjong.ui.screens.GameScreen
 import com.vortessence.mahjong.ui.screens.MainMenuScreen
@@ -86,6 +87,7 @@ class ScreenshotTour {
         MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(index, isTablet = false))
 
     private fun game(surface: TableSurface, levelIndex: Int, state: GameState = level(levelIndex), message: String? = null) {
+        TileWear.prepareNow()
         compose.setContent {
             MahjongTheme {
                 GameScreen(

@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
 
 class MainActivity : ComponentActivity() {
@@ -16,6 +17,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TileWear.prepareAsync()
         enableEdgeToEdge()
         // Full-screen game: system bars stay hidden and reappear briefly on an edge swipe
         WindowCompat.getInsetsController(window, window.decorView).apply {
