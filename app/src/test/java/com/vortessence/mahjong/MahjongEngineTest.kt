@@ -313,8 +313,7 @@ class MahjongEngineTest {
         val (stateMatched, matchResult2) = MahjongGameEngine.handleTileTap(stateAfterMatch, firstPair.second)
         assertTrue(matchResult2 is TileTapResult.Matched)
 
-        // Advance timer and moves
-        val simulatedState = stateMatched.copy(timerSeconds = 42L)
+        val simulatedState = stateMatched
         assertEquals(1, simulatedState.movesCount)
         assertEquals(1, simulatedState.moveHistory.size)
         assertEquals(34, simulatedState.remainingTilesCount)
@@ -329,7 +328,6 @@ class MahjongEngineTest {
         assertNotNull(restoredSaved)
         assertEquals("jade_pillar", restoredSaved!!.constellationId)
         assertEquals(1, restoredSaved.levelIndex)
-        assertEquals(42L, restoredSaved.timerSeconds)
         assertEquals(1, restoredSaved.movesCount)
         assertEquals(1, restoredSaved.moveHistory.size)
         assertEquals(simulatedState.tiles.size, restoredSaved.tiles.size)
@@ -338,7 +336,6 @@ class MahjongEngineTest {
         val restoredGameState = restoredSaved.toGameState()
         assertNotNull(restoredGameState)
         assertEquals("jade_pillar", restoredGameState.constellation.id)
-        assertEquals(42L, restoredGameState.timerSeconds)
         assertEquals(1, restoredGameState.movesCount)
         assertEquals(34, restoredGameState.remainingTilesCount)
         assertFalse(restoredGameState.isWon)

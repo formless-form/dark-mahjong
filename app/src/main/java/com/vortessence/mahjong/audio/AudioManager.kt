@@ -108,6 +108,15 @@ class AudioManager(private val context: Context) {
         vibrate { HapticPatterns.select(it) }
     }
 
+    // Title-screen menu: a quiet, slightly higher tick made from a tile-pick sound
+    fun playMenuClick() {
+        val settings = currentSettings ?: return
+        if (settings.soundEnabled) {
+            playRandomSound(pickSoundIds, settings.soundVolume * 0.35f, rate = 1.25f)
+        }
+        vibrate { HapticPatterns.select(it) }
+    }
+
     fun playTileDeselect() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
@@ -147,12 +156,12 @@ class AudioManager(private val context: Context) {
         vibrate { HapticPatterns.win(it) }
     }
 
-    private fun playRandomSound(soundIds: IntArray, volume: Float) {
+    private fun playRandomSound(soundIds: IntArray, volume: Float, rate: Float = 1.0f) {
         if ((volume <= 0f) || soundIds.isEmpty()) return
         val soundId = soundIds[Random.nextInt(soundIds.size)]
         val scaledVolume = volume.coerceIn(0f, 1f)
         try {
-            soundPool.play(soundId, scaledVolume, scaledVolume, 1, 0, 1.0f)
+            soundPool.play(soundId, scaledVolume, scaledVolume, 1, 0, rate)
         } catch (_: Exception) {
             // Ignore audio playback exception
         }

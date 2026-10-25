@@ -2,20 +2,24 @@ package com.vortessence.mahjong.data.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vortessence.mahjong.data.model.GameSettings
-import com.vortessence.mahjong.data.model.GameStats
+import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDateTime
+import kotlin.random.Random
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "mahjong_preferences")
 
@@ -33,13 +37,12 @@ class PreferencesRepository(private val context: Context) {
         val SHOW_CORNER_INDEX = booleanPreferencesKey("show_corner_index")
         val THEME = stringPreferencesKey("theme")
 
-        val GAMES_PLAYED = intPreferencesKey("games_played")
-        val GAMES_COMPLETED = intPreferencesKey("games_completed")
         val HIGHEST_LEVEL = intPreferencesKey("highest_level")
         val COMPLETED_CONSTELLATIONS = stringSetPreferencesKey("completed_constellations")
-        val BEST_TIMES = stringPreferencesKey("best_times") // format: "id1:120,id2:85"
         val SAVED_GAME = stringPreferencesKey("saved_game")
         val TABLE_SURFACE = stringPreferencesKey("table_surface")
+        val LAST_WIN_DAY = longPreferencesKey("last_win_epoch_day")
+        fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
     val settingsFlow: Flow<GameSettings> = context.dataStore.data.map { prefs ->
@@ -68,31 +71,10 @@ class PreferencesRepository(private val context: Context) {
         )
     }
 
-    val statsFlow: Flow<GameStats> = context.dataStore.data.map { prefs ->
-        val played = prefs[Keys.GAMES_PLAYED] ?: 0
-        val completed = prefs[Keys.GAMES_COMPLETED] ?: 0
-        val highest = prefs[Keys.HIGHEST_LEVEL] ?: 1
-        val completedSet = prefs[Keys.COMPLETED_CONSTELLATIONS] ?: emptySet()
-        val bestTimesRaw = prefs[Keys.BEST_TIMES] ?: ""
-
-        val bestTimesMap = mutableMapOf<String, Long>()
-        if (bestTimesRaw.isNotEmpty()) {
-            bestTimesRaw.split(",").forEach { entry ->
-                val parts = entry.split(":")
-                if (parts.size == 2) {
-                    parts[1].toLongOrNull()?.let { time ->
-                        bestTimesMap[parts[0]] = time
-                    }
-                }
-            }
-        }
-
-        GameStats(
-            gamesPlayed = played,
-            gamesCompleted = completed,
-            highestLevelReached = highest,
-            bestTimes = bestTimesMap,
-            completedConstellations = completedSet,
+    val progressFlow: Flow<Progress> = context.dataStore.data.map { prefs ->
+        Progress(
+            highestLevelReached = prefs[Keys.HIGHEST_LEVEL] ?: 1,
+            completedConstellations = prefs[Keys.COMPLETED_CONSTELLATIONS] ?: emptySet(),
         )
     }
 
@@ -112,18 +94,8 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    suspend fun recordGameStarted() {
+    suspend fun recordGameWon(constellationId: String, levelIndex: Int?) {
         context.dataStore.edit { prefs ->
-            val current = prefs[Keys.GAMES_PLAYED] ?: 0
-            prefs[Keys.GAMES_PLAYED] = current + 1
-        }
-    }
-
-    suspend fun recordGameWon(constellationId: String, levelIndex: Int?, timeSeconds: Long) {
-        context.dataStore.edit { prefs ->
-            val completed = prefs[Keys.GAMES_COMPLETED] ?: 0
-            prefs[Keys.GAMES_COMPLETED] = completed + 1
-
             // Level progression
             if (levelIndex != null) {
                 val currentHighest = prefs[Keys.HIGHEST_LEVEL] ?: 1
@@ -136,26 +108,54 @@ class PreferencesRepository(private val context: Context) {
             val completedSet = (prefs[Keys.COMPLETED_CONSTELLATIONS] ?: emptySet()).toMutableSet()
             completedSet.add(constellationId)
             prefs[Keys.COMPLETED_CONSTELLATIONS] = completedSet
-
-            // Best times
-            val bestTimesRaw = prefs[Keys.BEST_TIMES] ?: ""
-            val bestTimesMap = mutableMapOf<String, Long>()
-            if (bestTimesRaw.isNotEmpty()) {
-                bestTimesRaw.split(",").forEach { entry ->
-                    val parts = entry.split(":")
-                    if (parts.size == 2) {
-                        parts[1].toLongOrNull()?.let { t ->
-                            bestTimesMap[parts[0]] = t
-                        }
-                    }
-                }
-            }
-            val existing = bestTimesMap[constellationId]
-            if (existing == null || (timeSeconds < existing)) {
-                bestTimesMap[constellationId] = timeSeconds
-            }
-            prefs[Keys.BEST_TIMES] = bestTimesMap.entries.joinToString(",") { "${it.key}:${it.value}" }
         }
+    }
+
+    /**
+     * Picks the congratulations for a cleared board. Context pools (tutorial, first win of the day,
+     * late night, morning) are used some of the time; every pool is dealt as a shuffled deck that
+     * persists across launches, so no message repeats until its whole pool has been seen.
+     */
+    suspend fun nextCongratsMessage(isTutorial: Boolean, now: LocalDateTime = LocalDateTime.now()): String {
+        var message = CongratsPool.GENERAL.messages.first()
+        context.dataStore.edit { prefs ->
+            val today = now.toLocalDate().toEpochDay()
+            val firstToday = (prefs[Keys.LAST_WIN_DAY] ?: Long.MIN_VALUE) != today
+            prefs[Keys.LAST_WIN_DAY] = today
+            val hour = now.hour
+            val pool = when {
+                isTutorial -> CongratsPool.TUTORIAL
+                firstToday && Random.nextFloat() < 0.5f -> CongratsPool.FIRST_TODAY
+                (hour >= 22 || hour < 4) && Random.nextFloat() < 0.4f -> CongratsPool.LATE_NIGHT
+                hour in 5..10 && Random.nextFloat() < 0.3f -> CongratsPool.MORNING
+                else -> CongratsPool.GENERAL
+            }
+            message = pool.messages[dealFromBag(prefs, pool)]
+        }
+        return message
+    }
+
+    // Bag state "seed,position,lastOfPreviousBag": the order is rebuilt from the seed, and a new
+    // bag never starts with the message the previous bag ended on
+    private fun dealFromBag(prefs: MutablePreferences, pool: CongratsPool): Int {
+        val size = pool.messages.size
+        val parts = prefs[Keys.congratsBag(pool)]?.split(",")?.mapNotNull { it.toLongOrNull() }
+        var seed = parts?.getOrNull(0) ?: 0L
+        var position = parts?.getOrNull(1)?.toInt() ?: size
+        var previousLast = parts?.getOrNull(2)?.toInt() ?: -1
+        fun order(): List<Int> {
+            val o = (0 until size).shuffled(Random(seed)).toMutableList()
+            if (size > 1 && o[0] == previousLast) o[0] = o[1].also { o[1] = o[0] }
+            return o
+        }
+        if (position >= size) {
+            if (parts != null) previousLast = order().last()
+            seed = Random.nextLong()
+            position = 0
+        }
+        val index = order()[position]
+        prefs[Keys.congratsBag(pool)] = "$seed,${position + 1},$previousLast"
+        return index
     }
 
     val savedGameFlow: Flow<SavedGameState?> = context.dataStore.data.map { prefs ->

@@ -1,318 +1,193 @@
 package com.vortessence.mahjong.ui.screens
 
-import android.content.res.Configuration
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.vortessence.mahjong.R
 import com.vortessence.mahjong.data.model.ContinueInfo
-import com.vortessence.mahjong.ui.components.tileset.MahjongTiles
-import com.vortessence.mahjong.ui.components.tileset.`03RedDragon`
+import com.vortessence.mahjong.ui.components.NameSeal
+import com.vortessence.mahjong.ui.components.rememberFilmGrain
+import com.vortessence.mahjong.ui.theme.Cinzel
 import com.vortessence.mahjong.ui.theme.MahjongTheme
-import com.vortessence.mahjong.ui.theme.TomorrowBold
-import com.vortessence.mahjong.ui.theme.TomorrowMedium
 
+private val TitleText = Color(0xFFE6DFD1)
+private val TitleTextBright = Color(0xFFFFF7E8)
+private val Shade = Color(0xFF080C0B)
+
+// The background photo is CC0, so no credit is required; this one is a courtesy (also in NOTICE.md)
+private const val PHOTO_CREDIT = "Photo: Huangdan2060 · CC0 · Wikimedia Commons"
+
+/**
+ * Title screen: a misty karst photograph does the talking. On the left, in the open dark: the
+ * name seal, the title, and a short text menu set in the same inscriptional capitals.
+ */
 @Composable
 fun MainMenuScreen(
     continueInfo: ContinueInfo? = null,
     onContinue: () -> Unit = {},
     onPlayLevels: () -> Unit,
     onChooseConstellation: () -> Unit,
-    onStats: () -> Unit,
     onSettings: () -> Unit,
+    onMenuClick: () -> Unit = {},
 ) {
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFE9E1DA)),
-    ) {
-        // Red Dragon background illustration
+    val grain = rememberFilmGrain()
+    Box(modifier = Modifier.fillMaxSize().background(Shade)) {
+        // Crop scales uniformly to fill, so the photo is never stretched; film grain on top
         Image(
-            imageVector = MahjongTiles.`03RedDragon`,
+            painter = painterResource(R.drawable.title_mountains),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            alignment = Alignment.Center,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer(
-                    scaleX = 1.5f,
-                    scaleY = 1.5f,
-                    translationX = 300f,
-                    translationY = 200f
-                )
+                .graphicsLayer { renderEffect = grain },
+        )
+        // Darken the left so the menu reads
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        0f to Shade.copy(alpha = 0.82f),
+                        0.32f to Shade.copy(alpha = 0.55f),
+                        0.58f to Color.Transparent,
+                    ),
+                ),
         )
 
-        // Menu content
         Column(
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
+                .fillMaxHeight()
+                .windowInsetsPadding(WindowInsets.displayCutout)
+                .padding(start = 56.dp, top = 16.dp, bottom = 16.dp)
+                .width(320.dp)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val contentModifier = Modifier
-                .padding(horizontal = 28.dp)
-                .then(
-                    if (isLandscape) Modifier.widthIn(max = 420.dp) else Modifier.fillMaxWidth()
-                )
+            NameSeal(size = 70.dp)
+            Spacer(Modifier.height(12.dp))
+            Text(text = "DARK MAHJONG", style = titleStyle(TitleText, size = 19.sp))
+            Spacer(Modifier.height(22.dp))
 
-            Column(
-                modifier = contentModifier,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(140.dp))
-
-                // Main menu headings: automatically fit to the available width (same as buttons)
-                FitWidthText(
-                    text = "Mahjong",
-                    fontFamily = TomorrowBold,
-                    color = Color(0xFF363636),
-                    letterSpacing = 2.sp,
-                )
-
-                FitWidthText(
-                    text = "Solitaire",
-                    fontFamily = TomorrowBold,
-                    color = Color(0xFF363636),
-                    letterSpacing = 2.sp,
-                    maxWidthFraction = 0.70f,
-                    modifier = Modifier.offset(y = (-16).dp)
-                )
-
-                Spacer(modifier = Modifier.height(44.dp))
-
-                // Main Menu Action Buttons
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    if (continueInfo != null) {
-                        MainMenuButton(
-                            text = "Continue Game",
-                            subtitle = "${continueInfo.title} • ${continueInfo.subtitle}",
-                            onClick = onContinue,
-                        )
-                    }
-
-                    MainMenuButton(
-                        text = "Play Levels",
-                        onClick = onPlayLevels,
-                    )
-
-                    MainMenuButton(
-                        text = "Choose Constellation",
-                        onClick = onChooseConstellation,
-                    )
-
-                    MainMenuButton(
-                        text = "Statistics",
-                        onClick = onStats,
-                    )
-
-                    MainMenuButton(
-                        text = "Settings",
-                        onClick = onSettings,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(48.dp))
+            if (continueInfo != null) {
+                MenuItem("Continue", subtitle = continueInfo.title, onMenuClick = onMenuClick, onClick = onContinue)
             }
+            MenuItem("Play", onMenuClick = onMenuClick, onClick = onPlayLevels)
+            MenuItem("Layouts", onMenuClick = onMenuClick, onClick = onChooseConstellation)
+            MenuItem("Settings", onMenuClick = onMenuClick, onClick = onSettings)
         }
+
+        // System sans (Google Sans / Roboto) renders crispest at this size; the extra 30 px keeps
+        // the end of the line clear of the screen's rounded corner
+        val cornerClearance = with(LocalDensity.current) { 30.toDp() }
+        Text(
+            text = PHOTO_CREDIT,
+            fontFamily = FontFamily.SansSerif,
+            fontSize = 6.5.sp,
+            letterSpacing = 0.02.em,
+            color = TitleText.copy(alpha = 0.45f),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .windowInsetsPadding(WindowInsets.displayCutout)
+                .padding(end = 10.dp + cornerClearance, bottom = 3.dp),
+        )
     }
 }
+
+private fun titleStyle(color: Color, size: TextUnit = 17.sp) = androidx.compose.ui.text.TextStyle(
+    fontFamily = Cinzel,
+    fontSize = size,
+    letterSpacing = 0.32.em,
+    color = color,
+)
 
 /**
- * A text component that automatically scales its font size to exactly fill the available width.
+ * A plain text menu row with no button chrome. The whole row is the tap target; it brightens
+ * while pressed and plays a soft click when chosen.
  */
 @Composable
-private fun FitWidthText(
-    text: String,
-    fontFamily: FontFamily,
-    color: Color,
-    modifier: Modifier = Modifier,
-    letterSpacing: androidx.compose.ui.unit.TextUnit = 0.sp,
-    maxWidthFraction: Float = 1.0f,
-) {
-    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val maxWidthPx = with(LocalDensity.current) { this@BoxWithConstraints.maxWidth.toPx() } * maxWidthFraction
-        val textMeasurer = rememberTextMeasurer()
-        
-        // Measure with a base size to calculate the scaling factor
-        val baseFontSize = 100.sp
-        val textLayoutResult = textMeasurer.measure(
-            text = text,
-            style = TextStyle(
-                fontFamily = fontFamily,
-                fontSize = baseFontSize,
-                letterSpacing = letterSpacing,
-            ),
-            softWrap = false,
-        )
-        
-        val measuredWidth = textLayoutResult.size.width.toFloat()
-        val factor = if (measuredWidth > 0) maxWidthPx / measuredWidth else 1f
-        val calculatedFontSize = (baseFontSize.value * factor).sp
-
-        Text(
-            text = text,
-            style = TextStyle(
-                fontFamily = fontFamily,
-                fontSize = calculatedFontSize,
-                fontWeight = FontWeight.Bold,
-                color = color,
-                textAlign = TextAlign.Center,
-                letterSpacing = letterSpacing,
-            ),
-            maxLines = 1,
-            softWrap = false,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-private fun MainMenuButton(
+private fun MenuItem(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    onMenuClick: () -> Unit,
     subtitle: String? = null,
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        color = Color(0xFFE2D9D1),
-        border = BorderStroke(1.5.dp, Color(0xFF363636)),
-        modifier = modifier
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val textColor by animateColorAsState(if (pressed) TitleTextBright else TitleText, tween(120), label = "menuText")
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
             .fillMaxWidth()
-            .height(if (subtitle != null) 64.dp else 56.dp),
+            .height(if (subtitle != null) 60.dp else 52.dp)
+            .clickable(interactionSource = interaction, indication = null) {
+                onMenuClick()
+                onClick()
+            },
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            Text(
-                text = text,
-                style = TextStyle(
-                    fontFamily = TomorrowMedium,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 20.sp,
-                    color = Color(0xFF363636),
-                    textAlign = TextAlign.Center,
-                ),
-            )
+        Column {
+            Text(text = text, style = titleStyle(textColor))
             subtitle?.let {
                 Text(
                     text = it,
-                    style = TextStyle(
-                        fontFamily = TomorrowMedium,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = Color(0xFF363636).copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center,
-                    ),
+                    fontFamily = Cinzel,
+                    fontSize = 10.sp,
+                    letterSpacing = 0.12.em,
+                    color = TitleText.copy(alpha = 0.55f),
+                    maxLines = 1,
                 )
             }
         }
     }
 }
 
-@Preview(widthDp = 360, heightDp = 800)
+@Preview(widthDp = 952, heightDp = 427)
 @Composable
 fun MainMenuPreview() {
     MahjongTheme {
         MainMenuScreen(
-            continueInfo = null,
-            onContinue = {},
+            continueInfo = ContinueInfo("Level 3: Mini Turtle", "40 tiles remaining"),
             onPlayLevels = {},
             onChooseConstellation = {},
-            onStats = {},
-            onSettings = {}
-        )
-    }
-}
-
-@Preview(widthDp = 800, heightDp = 360)
-@Composable
-fun MainMenuLandscapePreview() {
-    MahjongTheme {
-        MainMenuScreen(
-            continueInfo = null,
-            onContinue = {},
-            onPlayLevels = {},
-            onChooseConstellation = {},
-            onStats = {},
-            onSettings = {}
-        )
-    }
-}
-
-@Preview(widthDp = 600, heightDp = 1024)
-@Composable
-fun MainMenuWidePortraitPreview() {
-    MahjongTheme {
-        MainMenuScreen(
-            continueInfo = null,
-            onContinue = {},
-            onPlayLevels = {},
-            onChooseConstellation = {},
-            onStats = {},
-            onSettings = {}
-        )
-    }
-}
-
-@Preview(widthDp = 360, heightDp = 800)
-@Composable
-fun MainMenuWithContinuePreview() {
-    MahjongTheme {
-        MainMenuScreen(
-            continueInfo = ContinueInfo(
-                title = "Level 1: Jade Pillar",
-                subtitle = "32 tiles remaining"
-            ),
-            onContinue = {},
-            onPlayLevels = {},
-            onChooseConstellation = {},
-            onStats = {},
-            onSettings = {}
+            onSettings = {},
         )
     }
 }

@@ -48,15 +48,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.Difficulty
-import com.vortessence.mahjong.data.model.GameStats
+import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.repository.ConstellationRepository
-import com.vortessence.mahjong.ui.components.formatTime
 import com.vortessence.mahjong.ui.theme.GoldAccent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConstellationSelectScreen(
-    stats: GameStats,
+    progress: Progress,
     onConstellationSelected: (Constellation) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -81,7 +80,7 @@ fun ConstellationSelectScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Constellations",
+                        text = "Layouts",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -162,7 +161,7 @@ fun ConstellationSelectScreen(
                         onClick = {
                             selectedLayoutFilter = if (selectedLayoutFilter == true) null else true
                         },
-                        label = { Text("📱 Phone (Vertical)") },
+                        label = { Text("Tall") },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                             selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -175,7 +174,7 @@ fun ConstellationSelectScreen(
                         onClick = {
                             selectedLayoutFilter = if (selectedLayoutFilter == false) null else false
                         },
-                        label = { Text("💻 Classic / Tablet (Wide)") },
+                        label = { Text("Wide") },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                             selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -191,13 +190,11 @@ fun ConstellationSelectScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filteredConstellations) { constellation ->
-                    val isCompleted = stats.completedConstellations.contains(constellation.id)
-                    val bestTime = stats.bestTimes[constellation.id]
+                    val isCompleted = progress.completedConstellations.contains(constellation.id)
 
                     ConstellationCard(
                         constellation = constellation,
                         isCompleted = isCompleted,
-                        bestTime = bestTime,
                         onClick = { onConstellationSelected(constellation) }
                     )
                 }
@@ -208,15 +205,14 @@ fun ConstellationSelectScreen(
 
 private fun layoutLabel(constellation: Constellation): String = when {
     constellation.id == ConstellationRepository.TUTORIAL_ID -> "🎓 Tutorial"
-    constellation.isPortraitOptimized -> "📱 Phone"
-    else -> "💻 Tablet"
+    constellation.isPortraitOptimized -> "Tall"
+    else -> "Wide"
 }
 
 @Composable
 private fun ConstellationCard(
     constellation: Constellation,
     isCompleted: Boolean,
-    bestTime: Long?,
     onClick: () -> Unit
 ) {
     Card(
@@ -299,16 +295,6 @@ private fun ConstellationCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 2
                 )
-
-                if (bestTime != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Best time: ${formatTime(bestTime)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
             }
         }
     }

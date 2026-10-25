@@ -14,7 +14,7 @@ import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.TutorialStep
 import com.vortessence.mahjong.ui.components.GameHeader
-import com.vortessence.mahjong.ui.components.GameWonDialog
+import com.vortessence.mahjong.ui.components.WinCelebration
 import com.vortessence.mahjong.ui.components.MahjongBoard
 import com.vortessence.mahjong.ui.components.StalemateDialog
 import com.vortessence.mahjong.ui.components.TutorialCard
@@ -25,6 +25,7 @@ fun GameScreen(
     levelIndex: Int?,
     settings: GameSettings = GameSettings(),
     tutorialStep: TutorialStep? = null,
+    winMessage: String? = null,
     totalLevels: Int = ConstellationRepository.totalLevels,
     onBack: () -> Unit,
     onTileClick: (Int) -> Unit,
@@ -97,16 +98,16 @@ fun GameScreen(
         }
     }
 
-    // Victory celebration dialog
+    // Fireworks and a warm message when the board is cleared
     if (gameState.isWon) {
-        GameWonDialog(
-            gameState = gameState,
-            levelIndex = levelIndex,
+        WinCelebration(
+            message = winMessage,
+            subtitle = if (levelIndex != null) "Level $levelIndex · ${gameState.constellation.name}" else gameState.constellation.name,
             hasNextLevel = hasNextLevel,
-            onPlayAgain = onRestart,
+            animationsEnabled = settings.animationsEnabled,
             onNextLevel = onNextLevel,
-            onChooseConstellation = onChooseConstellation,
-            onMainMenu = onMainMenu
+            onPlayAgain = onRestart,
+            onMainMenu = onMainMenu,
         )
     }
 

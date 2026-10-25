@@ -1,9 +1,11 @@
 package com.vortessence.mahjong.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vortessence.mahjong.R
@@ -15,6 +17,19 @@ val TomorrowMedium = FontFamily(
     Font(R.font.tomorrow_medium, FontWeight.SemiBold),
     Font(R.font.tomorrow_medium, FontWeight.Bold),
 )
+
+// Title and title-screen menu: Roman inscriptional capitals (lowercase renders as small capitals)
+@OptIn(ExperimentalTextApi::class)
+val Cinzel = FontFamily(
+    Font(
+        R.font.cinzel,
+        FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(600)),
+    ),
+)
+
+// Seal script (篆書), subset to the four characters of the name seal 暗夜麻將
+val SealScript = FontFamily(Font(R.font.seal_script_name, FontWeight.Normal))
 
 // Exclusively for main menu heading (Tomorrow-Bold)
 val TomorrowBold = FontFamily(

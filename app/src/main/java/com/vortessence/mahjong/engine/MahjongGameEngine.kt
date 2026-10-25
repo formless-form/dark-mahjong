@@ -34,7 +34,6 @@ object MahjongGameEngine {
             selectedTileId = null,
             hintPair = null,
             moveHistory = emptyList(),
-            timerSeconds = 0L,
             movesCount = 0,
             isPlaying = true,
             isWon = false,

@@ -8,7 +8,7 @@ import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.ContinueInfo
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
-import com.vortessence.mahjong.data.model.GameStats
+import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.data.repository.PreferencesRepository
@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -36,7 +35,6 @@ sealed class Screen {
     data object ConstellationSelect : Screen()
     data object Game : Screen()
     data object Settings : Screen()
-    data object Stats : Screen()
 }
 
 class MahjongViewModel(application: Application) : AndroidViewModel(application) {
@@ -44,11 +42,12 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val prefsRepo = PreferencesRepository(application)
     val audioManager = AudioManager(application)
 
-    val isTablet: Boolean
-        get() = getApplication<Application>().resources.configuration.smallestScreenWidthDp >= 600
+    // Dark Mahjong is landscape-only, so levels always use the wide classic layouts
+    // (upstream's portrait level set only suits a phone held upright)
+    private val useWideLayouts = true
 
     val currentLevelConstellations: List<Constellation>
-        get() = ConstellationRepository.getLevelConstellations(isTablet)
+        get() = ConstellationRepository.getLevelConstellations(useWideLayouts)
 
     private val _currentScreen = MutableStateFlow<Screen>(Screen.MainMenu)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
@@ -70,8 +69,12 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _settings = MutableStateFlow(GameSettings())
     val settings: StateFlow<GameSettings> = _settings.asStateFlow()
 
-    private val _stats = MutableStateFlow(GameStats())
-    val stats: StateFlow<GameStats> = _stats.asStateFlow()
+    // Congratulations for the board just cleared; null until it has been chosen
+    private val _winMessage = MutableStateFlow<String?>(null)
+    val winMessage: StateFlow<String?> = _winMessage.asStateFlow()
+
+    private val _progress = MutableStateFlow(Progress())
+    val progress: StateFlow<Progress> = _progress.asStateFlow()
 
     private val _savedGame = MutableStateFlow<SavedGameState?>(null)
     @Suppress("unused")
@@ -97,7 +100,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private var timerJob: Job? = null
     private var winRevealJob: Job? = null
 
     init {
@@ -108,10 +110,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 audioManager.updateSettings(s)
             }
         }
-        // Collect stats
+        // Collect progress
         viewModelScope.launch {
-            prefsRepo.statsFlow.collect { st ->
-                _stats.value = st
+            prefsRepo.progressFlow.collect { p ->
+                _progress.value = p
             }
         }
         // Collect saved game
@@ -124,7 +126,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun navigateTo(screen: Screen) {
         if (screen != Screen.Game) {
-            pauseTimer()
             saveCurrentGame()
         }
         _currentScreen.value = screen
@@ -134,7 +135,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val current = _gameState.value
         if (current != null && !current.isWon && current.remainingTilesCount > 0) {
             _currentScreen.value = Screen.Game
-            startTimer()
             return
         }
         val saved = _savedGame.value
@@ -145,14 +145,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 _gameState.value = restored
                 _tutorialStepIndex.value = TutorialScript.resumeStepFor(restored)
                 _currentScreen.value = Screen.Game
-                startTimer()
             }
         }
     }
 
     fun startLevel(levelIndex: Int) {
         _currentLevelIndex.value = levelIndex
-        val constellation = ConstellationRepository.getLevel(levelIndex, isTablet)
+        val constellation = ConstellationRepository.getLevel(levelIndex, useWideLayouts)
         initGame(constellation)
         _currentScreen.value = Screen.Game
     }
@@ -168,14 +167,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         winRevealJob?.cancel()
         winRevealJob = null
         val state = MahjongGameEngine.startNewGame(constellation)
+        _winMessage.value = null
         _gameState.value = state
         _tutorialStepIndex.value = if (TutorialScript.isTutorial(state)) 0 else null
-        startTimer()
         saveCurrentGame()
-
-        viewModelScope.launch {
-            prefsRepo.recordGameStarted()
-        }
     }
 
     private fun saveCurrentGame() {
@@ -234,14 +229,15 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                     audioManager.playTileMatch()
                 }
                 if (result.isWon) {
-                    pauseTimer()
                     clearSavedGame()
                     val levelIndex = _currentLevelIndex.value
                     viewModelScope.launch {
                         prefsRepo.recordGameWon(
                             constellationId = current.constellation.id,
                             levelIndex = levelIndex,
-                            timeSeconds = newState.timerSeconds,
+                        )
+                        _winMessage.value = prefsRepo.nextCongratsMessage(
+                            isTutorial = TutorialScript.isTutorial(current),
                         )
                     }
                     // Keep isWon false briefly so the final pair has time to animate smashing
@@ -303,7 +299,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun playNextLevel() {
         val currentLevel = _currentLevelIndex.value ?: return
-        if (currentLevel < ConstellationRepository.getTotalLevels(isTablet)) {
+        if (currentLevel < ConstellationRepository.getTotalLevels(useWideLayouts)) {
             startLevel(currentLevel + 1)
         }
     }
@@ -314,33 +310,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (isActive) {
-                delay(1000.milliseconds)
-                val current = _gameState.value
-                if (current != null && current.isPlaying && !current.isWon) {
-                    _gameState.value = current.copy(timerSeconds = current.timerSeconds + 1)
-                }
-            }
-        }
-    }
-
-    private fun pauseTimer() {
-        timerJob?.cancel()
-        timerJob = null
-    }
-
     fun onResume() {
         audioManager.onResume()
-        if (_currentScreen.value == Screen.Game && _gameState.value?.isWon == false) {
-            startTimer()
-        }
     }
 
     fun onPause() {
-        pauseTimer()
         saveCurrentGame()
         audioManager.onPause()
     }

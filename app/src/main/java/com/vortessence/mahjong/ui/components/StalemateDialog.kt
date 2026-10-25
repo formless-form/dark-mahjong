@@ -90,7 +90,7 @@ fun StalemateDialog(
                     onClick = onRestart,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Restart Constellation")
+                    Text("Restart Board")
                 }
             }
         }

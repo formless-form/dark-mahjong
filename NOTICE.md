@@ -1,5 +1,10 @@
 # Notices & Asset Attribution
 
+> **Dark Mahjong** is a modified fork of [PcmciaKai/mahjong_solitaire](https://github.com/PcmciaKai/mahjong_solitaire)
+> (Copyright (C) 2026 PcmciaKai), changed from 2026-10-25 by Gareth (github.com/formless-form):
+> rebranded, landscape-only, dark theme, stats/timer/support dialog removed, new title screen,
+> win celebration. The licences below cover the original assets and those added by the fork.
+
 This repository uses a multi-license model to clearly separate source code permissions from media asset rights and third-party attributions.
 
 * **Source Code:** Licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE) with an [App Store Exception](#1-source-code-license).
@@ -65,3 +70,26 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 * **Source:** [Tomorrow (Google Fonts)](https://fonts.google.com/specimen/Tomorrow) / [MonicaRizzolli/Tomorrow (GitHub)](https://github.com/MonicaRizzolli/Tomorrow)
 * **Files:** `tomorrow_bold.ttf` (main menu heading), `tomorrow_medium.ttf` (all other text)
 * **License:** SIL Open Font License, Version 1.1 — see [LICENSES/OFL-1.1-Tomorrow.txt](LICENSES/OFL-1.1-Tomorrow.txt)
+
+---
+
+## 5. Assets added by Dark Mahjong
+
+### Title-screen photograph
+
+* **File:** `app/src/main/res/drawable-nodpi/title_mountains.webp`
+* **Original:** [Sanqing Mountain is surrounded by clouds and mists](https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg) by **Huangdan2060**, via Wikimedia Commons
+* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication)
+* **Changes:** mirrored horizontally, cropped to a wide landscape frame without distortion, darkened and colour-graded. No attribution is required; the title screen carries a small courtesy credit.
+
+### Name seal (seal script)
+
+* **File:** `app/src/main/res/font/seal_script_name.ttf` (subset to the four characters 暗夜麻將)
+* **Source:** 全字庫說文解字 TrueType font (`ebas927.ttf`) from CNS11643 中文標準交換碼全字庫, **Ministry of Digital Affairs**, Taiwan — https://www.cns11643.gov.tw
+* **License:** [Open Government Data License, version 1.0](https://data.gov.tw/license) (the CNS11643 data may alternatively be used under OFL-1.1). Subset by the Dark Mahjong project.
+
+### Title font
+
+* **Cinzel** by Natanael Gama — [Google Fonts](https://fonts.google.com/specimen/Cinzel)
+* **File:** `app/src/main/res/font/cinzel.ttf`
+* **License:** SIL Open Font License 1.1 — see [LICENSES/OFL-1.1-Cinzel.txt](LICENSES/OFL-1.1-Cinzel.txt)

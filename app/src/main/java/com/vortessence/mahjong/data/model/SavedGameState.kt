@@ -19,7 +19,6 @@ data class ContinueInfo(
 data class SavedGameState(
     val constellationId: String,
     val levelIndex: Int?,
-    val timerSeconds: Long,
     val movesCount: Int,
     val tiles: List<SavedTile>,
     val moveHistory: List<Move>,
@@ -47,7 +46,6 @@ data class SavedGameState(
             selectedTileId = null,
             hintPair = null,
             moveHistory = moveHistory,
-            timerSeconds = timerSeconds,
             movesCount = movesCount,
             isPlaying = true,
             isWon = isWon,
@@ -68,7 +66,7 @@ data class SavedGameState(
         return listOf(
             constellationId,
             levelStr,
-            timerSeconds.toString(),
+            "", // Unused slot (formerly the timer), kept so the format stays stable
             movesCount.toString(),
             tilesStr,
             movesStr,
@@ -80,7 +78,6 @@ data class SavedGameState(
             return SavedGameState(
                 constellationId = state.constellation.id,
                 levelIndex = levelIndex,
-                timerSeconds = state.timerSeconds,
                 movesCount = state.movesCount,
                 tiles = state.tiles.map { bt ->
                     SavedTile(
@@ -104,7 +101,6 @@ data class SavedGameState(
                 val constellationId = parts[0]
                 if (constellationId.isBlank()) return null
                 val levelIndex = parts[1].toIntOrNull()
-                val timerSeconds = parts[2].toLongOrNull() ?: 0L
                 val movesCount = parts[3].toIntOrNull() ?: 0
 
                 val tilesRaw = parts[4]
@@ -149,7 +145,6 @@ data class SavedGameState(
                 return SavedGameState(
                     constellationId = constellationId,
                     levelIndex = levelIndex,
-                    timerSeconds = timerSeconds,
                     movesCount = movesCount,
                     tiles = tiles,
                     moveHistory = moves,

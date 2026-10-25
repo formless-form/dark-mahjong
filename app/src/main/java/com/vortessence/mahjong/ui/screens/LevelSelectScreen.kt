@@ -41,15 +41,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.Constellation
-import com.vortessence.mahjong.data.model.GameStats
+import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.repository.ConstellationRepository
-import com.vortessence.mahjong.ui.components.formatTime
 import com.vortessence.mahjong.ui.theme.GoldAccent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LevelSelectScreen(
-    stats: GameStats,
+    progress: Progress,
     levels: List<Constellation> = ConstellationRepository.levelConstellations,
     tutorial: Constellation = ConstellationRepository.tutorialConstellation,
     onLevelSelected: (Int) -> Unit,
@@ -59,14 +58,14 @@ fun LevelSelectScreen(
         onBack()
     }
 
-    val highestUnlocked = stats.highestLevelReached.coerceAtLeast(1)
+    val highestUnlocked = progress.highestLevelReached.coerceAtLeast(1)
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Levels Progression",
+                        text = "Levels",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -103,8 +102,7 @@ fun LevelSelectScreen(
                     stars = tutorial.difficulty.stars,
                     tileCount = tutorial.tileCount,
                     isUnlocked = true,
-                    isCompleted = stats.completedConstellations.contains(tutorial.id),
-                    bestTime = stats.bestTimes[tutorial.id],
+                    isCompleted = progress.completedConstellations.contains(tutorial.id),
                     onClick = { onLevelSelected(ConstellationRepository.TUTORIAL_LEVEL) }
                 )
             }
@@ -112,8 +110,7 @@ fun LevelSelectScreen(
             itemsIndexed(levels) { index, constellation ->
                 val levelIndex = index + 1
                 val isUnlocked = levelIndex <= highestUnlocked
-                val isCompleted = stats.completedConstellations.contains(constellation.id)
-                val bestTime = stats.bestTimes[constellation.id]
+                val isCompleted = progress.completedConstellations.contains(constellation.id)
 
                 LevelCard(
                     levelIndex = levelIndex,
@@ -123,7 +120,6 @@ fun LevelSelectScreen(
                     tileCount = constellation.tileCount,
                     isUnlocked = isUnlocked,
                     isCompleted = isCompleted,
-                    bestTime = bestTime,
                     onClick = {
                         if (isUnlocked) {
                             onLevelSelected(levelIndex)
@@ -144,7 +140,6 @@ private fun LevelCard(
     tileCount: Int,
     isUnlocked: Boolean,
     isCompleted: Boolean,
-    bestTime: Long?,
     onClick: () -> Unit
 ) {
     val containerColor = if (isUnlocked) {
@@ -230,16 +225,6 @@ private fun LevelCard(
                         text = "$difficultyName • $tileCount tiles",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (bestTime != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Best: ${formatTime(bestTime)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

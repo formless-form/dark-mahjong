@@ -8,7 +8,8 @@ Status: **draft v2 for Gareth's review** — nothing below is built yet. Open qu
 1. **Looks really good** — polished, tactile, Vita-Mahjong-level care, but our own look: **dark and softly lit**, never glaring.
 2. **Smooth** — a locked **120 fps** on the Pixel 9 Pro's 120 Hz screen with a full 144-tile board; never below 60.
 3. **Easy on the eyes and hands** — extra-large tiles, high contrast, big text, big buttons.
-4. **Single-player, offline, calm** — no scores, timers, stats, leaderboards, accounts, ads or network access.
+4. **Tasteful and minimalist** — Material 3 components on one dark token palette, one quiet accent, generous space, no badges, counters or clutter.
+5. **Single-player, offline, calm** — no scores, timers, stats, leaderboards, accounts, ads or network access.
 
 ## Rules scope
 
@@ -48,6 +49,18 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 - **No banding:** dark gradients are where cheap backgrounds look bad (visible stepping). Every shader adds **blue-noise dithering** before output, and colour maths runs in linear space.
 - **Cheap to run:** the scene renders once to an offscreen image when the chapter or screen size changes. An optional, very slow mist drift runs on its own layer at a low update rate, so the background never competes with the board for frame time or battery.
 - **Readable:** backgrounds stay low-contrast and darker at the board's edge, so the board's light pool always stands out.
+
+### Title screen
+
+- **Photo:** full-bleed, darkened, misty Chinese mountains: *Sanqing Mountain is surrounded by clouds and mists* (Huangdan2060, CC0, Wikimedia Commons), mirrored so the pine stands on the right. It is cropped to the screen's shape and scaled uniformly, never stretched. A soft dark fade on the left holds the menu, plus a light vignette. A tiny courtesy credit sits bottom-right.
+- **Name seal:** **暗夜麻將** ("dark-night mahjong") in genuine seal script (篆書, from Taiwan's CNS 11643 說文解字 font, subset to four characters). It is white on deep vermilion, read right column first, with a subtle carved-stone wear pass in AGSL.
+- **Title:** "DARK MAHJONG" in **Cinzel** (Roman inscriptional capitals), 17sp, wide letter-spacing.
+- **Menu:** left-aligned text in the same font and size, with capital initials and small capitals (Cinzel has no true lowercase). Each item is preceded by ">" (gold on the main action), with no button chrome. A full-height row is the tap target; it brightens while pressed and plays a soft click (a quiet, slightly higher tile tick plus a light haptic, following the sound and vibration settings). Items: Continue (when a game is saved) · Play · Layouts · Settings.
+- The earlier shader-generated karst scene was dropped in favour of a real photograph.
+
+### Winning: fireworks and a warm message
+
+Clearing a board sets off a short **sparkly fireworks light show** over the board: soft-glowing bursts in the theme's jade, amber and moon tones, with trailing sparks that fade. It is bright enough to feel celebratory, never harsh, and respects the animations toggle. Alongside it, a **warm congratulations message**, drawn from a large hand-written pool through a no-repeat shuffle that persists across sessions, so you see every message before any comes round again. Some are context-aware (first win of the day, tutorial, a chapter finished, a late-night win). Then a big **Next** button.
 
 ### Tile sets
 
@@ -132,12 +145,12 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | | |
 |---|---|
 | M0 | Toolchain + unmodified upstream running on the Pixel ✅ done 2026-10-25 (adb over Tailscale) |
-| M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/Ko-fi |
+| M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/moves/Ko-fi; photo title screen with name seal; win fireworks + varied messages ✅ 2026-10-25 (win celebration not yet seen on the phone) |
 | M2 | Board renderer: tile atlas, soft lighting, pinch/pan zoom, tile-size setting, side rail |
 | M3 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
 | M4 | Layout conversion (ffalt/mah), difficulty tool, 300-level table, journey map |
 | M5 | Today's Puzzle + calendar, Quick Game |
-| M6 | Shader backgrounds + motion polish (match dissolve, celebration) |
+| M6 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
 | M7 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
 | M8 | CC0 sound swap (later) |
 

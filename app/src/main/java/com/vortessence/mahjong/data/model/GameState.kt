@@ -11,7 +11,6 @@ data class GameState(
     val selectedTileId: Int? = null,
     val hintPair: Pair<Int, Int>? = null,
     val moveHistory: List<Move> = emptyList(),
-    val timerSeconds: Long = 0L,
     val movesCount: Int = 0,
     val isPlaying: Boolean = true,
     val isWon: Boolean = false,

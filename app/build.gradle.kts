@@ -10,11 +10,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.vortessence.mahjong"
-        minSdk = 30
+        // Own ID so Dark Mahjong installs alongside upstream; the Kotlin namespace stays
+        // upstream's to keep merges from PcmciaKai/mahjong_solitaire easy
+        applicationId = "com.formlessform.darkmahjong"
+        // Android 13: AGSL RuntimeShader for the generated backgrounds and tile effects
+        minSdk = 33
         targetSdk = 37
-        versionCode = 7
-        versionName = "1.2.4"
+        versionCode = 1
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

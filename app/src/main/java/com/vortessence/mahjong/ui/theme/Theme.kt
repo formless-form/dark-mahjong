@@ -1,30 +1,47 @@
 package com.vortessence.mahjong.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.vortessence.mahjong.data.model.TableSurface
 
-val MahjongColorScheme = lightColorScheme(
-    primary = AppThemePrimary,
-    onPrimary = Color.White,
-    primaryContainer = AppThemeSurface,
-    onPrimaryContainer = AppThemeText,
-    secondary = AppThemeSecondary,
-    onSecondary = Color.White,
-    secondaryContainer = AppThemeSurfaceVariant,
-    onSecondaryContainer = AppThemeText,
-    tertiary = AppThemeTertiary,
-    onTertiary = Color.White,
-    background = AppThemeBackground,
-    onBackground = AppThemeText,
-    surface = AppThemeSurface,
-    onSurface = AppThemeText,
-    surfaceVariant = AppThemeSurfaceVariant,
-    onSurfaceVariant = Color(0xFF5C554E),
-    outline = AppThemeBorder,
-    outlineVariant = Color(0xFFC0B6AC),
+// Dark only: there is no light scheme
+val MahjongColorScheme = darkColorScheme(
+    primary = JadeAccent,
+    onPrimary = JadeOnAccent,
+    primaryContainer = JadeContainer,
+    onPrimaryContainer = JadeOnContainer,
+    secondary = AmberAccent,
+    onSecondary = AmberOnAccent,
+    secondaryContainer = AmberContainer,
+    onSecondaryContainer = AmberOnContainer,
+    tertiary = MoonAccent,
+    onTertiary = MoonOnAccent,
+    background = InkBackground,
+    onBackground = MistText,
+    surface = InkSurface,
+    onSurface = MistText,
+    surfaceVariant = InkSurfaceHigh,
+    onSurfaceVariant = MistTextMuted,
+    surfaceTint = JadeAccent,
+    surfaceDim = InkBackground,
+    surfaceBright = InkSurfaceHighest,
+    surfaceContainerLowest = InkBackground,
+    surfaceContainerLow = InkSurface,
+    surfaceContainer = InkSurfaceRaised,
+    surfaceContainerHigh = InkSurfaceHigh,
+    surfaceContainerHighest = InkSurfaceHighest,
+    inverseSurface = MistText,
+    inverseOnSurface = InkSurface,
+    inversePrimary = JadeContainer,
+    outline = InkOutline,
+    outlineVariant = InkOutlineSoft,
+    error = EmberError,
+    onError = Color(0xFF2B0D0A),
+    errorContainer = EmberErrorContainer,
+    onErrorContainer = EmberOnErrorContainer,
+    scrim = Color.Black,
 )
 
 @Composable
