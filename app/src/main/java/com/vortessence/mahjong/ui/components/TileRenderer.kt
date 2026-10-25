@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -262,6 +263,11 @@ object TileRenderer {
         val innerH = height * 0.85f
 
         getTileVector(tile)?.let { vector ->
+            // The artwork is engraved: paint sits in carved grooves. Lit from above, each groove's
+            // upper wall falls into a fine shadow and its lower lip catches a fine light edge
+            val e = width * 0.009f
+            drawVectorTile(scope, vector, cx, cy - e * 0.7f, innerW, innerH, tint = EngraveShadow)
+            drawVectorTile(scope, vector, cx, cy + e, innerW, innerH, tint = EngraveLight)
             drawVectorTile(scope, vector, cx, cy, innerW, innerH)
         }
 
@@ -272,7 +278,7 @@ object TileRenderer {
         // slightly beyond the far edge: each face brightens towards its top, a reflection band
         // of the lamp shade crosses its upper part (strongest near the lamp's mirror point, with
         // a hotspot there), and the bevels glint
-        drawGlaze(scope, faceTopLeft, faceSize, cornerR, faceCorner, width, glare)
+        drawGlaze(scope, boardTile.id, faceTopLeft, faceSize, cornerR, faceCorner, width, glare)
     }
 
     private fun drawWear(scope: DrawScope, id: Int, topLeft: Offset, size: Size) {
@@ -301,6 +307,7 @@ object TileRenderer {
 
     private fun drawGlaze(
         scope: DrawScope,
+        id: Int,
         topLeft: Offset,
         size: Size,
         cornerR: Float,
@@ -308,12 +315,29 @@ object TileRenderer {
         width: Float,
         glare: Float,
     ) {
+        // The face is very slightly domed, never quite flat: a hint lighter where it bulges towards
+        // the lamp, falling away a little towards the edges. Each tile's crown sits differently
+        val (cxShift, cyShift, wobbleRaw) = TileWear.surface(id)
+        val crown = Offset(topLeft.x + size.width * (0.5f + cxShift), topLeft.y + size.height * (0.4f + cyShift))
+        scope.drawRoundRect(
+            brush = Brush.radialGradient(
+                0f to Color.White.copy(alpha = 0.035f),
+                0.5f to Color.Transparent,
+                0.85f to Color.Black.copy(alpha = 0.02f),
+                1f to Color.Black.copy(alpha = 0.06f),
+                center = crown,
+                radius = size.height * 0.62f,
+            ),
+            topLeft = topLeft,
+            size = size,
+            cornerRadius = corner,
+        )
         scope.drawRoundRect(
             brush = Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.26f),
-                0.3f to Color.White.copy(alpha = 0.05f),
-                0.75f to Color.Transparent,
-                1f to Color.Black.copy(alpha = 0.08f),
+                0f to Color.White.copy(alpha = 0.32f),
+                0.3f to Color.White.copy(alpha = 0.07f),
+                0.7f to Color.Transparent,
+                1f to Color.Black.copy(alpha = 0.16f),
                 startY = topLeft.y,
                 endY = topLeft.y + size.height,
             ),
@@ -321,6 +345,23 @@ object TileRenderer {
             size = size,
             cornerRadius = corner,
         )
+        TileWear.sheen(id)?.let { sheen ->
+            val mirrorX = if (TileWear.orientation(id) % 2 == 1) -1f else 1f
+            scope.withTransform(
+                transformBlock = { scale(mirrorX, 1f, Offset(topLeft.x + size.width / 2f, topLeft.y)) },
+                drawBlock = {
+                    drawImage(
+                        image = sheen,
+                        srcOffset = IntOffset.Zero,
+                        srcSize = IntSize(TileWear.WIDTH, TileWear.HEIGHT),
+                        dstOffset = IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()),
+                        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                        alpha = (0.5f + 0.5f * glare).coerceAtMost(1f),
+                        filterQuality = FilterQuality.Medium,
+                    )
+                },
+            )
+        }
         val band = 0.13f + 0.27f * glare
         val bandTopLeft = Offset(topLeft.x + size.width * 0.06f, topLeft.y + size.height * 0.03f)
         val bandSize = Size(size.width * 0.88f, size.height * 0.34f)
@@ -336,33 +377,102 @@ object TileRenderer {
             size = bandSize,
         )
         // A crisp, mirror-like reflection of the lamp's opening: hard-edged like real glaze
-        val mirror = 0.1f + 0.22f * glare
-        val mirrorTopLeft = Offset(topLeft.x + size.width * 0.14f, topLeft.y + size.height * 0.05f)
-        val mirrorSize = Size(size.width * 0.72f, size.height * 0.13f)
-        scope.drawRoundRect(
-            brush = Brush.verticalGradient(
-                0f to Color.White.copy(alpha = mirror),
-                0.7f to Color.White.copy(alpha = mirror * 0.75f),
-                1f to Color.White.copy(alpha = 0f),
-                startY = mirrorTopLeft.y,
-                endY = mirrorTopLeft.y + mirrorSize.height,
-            ),
-            topLeft = mirrorTopLeft,
-            size = mirrorSize,
-            cornerRadius = CornerRadius(mirrorSize.height * 0.5f),
+        // Because the surface undulates, the lamp's reflection wavers along its lower edge and
+        // sits at a slight angle, differently on every tile
+        val mirror = 0.17f + 0.3f * glare
+        val mLeft = topLeft.x + size.width * 0.12f
+        val mTop = topLeft.y + size.height * 0.045f
+        val mW = size.width * 0.76f
+        val mH = size.height * 0.145f
+        val wobble = mH * (0.08f + 0.14f * wobbleRaw)
+        val phase = wobbleRaw * 6.28f
+        val reflection = Path().apply {
+            moveTo(mLeft + mH * 0.5f, mTop)
+            lineTo(mLeft + mW - mH * 0.5f, mTop)
+            quadraticTo(mLeft + mW, mTop, mLeft + mW, mTop + mH * 0.5f)
+            val steps = 10
+            for (i in steps downTo 0) {
+                val f = i / steps.toFloat()
+                val px = mLeft + mW * (0.04f + 0.92f * f)
+                val py = mTop + mH * 0.85f + wobble * kotlin.math.sin(f * 7.5f + phase) +
+                    wobble * 0.5f * kotlin.math.sin(f * 15f + phase * 1.7f)
+                lineTo(px, py)
+            }
+            lineTo(mLeft, mTop + mH * 0.5f)
+            quadraticTo(mLeft, mTop, mLeft + mH * 0.5f, mTop)
+            close()
+        }
+        val tilt = (wobbleRaw - 0.5f) * 5f
+        scope.withTransform(
+            transformBlock = { rotate(tilt, Offset(mLeft + mW / 2f, mTop + mH / 2f)) },
+            drawBlock = {
+                drawPath(
+                    path = reflection,
+                    brush = Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = mirror),
+                        0.65f to Color.White.copy(alpha = mirror * 0.75f),
+                        1f to Color.White.copy(alpha = 0f),
+                        startY = mTop,
+                        endY = mTop + mH + wobble,
+                    ),
+                )
+            },
         )
         if (glare > 0.05f) {
             val hot = Offset(topLeft.x + size.width * 0.5f, topLeft.y + size.height * 0.15f)
             scope.drawCircle(
                 brush = Brush.radialGradient(
-                    listOf(Color.White.copy(alpha = 0.5f * glare), Color.Transparent),
+                    listOf(Color.White.copy(alpha = 0.55f * glare), Color.Transparent),
                     center = hot,
-                    radius = size.width * 0.2f,
+                    radius = size.width * 0.22f,
                 ),
-                radius = size.width * 0.2f,
+                radius = size.width * 0.22f,
+                center = hot,
+            )
+            scope.drawCircle(
+                brush = Brush.radialGradient(
+                    0f to Color.White.copy(alpha = 0.75f * glare),
+                    0.6f to Color.White.copy(alpha = 0.35f * glare),
+                    1f to Color.Transparent,
+                    center = hot,
+                    radius = size.width * 0.07f,
+                ),
+                radius = size.width * 0.07f,
                 center = hot,
             )
         }
+        // A thick clear coat rounds over at the edge of the face: its rim catches the light as a
+        // bright band (strongest at the top, nearest the lamp), and just inside the lower rim the
+        // coat's depth shows as a faint shadow
+        val rimWidth = width * 0.035f
+        val rimInset = rimWidth * 0.5f
+        scope.drawRoundRect(
+            brush = Brush.verticalGradient(
+                0f to Color.White.copy(alpha = 0.55f),
+                0.25f to Color.White.copy(alpha = 0.22f),
+                0.7f to Color.White.copy(alpha = 0.08f),
+                1f to Color.White.copy(alpha = 0.04f),
+                startY = topLeft.y,
+                endY = topLeft.y + size.height,
+            ),
+            topLeft = Offset(topLeft.x + rimInset, topLeft.y + rimInset),
+            size = Size(size.width - rimWidth, size.height - rimWidth),
+            cornerRadius = CornerRadius(corner.x - rimInset, corner.y - rimInset),
+            style = Stroke(width = rimWidth),
+        )
+        scope.drawRoundRect(
+            brush = Brush.verticalGradient(
+                0f to Color.Transparent,
+                0.8f to Color.Transparent,
+                1f to Color.Black.copy(alpha = 0.12f),
+                startY = topLeft.y,
+                endY = topLeft.y + size.height,
+            ),
+            topLeft = Offset(topLeft.x + rimWidth * 1.4f, topLeft.y + rimWidth * 1.4f),
+            size = Size(size.width - rimWidth * 2.8f, size.height - rimWidth * 2.8f),
+            cornerRadius = CornerRadius(corner.x * 0.8f, corner.y * 0.8f),
+            style = Stroke(width = rimWidth * 0.8f),
+        )
         // Bevel glints: bright along the top edge, softer down the left, a touch of shade below
         scope.drawLine(
             color = Color.White.copy(alpha = 0.7f),
@@ -571,7 +681,8 @@ object TileRenderer {
         )
     }
 
-    private fun drawCachedNode(scope: DrawScope, node: CachedVectorNode) {
+    /** Draws a cached vector; with [tint], every fill and stroke is drawn in that one colour. */
+    private fun drawCachedNode(scope: DrawScope, node: CachedVectorNode, tint: Color? = null) {
         when (node) {
             is CachedGroupNode -> {
                 scope.withTransform(
@@ -591,7 +702,7 @@ object TileRenderer {
                     },
                     drawBlock = {
                         for (child in node.children) {
-                            drawCachedNode(this, child)
+                            drawCachedNode(this, child, tint)
                         }
                     }
                 )
@@ -600,14 +711,14 @@ object TileRenderer {
                 if (node.fill != null) {
                     scope.drawPath(
                         path = node.path,
-                        brush = node.fill,
+                        brush = if (tint != null) SolidColor(tint) else node.fill,
                         alpha = node.fillAlpha
                     )
                 }
                 if (node.stroke != null) {
                     scope.drawPath(
                         path = node.path,
-                        brush = node.stroke,
+                        brush = if (tint != null) SolidColor(tint) else node.stroke,
                         alpha = node.strokeAlpha,
                         style = Stroke(
                             width = node.strokeLineWidth,
@@ -621,13 +732,17 @@ object TileRenderer {
         }
     }
 
+    private val EngraveShadow = Color(0x5A3A2A18)
+    private val EngraveLight = Color(0x99FFFDF6)
+
     private fun drawVectorTile(
         scope: DrawScope,
         imageVector: ImageVector,
         cx: Float,
         cy: Float,
         maxW: Float,
-        maxH: Float
+        maxH: Float,
+        tint: Color? = null,
     ) {
         val scale = minOf(maxW / imageVector.viewportWidth, maxH / imageVector.viewportHeight)
         val targetW = imageVector.viewportWidth * scale
@@ -642,7 +757,7 @@ object TileRenderer {
                 scale(scale, scale, Offset.Zero)
             },
             drawBlock = {
-                drawCachedNode(this, cached)
+                drawCachedNode(this, cached, tint)
             }
         )
     }

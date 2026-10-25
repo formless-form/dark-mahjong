@@ -25,13 +25,16 @@ object TileWear {
 
     @Volatile
     private var overlays: Array<ImageBitmap>? = null
+
+    @Volatile
+    private var sheens: Array<ImageBitmap>? = null
     private var started = false
 
     @Synchronized
     fun prepareAsync() {
         if (started) return
         started = true
-        Thread({ overlays = Array(VARIANTS) { generate(it) } }, "tile-wear").apply {
+        Thread({ build() }, "tile-wear").apply {
             isDaemon = true
             priority = Thread.MIN_PRIORITY
         }.start()
@@ -40,11 +43,24 @@ object TileWear {
     /** Generates the textures on the calling thread (tests and previews). */
     @Synchronized
     fun prepareNow() {
-        if (overlays == null) overlays = Array(VARIANTS) { generate(it) }
+        if (overlays == null) build()
         started = true
     }
 
+    private fun build() {
+        val made = Array(VARIANTS) { generate(it) }
+        sheens = Array(VARIANTS) { made[it].second }
+        overlays = Array(VARIANTS) { made[it].first }
+    }
+
     fun overlay(id: Int): ImageBitmap? = overlays?.get(mix(id) % VARIANTS)
+
+    /**
+     * The glaze's specular streaks for this tile: the lamp's reflection broken up by the same
+     * ripples and scratches as its wear. Always drawn upright (the reflection belongs to the
+     * lamp, not to the tile), mirrored left-right when the wear is.
+     */
+    fun sheen(id: Int): ImageBitmap? = sheens?.get(mix(id) % VARIANTS)
 
     /** 0 as generated, 1 mirrored, 2 flipped, 3 turned half round: 32 looks from 8 textures. */
     fun orientation(id: Int): Int = (mix(id) / VARIANTS) % 4
@@ -59,6 +75,15 @@ object TileWear {
         val b = ((h / 1000) % 1000) / 1000f - 0.5f
         val c = ((h / 1000000) % 1000) / 1000f - 0.5f
         return Triple(a * 0.016f, b * 0.016f, c * 1.1f)
+    }
+
+    /** The face's slight unevenness: crown offset (fractions of the face) and a 0..1 wobble. */
+    fun surface(id: Int): Triple<Float, Float, Float> {
+        val h = mix(id * 53 + 11)
+        val a = (h % 1000) / 1000f - 0.5f
+        val b = ((h / 1000) % 1000) / 1000f - 0.5f
+        val c = ((h / 1000000) % 1000) / 1000f
+        return Triple(a * 0.16f, b * 0.12f, c)
     }
 
     private fun mix(id: Int): Int {
@@ -102,7 +127,7 @@ object TileWear {
         return v
     }
 
-    private fun generate(variant: Int): ImageBitmap {
+    private fun generate(variant: Int): Pair<ImageBitmap, ImageBitmap> {
         val rnd = Random(variant * 7919 + 13)
         val w = WIDTH
         val h = HEIGHT
@@ -141,6 +166,7 @@ object TileWear {
 
         val corner = w * 0.1f
         val px = IntArray(w * h)
+        val sx = IntArray(w * h)
         val off = variant * 3.1f
         for (y in 0 until h) {
             for (x in 0 until w) {
@@ -157,6 +183,25 @@ object TileWear {
                 val g = fbm(fx / w * 5f + off, fy / h * 6.5f)
                 var a = (0.025f + 0.09f * g * g + 0.15f * exp(-e / 7f) * (0.6f + 0.8f * g)).coerceAtMost(0.32f)
                 var r = 88f; var gg = 66f; var b = 36f
+
+                // Uneven glaze: broad, faint ripples where it pooled thicker or ran thinner
+                val ripple = fbm(fx / w * 2.2f + 31f + off, fy / h * 1.6f + variant * 1.3f)
+                val thin = smoothstep(0.38f, 0.22f, ripple) * 0.05f
+                if (thin > 0f) {
+                    val na = thin + a * (1f - thin)
+                    r = (60f * thin + r * a * (1f - thin)) / na
+                    gg = (50f * thin + gg * a * (1f - thin)) / na
+                    b = (35f * thin + b * a * (1f - thin)) / na
+                    a = na
+                }
+                val thick = smoothstep(0.62f, 0.8f, ripple) * 0.07f
+                if (thick > 0f) {
+                    val na = thick + a * (1f - thick)
+                    r = (255f * thick + r * a * (1f - thick)) / na
+                    gg = (252f * thick + gg * a * (1f - thick)) / na
+                    b = (244f * thick + b * a * (1f - thick)) / na
+                    a = na
+                }
 
                 // Faint fingerprint haze that dulls the glaze in patches
                 val haze = smoothstep(0.6f, 0.78f, fbm(fx / w * 3f + 11f + off, fy / h * 3f + variant)) * 0.06f
@@ -201,6 +246,20 @@ object TileWear {
                     a = na
                 }
 
+                // Specular streaks: the lamp's reflection, in a curved zone across the upper face,
+                // broken into horizontal streaks by ripples in the glaze; scratches flare in it
+                val u = fx / w
+                val v = fy / h
+                val zoneCentre = 0.2f + 0.08f * (u - 0.5f) * (u - 0.5f) * 4f
+                val zone = exp(-((v - zoneCentre) * (v - zoneCentre)) / (2f * 0.1f * 0.1f))
+                val streak = smoothstep(0.48f, 0.78f, fbm(u * 2.6f + off * 0.7f, v * 19f + variant * 2.3f))
+                val rippleLight = 0.6f + 0.8f * smoothstep(0.35f, 0.75f, ripple)
+                var spec = zone * (0.12f + 0.5f * streak) * rippleLight + zone * s * 1.8f
+                // The whole face carries a faint lower sheen too, so streaks never end abruptly
+                spec += 0.05f * smoothstep(0.55f, 0.85f, fbm(u * 3f + 51f, v * 14f + off)) * (1f - v)
+                val specAlpha = (spec.coerceIn(0f, 0.6f) * mask * 255f).toInt()
+                sx[y * w + x] = (specAlpha shl 24) or 0xFFFBF2
+
                 val alpha = (a * mask * 255f).toInt().coerceIn(0, 255)
                 px[y * w + x] = (alpha shl 24) or
                     (r.toInt().coerceIn(0, 255) shl 16) or
@@ -208,7 +267,10 @@ object TileWear {
                     b.toInt().coerceIn(0, 255)
             }
         }
-        return Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888).asImageBitmap()
+        return Pair(
+            Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888).asImageBitmap(),
+            Bitmap.createBitmap(sx, w, h, Bitmap.Config.ARGB_8888).asImageBitmap(),
+        )
     }
 
     private fun smoothstep(e0: Float, e1: Float, x: Float): Float {

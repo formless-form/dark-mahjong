@@ -64,7 +64,10 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 - **Used, glazed tiles:** every tile looks like a real tile from a well-played set, varying from tile to tile but stable for each one (`TileWear`, chosen from the tile id).
   - **Wear:** handled grime worked into the edges and corners, hairline scratches that catch the light, the odd tiny ding, a faint fingerprint haze. There are 8 generated textures × 4 orientations.
   - **Ageing and placement:** ivory from crisp to warmly yellowed, and a fraction-off-square placement.
-  - **Glaze:** drawn over the artwork as on a real tile, with a sheen towards the top, a soft reflection band, a crisp mirror-like reflection of the lamp's opening, a hotspot near the lamp, and bevel glints.
+  - **Thick clear glaze:** drawn over the artwork as on a real tile. It has a sheen towards the top and a dark-room reflection at the bottom, plus a bright rounded rim where the coat curves over the face edge, with a depth shadow inside its lower rim.
+  - **Reflections that reveal the surface:** streaky specular highlights where the lamp's reflection is broken up by ripples in the glaze, with scratches flaring brighter inside the reflection. A crisp lamp reflection with a wavering lower edge and a slight per-tile tilt, plus a sharp hotspot near the lamp.
+  - **Not quite flat:** each face is very slightly domed, with its crown sitting a little differently per tile, and broad, faint ripples where the glaze pooled thicker or ran thinner.
+  - **Engraved artwork:** the paint sits in carved grooves, so a fine shadow falls along each stroke's upper edge and a fine light edge along its lower lip.
 - **Tabletops:** all are drawn by one full-screen AGSL shader in true perspective.
   - **Green Mat:** fine felt fibres and soft mottling, matte.
   - **Walnut:** procedural narrow boards with uneven straight grain, heartwood streaks, tiny pores, fine seams and a glossy clearcoat reflecting the lamp.
