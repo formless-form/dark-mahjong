@@ -131,7 +131,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 
 | | |
 |---|---|
-| M0 | Toolchain + unmodified upstream running on the Pixel ✅ build done, phone pending |
+| M0 | Toolchain + unmodified upstream running on the Pixel ✅ done 2026-10-25 (adb over Tailscale) |
 | M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/Ko-fi |
 | M2 | Board renderer: tile atlas, soft lighting, pinch/pan zoom, tile-size setting, side rail |
 | M3 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
