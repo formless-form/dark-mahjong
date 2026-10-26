@@ -62,7 +62,7 @@ to time, so trust what the Console shows over this page where they differ.
 - App icon, feature graphic, phone screenshots: from `fastlane/metadata/android/en-US/images/`.
 - Tablet screenshots: optional; leave empty (the app is for phones held upright).
 - Category: **Board**, under Games (Puzzle would also fit). Tags: Mahjong, Solitaire, Board, Relaxing.
-- Contact details: email **formless.form+googleplay@gmail.com** (shown publicly; also in the privacy policy), and optionally the website https://github.com/formless-form/dark-mahjong
+- Contact details: email **grevillealabs@gmail.com** (shown publicly; also in the privacy policy), and optionally the website https://github.com/formless-form/dark-mahjong
 
 ## 5. Closed test, then production
 

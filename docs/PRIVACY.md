@@ -27,4 +27,4 @@ If this policy ever changes, the new version will be published here with a new e
 
 ## Contact
 
-Questions about this policy: formless.form+googleplay@gmail.com
+Questions about this policy: grevillealabs@gmail.com
