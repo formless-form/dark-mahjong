@@ -388,7 +388,8 @@ private fun lampLightBrush(w: Float, h: Float): Brush {
     val centre = Offset(w / 2f, h / 2f - 0.06f * h)
     val stops = (0..8).map { i ->
         val d = i / 8f * 0.95f
-        val light = (0.30f + 0.70f * kotlin.math.exp(-d * d * 3.2f)) * 0.9f
+        // The trailing factor is the room's overall exposure (matching the table shader's 0.9)
+        val light = (0.30f + 0.70f * kotlin.math.exp(-d * d * 3.2f)) * 0.9f * 0.9f
         (i / 8f) to Color(light, light * 0.95f, light * 0.88f)
     }.toTypedArray()
     return Brush.radialGradient(*stops, center = centre, radius = 0.95f * h)

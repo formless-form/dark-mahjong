@@ -203,6 +203,8 @@ half4 main(float2 p) {
     // Screen-edge vignette deepens the dark corners
     float2 e = (p / res - 0.5) * float2(1.25, 1.0);
     c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e)));
+    // Overall exposure: the room is dark ("Dark Mahjong"); shared with the tiles' lamp light
+    c *= 0.9;
 
     float ign = fract(52.9829189 * fract(dot(p, float2(0.06711056, 0.00583715))));
     c += (ign - 0.5) / 255.0;

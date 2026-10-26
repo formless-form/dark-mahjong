@@ -60,7 +60,7 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 ### The table: tilted camera, lamp light
 
 - **Camera:** about 20° away from overhead (`TableCamera`). The board is laid out flat and projected to the screen through one homography. The tabletop shader uses the exact inverse, so tiles and table always agree, and taps are mapped back through it. Tile thickness shows mostly on the front edge, and upper layers shift up the table to match.
-- **Lamp:** one warm lamp hangs over the middle of the table and the room falls away into darkness. Tiles are modulated by the same radial falloff, full under the lamp but never too dark to read. Their glossy faces brighten towards the top, catch a fine bevel highlight, and near the lamp's mirror point show a soft reflection of it.
+- **Lamp:** one warm lamp hangs over the middle of the table and the room falls away into darkness. The overall exposure (×0.9, set 2026-10-26) is shared by the table shader and the tiles' light. Tiles are modulated by the same radial falloff, full under the lamp but never too dark to read. Their glossy faces brighten towards the top, catch a fine bevel highlight, and near the lamp's mirror point show a soft reflection of it.
 - **Used, glazed tiles:** every tile looks like a real tile from a well-played set, varying from tile to tile but stable for each one (`TileWear`, chosen from the tile id).
   - **Wear:** handled grime worked into the edges and corners, hairline scratches that catch the light, the odd tiny ding, a faint fingerprint haze. There are 8 generated textures × 4 orientations.
   - **Ageing and placement:** ivory from crisp to warmly yellowed, and a fraction-off-square placement.
