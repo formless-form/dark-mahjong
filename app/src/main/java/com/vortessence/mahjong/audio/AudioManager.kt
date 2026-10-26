@@ -37,14 +37,15 @@ class AudioManager(private val context: Context) {
         soundPool.load(context.applicationContext, R.raw.mahjong_pick_4, 1),
     )
 
-    // Two tiles clacking together: one recording sped up 1.4x (brighter and snappier), at four
-    // slightly different pitches around that (-4.5%, -1.5%, +1.5%, +4.5%), so repeated matches
-    // never sound mechanical
+    // Two tiles clacking together over a soft burst of stardust (chimes and glitter), in four
+    // takes at slightly different pitches with their own sparkles, so repeated matches never
+    // sound mechanical; each match also plays at a fresh random speed within 3% (pitch and
+    // length together). Built by tools/make-match-sounds.py
     private val matchSoundIds = intArrayOf(
-        soundPool.load(context.applicationContext, R.raw.tile_clack_1, 1),
-        soundPool.load(context.applicationContext, R.raw.tile_clack_2, 1),
-        soundPool.load(context.applicationContext, R.raw.tile_clack_3, 1),
-        soundPool.load(context.applicationContext, R.raw.tile_clack_4, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_match_1, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_match_2, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_match_3, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_match_4, 1),
     )
 
     private val vibrator: Vibrator? by lazy {
@@ -131,7 +132,7 @@ class AudioManager(private val context: Context) {
     fun playTileMatch() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(matchSoundIds, settings.soundVolume)
+            playRandomSound(matchSoundIds, settings.soundVolume, rate = 0.97f + Random.nextFloat() * 0.06f)
         }
         val now = SystemClock.elapsedRealtime()
         matchStreak = if ((now - lastMatchTimeMs) <= MATCH_STREAK_WINDOW_MS) {

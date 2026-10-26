@@ -40,14 +40,14 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 
 ## 3. Audio Assets
 
-### Tile clack (match sound)
+### Match sound
 
-* **Files:** `app/src/main/res/raw/tile_clack_1.ogg` to `tile_clack_4.ogg`, made from `sounds/tile_clack-original.wav` (mono, trimmed to 0.19 s, lowered 5.2 dB, sped up 1.4× (which raises the pitch about 6 semitones), then pitched −4.5 %, −1.5 %, +1.5 % and +4.5 %, Ogg Vorbis)
+* **Files:** `app/src/main/res/raw/tile_match_1.ogg` to `tile_match_4.ogg`, built by `tools/make-match-sounds.py`: a tile clack from `sounds/tile_clack-original.wav` (mono, trimmed, levelled, sped up 1.4×, four slightly different pitches) over synthesised stardust (pentatonic chimes and a glitter fizz)
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication); no attribution
 
 ### Mahjong Sound Pack
 
-* **Files still in use:** `mahjong_pick_1` to `mahjong_pick_4` (tile taps and the title-screen menu click). Its match sounds were replaced by the tile clack above; the pick sounds are next.
+* **Files still in use:** `mahjong_pick_1` to `mahjong_pick_4` (tile taps and the title-screen menu click). Its match sounds were replaced by the match sound above; the pick sounds are next.
 * **Author / Publisher:** みんなの創作支援サイトＴスタ (T-STUDIO)
 * **Source:** [Free Sound Mahjong Sound Pack (itch.io)](https://t-studio-tst.itch.io/free-sound-mahjong-sound-pack)
 * **Credit:** みんなの創作支援サイトＴスタ
