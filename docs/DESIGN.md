@@ -183,7 +183,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/moves/Ko-fi; photo title screen with name seal; win fireworks + varied messages ✅ 2026-10-25 (win celebration not yet seen on the phone) |
 | M2 | Portrait refocus; fireworks seen from above; tilted camera; walnut / green mat / Thai straw (photo) tabletops; shiny lamp-lit tiles in the dark; drifting title fog; JVM screenshot tests ✅ 2026-10-26 |
 | M3 | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar, Sans Flex title menu; the name seal as launcher icon; pinch-to-zoom with one-tap zoom-out; 29 layouts ported from ffalt/mah ✅ 2026-10-26 |
-| M4 | **In progress: sound design.** Match sound replaced (2026-10-26, CC0): a tile clack made for the game, sped up 1.4×, over a soft burst of synthesised stardust (pentatonic chimes over a glitter fizz), in four takes at slightly different pitches, each match also played at a random speed within ±3 %; built by `tools/make-match-sounds.py`; tile taps replaced by two light wood impacts from Kenney (CC0), each at two pitches, built by `tools/make-tap-sounds.py`. Win sound: a dizi (bamboo flute) phrase by CarlosCarty (Freesound, CC0) with its natural ending, built by `tools/make-win-sound.py`; the music dips under it. No T-STUDIO sounds remain, so every sound in the app is now open source. Open-source sounds only (CC0 preferred; every file's licence recorded in NOTICE.md), replacing the T-STUDIO pack, so the app can be listed on Google Play |
+| M4 | Sound design: every sound open source, so the app can go on Google Play. Match: a tile clack recorded for the game, sped up 1.4×, over synthesised stardust (pentatonic chimes over a glitter fizz), four takes plus random ±3 % speed (`tools/make-match-sounds.py`). Taps: Kenney light wood impacts, two takes at two pitches (`tools/make-tap-sounds.py`). Win: a dizi phrase by CarlosCarty (Freesound) with the music dipping under it (`tools/make-win-sound.py`). All CC0; T-STUDIO sounds removed ✅ 2026-10-26 |
 | M5 | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar |
 | M6 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
 | M7 | Difficulty tool, 300-level table, journey map |
@@ -191,7 +191,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M9 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
 | M10 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
 
-Each finished milestone is tagged in git (`milestone-01`, `milestone-02`, `milestone-03`).
+Each finished milestone is tagged in git (`milestone-01` to `milestone-04`). **Next:** a Google Play release (upload key, App Bundle, privacy policy, store listing, closed test).
 
 ## Remaining decisions
 
