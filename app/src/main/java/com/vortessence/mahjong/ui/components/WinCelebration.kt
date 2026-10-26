@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -94,14 +95,15 @@ fun WinCelebration(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(28.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // The buttons share the card's width, so they fit on a small phone too
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         if (hasNextLevel) {
-                            BigButton("Next", onClick = onNextLevel, primary = true)
-                            BigButton("Replay", onClick = onPlayAgain)
+                            BigButton("Next", onClick = onNextLevel, primary = true, compact = true, modifier = Modifier.weight(1f))
+                            BigButton("Replay", onClick = onPlayAgain, compact = true, modifier = Modifier.weight(1f))
                         } else {
-                            BigButton("Play again", onClick = onPlayAgain, primary = true)
+                            BigButton("Play again", onClick = onPlayAgain, primary = true, compact = true, modifier = Modifier.weight(1.4f))
                         }
-                        BigButton("Menu", onClick = onMainMenu)
+                        BigButton("Menu", onClick = onMainMenu, compact = true, modifier = Modifier.weight(1f))
                     }
                 }
             }

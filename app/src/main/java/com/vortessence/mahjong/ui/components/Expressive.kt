@@ -164,16 +164,22 @@ fun BigButton(
     modifier: Modifier = Modifier,
     primary: Boolean = false,
     icon: ImageVector? = null,
+    // Narrower side padding, for buttons sharing a row on a small phone
+    compact: Boolean = false,
 ) {
     val content: @Composable RowScope.() -> Unit = {
         if (icon != null) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.iconSizeFor(BigButtonHeight)))
             Spacer(Modifier.width(ButtonDefaults.iconSpacingFor(BigButtonHeight)))
         }
-        ProvideTextStyle(ButtonDefaults.textStyleFor(BigButtonHeight)) { Text(text) }
+        ProvideTextStyle(ButtonDefaults.textStyleFor(BigButtonHeight)) { Text(text, maxLines = 1, softWrap = false) }
     }
     val sized = modifier.heightIn(min = BigButtonHeight)
-    val padding = ButtonDefaults.contentPaddingFor(BigButtonHeight, hasStartIcon = icon != null)
+    val padding = if (compact) {
+        PaddingValues(horizontal = 12.dp)
+    } else {
+        ButtonDefaults.contentPaddingFor(BigButtonHeight, hasStartIcon = icon != null)
+    }
     if (primary) {
         Button(onClick = onClick, shapes = ButtonDefaults.shapesFor(BigButtonHeight), modifier = sized, contentPadding = padding, content = content)
     } else {

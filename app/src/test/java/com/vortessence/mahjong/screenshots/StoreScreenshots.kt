@@ -25,12 +25,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Google Play listing screenshots: 1200 x 2400 px (Play rejects screenshots more than twice as
- * tall as they are wide, and the Pixel's own screen is taller than that). Rendered into
+ * Google Play listing screenshots: 1080 x 1920 px (Play wants phone screenshots at exactly 9:16,
+ * and the Pixel's own screen is taller than that). Rendered into
  * build/store-screenshots. Run: ./gradlew testDebugUnitTest --tests '*StoreScreenshots*'
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36], qualifiers = "w400dp-h800dp-port-xxhdpi")
+@Config(sdk = [36], qualifiers = "w360dp-h640dp-port-xxhdpi")
 class StoreScreenshots {
     @get:Rule
     val compose = createComposeRule()
