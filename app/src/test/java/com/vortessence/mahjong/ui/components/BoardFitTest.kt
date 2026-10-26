@@ -1,5 +1,8 @@
 package com.vortessence.mahjong.ui.components
 
+import com.vortessence.mahjong.data.model.BoardTile
+import com.vortessence.mahjong.data.model.Tile
+import com.vortessence.mahjong.data.model.TileSuit
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import org.junit.Assert.assertTrue
@@ -19,6 +22,16 @@ class BoardFitTest {
     // taller screen for good measure
     private val canvases = listOf(1280f to 2240f, 1080f to 1500f, 1080f to 2400f)
     private val padding = 48f
+
+    // Every level suits a phone held upright: on a Pixel 9 Pro's board area (in dp), no level's
+    // tiles are smaller than 30 dp, so none needs constant zooming and panning
+    @Test
+    fun everyLevelHasPhoneSizedTiles() {
+        for (level in ConstellationRepository.levelConstellations) {
+            val t = computeBoardTransform(level.positions.map { BoardTile(0, Tile(TileSuit.DRAGON, 1), it) }, 427f, 792f, 16f)
+            assertTrue("${level.name}: tiles are ${t.tileWidth} dp wide", t.tileWidth >= 30f)
+        }
+    }
 
     @Test
     fun everyLayoutFitsOnScreen() {

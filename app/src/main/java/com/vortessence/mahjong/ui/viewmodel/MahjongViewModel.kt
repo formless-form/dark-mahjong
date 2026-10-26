@@ -91,7 +91,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             ContinueInfo(title = title, subtitle = subtitle)
         } else if (saved != null && saved.tiles.any { !it.isRemoved }) {
             val constellation = ConstellationRepository.getById(saved.constellationId)
-            val title = if (saved.levelIndex != null) "Level ${saved.levelIndex}: ${constellation.name}" else constellation.name
+            val level = savedLevelIndex(saved)
+            val title = if (level != null) "Level $level: ${constellation.name}" else constellation.name
             val remaining = saved.tiles.count { !it.isRemoved }
             val subtitle = "$remaining tiles remaining"
             ContinueInfo(title = title, subtitle = subtitle)
@@ -131,6 +132,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _currentScreen.value = screen
     }
 
+    // A level game saved before the levels were reordered keeps its layout; its number follows it
+    private fun savedLevelIndex(saved: SavedGameState): Int? =
+        saved.levelIndex?.let { ConstellationRepository.levelIndexOf(saved.constellationId, useWideLayouts) ?: it }
+
     fun continueGame() {
         val current = _gameState.value
         if (current != null && !current.isWon && current.remainingTilesCount > 0) {
@@ -141,7 +146,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         if (saved != null) {
             val restored = saved.toGameState()
             if (!restored.isWon && restored.remainingTilesCount > 0) {
-                _currentLevelIndex.value = saved.levelIndex
+                _currentLevelIndex.value = savedLevelIndex(saved)
                 _gameState.value = restored
                 _tutorialStepIndex.value = TutorialScript.resumeStepFor(restored)
                 _currentScreen.value = Screen.Game

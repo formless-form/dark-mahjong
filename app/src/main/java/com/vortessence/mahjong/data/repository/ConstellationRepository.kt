@@ -5,6 +5,7 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TilePosition
 import com.vortessence.mahjong.data.model.TileSuit
+import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 
 object ConstellationRepository {
 
@@ -21,9 +22,8 @@ object ConstellationRepository {
     /**
      * Vertical, phone-optimized constellations designed specifically for smartphones.
      * These use the vertical screen space efficiently and prevent excessive zooming out.
-     * They serve as the progressive levels in Levels mode (Level 1 to Level 12).
      */
-    val levelConstellations: List<Constellation> by lazy {
+    private val phoneConstellations: List<Constellation> by lazy {
         listOf(
             createJadePillar(),
             createBambooSpire(),
@@ -62,18 +62,44 @@ object ConstellationRepository {
 
     /**
      * Layouts ported from Mah by ffalt (MIT licence): the ones that suit a phone held upright.
-     * Manual selection only, like the classic layouts.
      */
     val mahConstellations: List<Constellation> by lazy {
         MahLayouts.boards.map { it.toConstellation() }
     }
 
     /**
-     * All constellations available in the app (tutorial + level, classic and Mah constellations).
+     * The progressive levels in Levels mode, easy to hard: the phone-shaped layouts and the ones
+     * from Mah. Levels 1 to 8 are the same as before the Mah layouts joined.
+     */
+    val levelConstellations: List<Constellation> by lazy {
+        (phoneConstellations + mahConstellations).sortedWith(easyToHard)
+    }
+
+    /**
+     * All constellations available in the app: the tutorial, then everything else easy to hard.
      */
     val constellations: List<Constellation> by lazy {
-        listOf(tutorialConstellation) + levelConstellations + classicConstellations + mahConstellations
+        listOf(tutorialConstellation) + (phoneConstellations + classicConstellations + mahConstellations).sortedWith(easyToHard)
     }
+
+    /**
+     * Easy to hard: by difficulty band, then fewer tiles first, then the board that starts with
+     * more tiles free (more choices, fewer dead ends).
+     */
+    private val easyToHard: Comparator<Constellation> by lazy {
+        val openness = HashMap<String, Float>()
+        fun open(c: Constellation) = openness.getOrPut(c.id) {
+            c.positions.count { BoardSolvabilityGenerator.isTileFree(it, c.positions) }.toFloat() / c.tileCount
+        }
+        compareBy<Constellation>({ it.difficulty.ordinal }, { it.tileCount })
+            .thenByDescending { open(it) }
+            .thenBy { it.name }
+    }
+
+    /** The level number a layout is in Levels mode (0 for the tutorial), or null if it isn't a level. */
+    fun levelIndexOf(id: String, isTablet: Boolean = false): Int? =
+        if (id == TUTORIAL_ID) TUTORIAL_LEVEL
+        else getLevelConstellations(isTablet).indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1)
 
     val tabletLevelConstellations: List<Constellation> by lazy {
         classicConstellations

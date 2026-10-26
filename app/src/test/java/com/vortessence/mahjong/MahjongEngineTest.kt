@@ -236,43 +236,26 @@ class MahjongEngineTest {
     }
 
     @Test
-    fun testLevelConstellationsArePortraitOrientedForSmartphones() {
-        assertEquals("Should have 12 progressive levels", 12, ConstellationRepository.levelConstellations.size)
-        assertEquals("Total levels count should match", 12, ConstellationRepository.totalLevels)
+    fun testLevelsRunEasyToHard() {
+        val levels = ConstellationRepository.levelConstellations
+        assertEquals("12 phone-shaped levels plus the Mah layouts", 12 + ConstellationRepository.mahConstellations.size, levels.size)
+        assertEquals("Total levels count should match", levels.size, ConstellationRepository.totalLevels)
 
-        for (constellation in ConstellationRepository.levelConstellations) {
-            assertTrue("Level constellation ${constellation.name} must be marked portrait-optimized", constellation.isPortraitOptimized)
-
-            var minX = Float.MAX_VALUE
-            var maxX = -Float.MAX_VALUE
-            var minY = Float.MAX_VALUE
-            var maxY = -Float.MAX_VALUE
-
-            for (p in constellation.positions) {
-                if (p.x < minX) minX = p.x
-                if (p.x > maxX) maxX = p.x
-                if (p.y < minY) minY = p.y
-                if (p.y > maxY) maxY = p.y
-            }
-
-            val totalNormW = (maxX - minX) + 2f
-            val totalNormH = ((maxY - minY) + 2f) * 1.333f
-            val aspectRatio = totalNormW / totalNormH
-
-            // Phone-optimized layouts should be slender / vertical (aspect ratio <= 0.60, width <= 14 units / 7 tiles)
+        // Never harder then easier again
+        for (i in 1 until levels.size) {
             assertTrue(
-                "Level constellation ${constellation.name} width ($totalNormW) must be <= 14 (7 tiles max)",
-                totalNormW <= 14f
-            )
-            assertTrue(
-                "Level constellation ${constellation.name} height ($totalNormH) must be >= 18 (utilize vertical space)",
-                totalNormH >= 18f
-            )
-            assertTrue(
-                "Level constellation ${constellation.name} normalized aspect ratio ($aspectRatio) should be <= 0.60 for phones",
-                aspectRatio <= 0.60f
+                "Level ${i + 1} (${levels[i].name}) is easier than level $i (${levels[i - 1].name})",
+                levels[i].difficulty >= levels[i - 1].difficulty,
             )
         }
+
+        // Levels 1 to 8 are the layouts they were before the Mah layouts joined, so progress
+        // made then still means the same boards
+        assertEquals(
+            listOf("jade_pillar", "bamboo_spire", "dragon_saber", "celestial_lantern", "torii_arch", "celadon_hourglass", "cascading_falls", "phoenix_tower"),
+            levels.take(8).map { it.id },
+        )
+        // The board sizes on screen are checked in BoardFitTest
     }
 
     @Test
@@ -399,19 +382,14 @@ class MahjongEngineTest {
         val tabletLevels = ConstellationRepository.getLevelConstellations(isTablet = true)
         val phoneLevels = ConstellationRepository.getLevelConstellations(isTablet = false)
 
+        // Tablets keep upstream's 12 classic (wide) levels; the phone levels are checked in
+        // testLevelsRunEasyToHard and, for size on screen, BoardFitTest
         assertEquals(12, tabletLevels.size)
-        assertEquals(12, phoneLevels.size)
+        assertEquals(12 + ConstellationRepository.mahConstellations.size, phoneLevels.size)
 
         for (constellation in tabletLevels) {
             assertFalse(
                 "Tablet level constellation ${constellation.name} must not be portrait-optimized",
-                constellation.isPortraitOptimized
-            )
-        }
-
-        for (constellation in phoneLevels) {
-            assertTrue(
-                "Phone level constellation ${constellation.name} must be portrait-optimized",
                 constellation.isPortraitOptimized
             )
         }
