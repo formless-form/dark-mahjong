@@ -7,12 +7,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pinch
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.vortessence.mahjong.data.model.ContinueInfo
@@ -194,6 +198,24 @@ class ScreenshotTour {
     @Test fun gameGreenMat() { game(TableSurface.GREEN_MAT, 8); shoot("game_green_mat") }
     @Test fun gameWalnut() { game(TableSurface.WALNUT, 11); shoot("game_walnut") }
     @Test fun gameThaiStraw() { game(TableSurface.THAI_STRAW, 12); shoot("game_thai_straw") }
+
+    // Pinched in to about 2.2x near the top of the board: the zoom-out button appears
+    @Test
+    fun gameZoomedIn() {
+        game(TableSurface.WALNUT, 11)
+        compose.waitForIdle()
+        compose.onRoot().performTouchInput {
+            val c = Offset(centerX, height * 0.35f)
+            pinch(
+                start0 = c - Offset(60f, 0f), end0 = c - Offset(132f, 0f),
+                start1 = c + Offset(60f, 0f), end1 = c + Offset(132f, 0f),
+                durationMillis = 400,
+            )
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Zoom out to the whole board").assertExists()
+        shoot("game_zoomed")
+    }
 
     @Test
     fun celebration() {

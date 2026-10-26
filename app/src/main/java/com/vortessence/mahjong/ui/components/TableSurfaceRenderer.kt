@@ -2,6 +2,7 @@ package com.vortessence.mahjong.ui.components
 
 import android.content.Context
 import android.graphics.RuntimeShader
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.vortessence.mahjong.data.model.TableSurface
@@ -15,6 +16,11 @@ object TableSurfaceRenderer {
 
     private var shader: RuntimeShader? = null
 
+    /**
+     * Draws the table over [width] x [height]. When the player has zoomed in, the caller draws
+     * this under the zoom transform and passes the same [zoom] and [pan], so fine detail is
+     * sharpened to match while the vignette and dither stay fixed to the screen.
+     */
     @Suppress("UNUSED_PARAMETER")
     fun drawTableSurface(
         scope: DrawScope,
@@ -22,12 +28,16 @@ object TableSurfaceRenderer {
         width: Float,
         height: Float,
         context: Context? = null,
+        zoom: Float = 1f,
+        pan: Offset = Offset.Zero,
     ) {
         val s = shader ?: RuntimeShader(TABLE_AGSL).also { shader = it }
         s.setFloatUniform("res", width, height)
         s.setFloatUniform("mode", surface.ordinal.toFloat())
         s.setFloatUniform("tilt", Math.toRadians(TableCamera.TILT_DEGREES.toDouble()).toFloat())
         s.setFloatUniform("camDist", TableCamera.DISTANCE)
+        s.setFloatUniform("zoom", zoom)
+        s.setFloatUniform("pan", pan.x, pan.y)
         scope.drawRect(ShaderBrush(s))
     }
 
@@ -58,6 +68,8 @@ uniform float2 res;
 uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat (TableSurface order)
 uniform float tilt;
 uniform float camDist;
+uniform float zoom;     // the player's pinch zoom, drawn under the matching canvas transform
+uniform float2 pan;     // screen position = p * zoom + pan
 
 const float PI = 3.14159265;
 
@@ -243,8 +255,9 @@ half4 main(float2 p) {
     float u = s.x * z / D;
     float2 q = float2(u, v);
     // Approximate size of one screen pixel on the table, for anti-aliasing fine detail
-    float fp = (z / D) / res.y * (1.0 + 0.6 * st);
-
+    float fp = (z / D) / res.y * (1.0 + 0.6 * st) / zoom;
+    // The real screen pixel, for effects that belong to the screen rather than the table
+    float2 sp = p * zoom + pan;
     float3 albedo;
     float gloss;
     if (mode < 0.5) { albedo = felt(q, fp); gloss = 0.0; }
@@ -261,12 +274,12 @@ half4 main(float2 p) {
     float grain = mode > 0.5 && mode < 1.5 ? 0.75 + 0.5 * vnoise(q * float2(60.0, 6.0)) : 1.0;
     c += gloss * glare * grain * float3(0.24, 0.215, 0.18);
     // Screen-edge vignette deepens the dark corners
-    float2 e = (p / res - 0.5) * float2(1.25, 1.0);
+    float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
     c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e)));
     // Overall exposure: the room is dark ("Dark Mahjong"); shared with the tiles' lamp light
     c *= 0.9;
 
-    float ign = fract(52.9829189 * fract(dot(p, float2(0.06711056, 0.00583715))));
+    float ign = fract(52.9829189 * fract(dot(floor(sp), float2(0.06711056, 0.00583715))));
     c += (ign - 0.5) / 255.0;
     return half4(half3(clamp(c, 0.0, 1.0)), 1.0);
 }

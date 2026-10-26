@@ -1,28 +1,50 @@
 package com.vortessence.mahjong.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ZoomOut
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -46,6 +68,7 @@ import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.ui.theme.GoldHighlight
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -131,6 +154,8 @@ fun MahjongBoard(
     Box(
         modifier = modifier
             .fillMaxSize()
+            // A zoomed-in scene must stay within the board's area
+            .clipToBounds()
             .onSizeChanged { boardSize = it }
     ) {
         val canvasW = boardSize.width.toFloat()
@@ -295,13 +320,43 @@ private fun BoardContent(
     val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
     val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
     val tileLight = remember(canvasW, canvasH) { lampLightBrush(canvasW, canvasH) }
+    // Pinch-to-zoom: a camera zoom over the whole scene (table, tiles and lamp light alike), with
+    // screen = scene * zoom + pan. Panning stops at the scene's edges, so the table always fills
+    // the view.
+    var zoom by remember { mutableFloatStateOf(1f) }
+    var pan by remember { mutableStateOf(Offset.Zero) }
+    val zoomedIn by remember { derivedStateOf { zoom > 1.01f } }
+    val scope = rememberCoroutineScope()
+    var zoomOutJob by remember { mutableStateOf<Job?>(null) }
+    val clampPan = { p: Offset, z: Float ->
+        Offset(p.x.coerceIn(canvasW * (1f - z), 0f), p.y.coerceIn(canvasH * (1f - z), 0f))
+    }
+    val zoomOut = {
+        val fromZoom = zoom
+        val fromPan = pan
+        zoomOutJob?.cancel()
+        zoomOutJob = scope.launch {
+            animate(
+                0f, 1f,
+                animationSpec = if (settings.animationsEnabled) {
+                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                } else {
+                    snap()
+                },
+            ) { f, _ ->
+                zoom = fromZoom + (1f - fromZoom) * f
+                pan = fromPan * (1f - f)
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    val p = floatArrayOf(offset.x, offset.y)
+                    // Back through the zoom and the camera to the flat layout
+                    val p = floatArrayOf((offset.x - pan.x) / zoom, (offset.y - pan.y) / zoom)
                     screenToPlane.mapPoints(p)
                     val tappedId = findTappedTileId(p[0], p[1], latestTiles, latestTransform)
                     if (tappedId != null) {
@@ -309,14 +364,31 @@ private fun BoardContent(
                     }
                 }
             }
+            // Inside the tap detector, so a pinch or a drag past the touch slop cancels the tap
+            .pointerInput(canvasW, canvasH) {
+                detectTransformGestures { centroid, panChange, zoomChange, _ ->
+                    zoomOutJob?.cancel()
+                    val newZoom = (zoom * zoomChange).coerceIn(1f, TableCamera.MAX_ZOOM)
+                    // Keep the spot under the fingers where it is, then follow the fingers
+                    val scenePoint = (centroid - pan) / zoom
+                    pan = clampPan(centroid - scenePoint * newZoom + panChange, newZoom)
+                    zoom = newZoom
+                }
+            }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            drawContext.canvas.save()
+            drawContext.canvas.translate(pan.x, pan.y)
+            drawContext.canvas.scale(zoom, zoom)
+
             TableSurfaceRenderer.drawTableSurface(
                 scope = this,
                 surface = settings.tableSurface,
                 width = canvasW,
                 height = canvasH,
                 context = context,
+                zoom = zoom,
+                pan = pan,
             )
 
             val sortedTiles = gameState.tiles
@@ -331,7 +403,6 @@ private fun BoardContent(
                 Rect(-canvasW * 0.25f, -canvasH * 0.25f, canvasW * 1.25f, canvasH * 1.25f),
                 Paint(),
             )
-
             for (tile in sortedTiles) {
                 val px = currentTransform.tilePixelX(tile.x, tile.z)
                 val py = currentTransform.tilePixelY(tile.y, tile.z)
@@ -376,6 +447,29 @@ private fun BoardContent(
             )
             drawContext.canvas.restore()
             nativeCanvas.restore()
+            drawContext.canvas.restore()
+        }
+
+        // Once zoomed in, one tap at the edge of the screen goes back to the whole board
+        AnimatedVisibility(
+            visible = zoomedIn,
+            enter = fadeIn() + scaleIn(initialScale = 0.6f),
+            exit = fadeOut() + scaleOut(targetScale = 0.6f),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+        ) {
+            FilledTonalIconButton(
+                onClick = zoomOut,
+                shapes = IconButtonDefaults.shapes(),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                modifier = Modifier.size(56.dp),
+            ) {
+                Icon(Icons.Rounded.ZoomOut, contentDescription = "Zoom out to the whole board", modifier = Modifier.size(28.dp))
+            }
         }
     }
 }
@@ -624,7 +718,7 @@ data class BoardTransform(
     }
 }
 
-private fun computeBoardTransform(
+internal fun computeBoardTransform(
     tiles: List<BoardTile>,
     availableWidth: Float,
     availableHeight: Float,

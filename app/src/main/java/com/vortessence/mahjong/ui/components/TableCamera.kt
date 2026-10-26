@@ -21,6 +21,9 @@ object TableCamera {
     /** Camera distance in screen heights: further means milder perspective. */
     const val DISTANCE = 2.2f
 
+    /** The furthest the player can pinch in, as a multiple of the fitted board. */
+    const val MAX_ZOOM = 3f
+
     private val tilt = Math.toRadians(TILT_DEGREES.toDouble()).toFloat()
 
     /** Projects plane coordinates (u, v) to screen pixels for a canvas of size [w] x [h]. */

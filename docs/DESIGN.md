@@ -103,7 +103,8 @@ Clearing a board sets off a fireworks light show **seen from directly above**. T
 ## Accessibility & controls
 
 - **Tile size:** Normal / Large / Extra-large. At large sizes the board is bigger than the screen, so you pan around it.
-- **Pinch-to-zoom + pan** (one-finger drag pans once zoomed), double-tap to zoom in/out, a big **Fit** button, and upstream's auto-fit as the board empties. A generous touch slop keeps a pan from ever selecting a tile.
+- **Pinch-to-zoom + pan** (since 2026-10-26): pinch from 1× up to 3×, centred on the fingers; once zoomed, a drag pans (stopping at the table's edges). It is a true camera zoom: the table, tiles and lamp light magnify together, the shader sharpens its fine detail to match, and the lens vignette stays fixed to the screen. A round **zoom-out** button appears at the right edge, just above the toolbar, while zoomed; one tap springs back to the whole board. Taps still select tiles at any zoom, and a pinch or a drag past the touch slop never selects one. No double-tap zoom, because it would delay every tile tap. Upstream's auto-fit as the board empties still applies underneath.
+- **Turning the play area:** tried 2026-10-26 (the tabletop and tiles turned 2° together) and dropped; the board stays square to the screen.
 - **Highlight free tiles** (dim blocked tiles), on by default for early levels.
 - **Larger text:** 100 / 130 / 160 % on top of the system font size.
 - **Big buttons:** in portrait the controls live in a **bottom bar** under the board: a floating toolbar of large labelled buttons, icon plus word (Hint · Undo · Restart since 2026-10-26; M2b may add Shuffle). Back is the round button at the top left, or the back gesture. Menus use big list rows.
@@ -180,7 +181,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/moves/Ko-fi; photo title screen with name seal; win fireworks + varied messages ✅ 2026-10-25 (win celebration not yet seen on the phone) |
 | M2 | Portrait refocus; fireworks seen from above; tilted camera; walnut / green mat / Thai straw (photo) tabletops; shiny lamp-lit tiles in the dark; drifting title fog; JVM screenshot tests ✅ 2026-10-26 |
 | M2c | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar; the name seal as launcher icon ✅ 2026-10-26 |
-| M2b | Board renderer: tile atlas, pinch/pan zoom, tile-size setting, Shuffle in the button bar |
+| M2b | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar (pinch/pan zoom ✅ 2026-10-26) |
 | M3 | **Next:** open-source sounds only (CC0 preferred; every file's licence recorded in NOTICE.md), replacing the T-STUDIO pack, so the app can be listed on Google Play |
 | M4 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
 | M5 | Layout conversion (ffalt/mah), difficulty tool, 300-level table, journey map |
