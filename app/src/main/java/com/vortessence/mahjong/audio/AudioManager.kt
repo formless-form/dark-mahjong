@@ -2,8 +2,11 @@ package com.vortessence.mahjong.audio
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.SoundPool
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -97,6 +100,7 @@ class AudioManager(private val context: Context) {
     }
 
     fun release() {
+        releaseWinPlayer()
         musicPlayer.release()
         try {
             soundPool.release()
@@ -156,10 +160,66 @@ class AudioManager(private val context: Context) {
     fun playWin() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            AudioEffects.playWin(settings.soundVolume)
+            playWinPhrase(settings.soundVolume)
         }
         vibrate { HapticPatterns.win(it) }
     }
+
+    // The win phrase: a bamboo flute (dizi) melody (9 s, built by tools/make-win-sound.py). Too long for the
+    // SoundPool, so it has its own player, and the music eases down beneath it and back after.
+    private var winPlayer: MediaPlayer? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private fun playWinPhrase(volume: Float) {
+        releaseWinPlayer()
+        val player = MediaPlayer.create(
+            context.applicationContext,
+            R.raw.win_dizi,
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build(),
+            android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
+        ) ?: return
+        val level = volume.coerceIn(0f, 1f)
+        player.setVolume(level, level)
+        player.setOnCompletionListener {
+            if (winPlayer === it) releaseWinPlayer()
+        }
+        winPlayer = player
+        rampMusic(to = 0.3f)
+        player.start()
+    }
+
+    private fun releaseWinPlayer() {
+        val player = winPlayer ?: return
+        winPlayer = null
+        try {
+            player.release()
+        } catch (_: Exception) {
+            // Ignore
+        }
+        rampMusic(to = 1f)
+    }
+
+    // Eases the music's ducking to [to] over about half a second
+    private fun rampMusic(to: Float) {
+        mainHandler.removeCallbacksAndMessages(MUSIC_RAMP)
+        val from = musicDuck
+        val steps = 12
+        for (i in 1..steps) {
+            mainHandler.postAtTime(
+                {
+                    musicDuck = from + (to - from) * i / steps
+                    musicPlayer.duck(musicDuck)
+                },
+                MUSIC_RAMP,
+                SystemClock.uptimeMillis() + i * 40L,
+            )
+        }
+    }
+
+    private var musicDuck = 1f
 
     private fun playRandomSound(soundIds: IntArray, volume: Float, rate: Float = 1.0f) {
         if ((volume <= 0f) || soundIds.isEmpty()) return
@@ -185,5 +245,8 @@ class AudioManager(private val context: Context) {
     private companion object {
         // Matches made within this window of each other build up the haptic streak
         const val MATCH_STREAK_WINDOW_MS = 4000L
+
+        // Token for the music-ramp steps, so a new ramp can cancel one in progress
+        private val MUSIC_RAMP = Any()
     }
 }

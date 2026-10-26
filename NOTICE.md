@@ -51,6 +51,12 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 * **Source:** [Impact Sounds](https://kenney.nl/assets/impact-sounds) by **Kenney** (www.kenney.nl)
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/); see `sounds/kenney/License.txt`
 
+### Win sound
+
+* **File:** `app/src/main/res/raw/win_dizi.ogg`, one phrase cut and faded by `tools/make-win-sound.py` from `sounds/freesound/339357__carloscarty__dizi-flute-02.mp3`
+* **Source:** [DIZI FLUTE 02](https://freesound.org/people/CarlosCarty/sounds/339357/) by **CarlosCarty**, via Freesound
+* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+
 ### Background Music
 
 * **Files:** `zen_mountain_mist.opus`, `zen_mountain_stream.opus`, `ink_cloud_meditation.opus`, `ink_cloud_study.opus`, `jade_rain_study.opus`

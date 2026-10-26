@@ -14,16 +14,10 @@ object AudioEffects {
     private val executor = Executors.newFixedThreadPool(2)
 
     private val blockedSoundBuffer: ShortArray by lazy { generateBlockedBuffer() }
-    private val winSoundBuffer: ShortArray by lazy { generateWinChimeBuffer() }
 
     fun playBlocked(volume: Float) {
         if (volume <= 0f) return
         playSound(blockedSoundBuffer, volume)
-    }
-
-    fun playWin(volume: Float) {
-        if (volume <= 0f) return
-        playSound(winSoundBuffer, volume)
     }
 
     private fun playSound(buffer: ShortArray, volume: Float) {
@@ -74,31 +68,6 @@ object AudioEffects {
             val decay = exp(-t * 90.0)
             val wave = 0.8 * sin(2 * PI * 240 * t) + 0.2 * sin(2 * PI * 480 * t)
             buffer[i] = (wave * decay * 20000).toInt().coerceIn(-32767, 32767).toShort()
-        }
-        return buffer
-    }
-
-    /**
-     * Win sound: celestial pentatonic chime arpeggio (C5, E5, G5, A5, C6).
-     */
-    private fun generateWinChimeBuffer(): ShortArray {
-        val durationMs = 1500
-        val numSamples = (SAMPLE_RATE * durationMs) / 1000
-        val buffer = ShortArray(numSamples)
-        val notes = listOf(523.25, 659.25, 783.99, 880.0, 1046.50)
-        val noteInterval = (SAMPLE_RATE * 0.16).toInt()
-
-        for (i in 0 until numSamples) {
-            var sample = 0.0
-            for ((noteIdx, freq) in notes.withIndex()) {
-                val noteStart = noteIdx * noteInterval
-                if (i >= noteStart) {
-                    val t = (i - noteStart).toDouble() / SAMPLE_RATE
-                    val decay = exp(-t * 3.5)
-                    sample += (sin(2 * PI * freq * t) + 0.3 * sin(2 * PI * freq * 2 * t)) * decay * 0.2
-                }
-            }
-            buffer[i] = (sample * 28000).toInt().coerceIn(-32767, 32767).toShort()
         }
         return buffer
     }

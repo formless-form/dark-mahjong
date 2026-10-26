@@ -19,6 +19,8 @@ class BackgroundMusicPlayer(private val context: Context) {
     private var mediaPlayer: MediaPlayer? = null
     private var currentIndex = -1
     private var currentVolume = 0.4f
+    // Temporary lowering under other sounds (the win phrase); 1 means none
+    private var duckFactor = 1f
     private var isStarted = false
     private var isPaused = false
     private val lock = Any()
@@ -27,7 +29,19 @@ class BackgroundMusicPlayer(private val context: Context) {
         synchronized(lock) {
             currentVolume = volume.coerceIn(0f, 1f)
             try {
-                mediaPlayer?.setVolume(currentVolume, currentVolume)
+                mediaPlayer?.setVolume(currentVolume * duckFactor, currentVolume * duckFactor)
+            } catch (_: Exception) {
+                // Ignore if media player is not in a valid state
+            }
+        }
+    }
+
+    /** Plays the music at [factor] of its volume (1 restores it), e.g. under the win phrase. */
+    fun duck(factor: Float) {
+        synchronized(lock) {
+            duckFactor = factor.coerceIn(0f, 1f)
+            try {
+                mediaPlayer?.setVolume(currentVolume * duckFactor, currentVolume * duckFactor)
             } catch (_: Exception) {
                 // Ignore if media player is not in a valid state
             }
@@ -68,7 +82,7 @@ class BackgroundMusicPlayer(private val context: Context) {
                 ?: MediaPlayer.create(context, resId)
                 ?: return
 
-            player.setVolume(currentVolume, currentVolume)
+            player.setVolume(currentVolume * duckFactor, currentVolume * duckFactor)
             player.setOnCompletionListener {
                 playNextTrack()
             }
