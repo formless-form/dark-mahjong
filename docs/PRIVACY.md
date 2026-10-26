@@ -27,4 +27,4 @@ If this policy ever changes, the new version will be published here with a new e
 
 ## Contact
 
-Questions about this policy: CONTACT_EMAIL_TO_BE_ADDED
+Questions about this policy: formless.form+googleplay@gmail.com
