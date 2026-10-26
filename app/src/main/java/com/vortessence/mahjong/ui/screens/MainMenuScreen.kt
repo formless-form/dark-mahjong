@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.vortessence.mahjong.R
 import com.vortessence.mahjong.data.model.ContinueInfo
-import com.vortessence.mahjong.ui.components.DriftingFog
 import com.vortessence.mahjong.ui.components.NameSeal
 import com.vortessence.mahjong.ui.components.rememberFilmGrain
 import com.vortessence.mahjong.ui.theme.Cinzel
@@ -53,8 +52,8 @@ private val Shade = Color(0xFF080C0B)
 private const val PHOTO_CREDIT = "Photo: Huangdan2060 · CC0 · Wikimedia Commons"
 
 /**
- * Title screen (portrait): a misty mountain photograph with fog drifting slowly across it. The
- * name seal and title sit in the open sky at the top; a short text menu in the same
+ * Title screen (portrait): a misty mountain photograph. The name seal and title sit in the open
+ * sky at the top; a short text menu in the same
  * inscriptional capitals sits over the dark forest at the bottom.
  */
 @Composable
@@ -65,8 +64,6 @@ fun MainMenuScreen(
     onChooseConstellation: () -> Unit,
     onSettings: () -> Unit,
     onMenuClick: () -> Unit = {},
-    fogStartSeconds: Float = 0f,
-    animateFog: Boolean = true,
 ) {
     val grain = rememberFilmGrain()
     Box(modifier = Modifier.fillMaxSize().background(Shade)) {
@@ -79,7 +76,6 @@ fun MainMenuScreen(
                 .fillMaxSize()
                 .graphicsLayer { renderEffect = grain },
         )
-        DriftingFog(modifier = Modifier.fillMaxSize(), startSeconds = fogStartSeconds, animate = animateFog)
         // Darken the bright sky behind the title, and deepen the forest behind the menu
         Box(
             Modifier

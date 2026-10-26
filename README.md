@@ -15,14 +15,14 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="240" alt="A board on the green mat"/>
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="240" alt="Winning: fireworks seen from above and a warm message"/>
-  <img src="docs/screenshots/title_fog.webp" width="240" alt="Fog drifting slowly across the title screen (sped up)"/>
+  <img src="docs/screenshots/fireworks.jpg" width="240" alt="The fireworks light show, seen from above"/>
 </p>
 
 ## What's different from the original
 
 ### A darker ambience
 - **One lamp over the table.** The table is lit by a single warm lamp and the room falls away into darkness. Tiles and tabletop share the same light, brightest in the middle and dim at the edges, but never too dark to read a tile.
-- **A misty title screen.** A real photograph of Sanqing Mountain in cloud, darkened, with subtle film grain and large, soft banks of mist drifting slowly across it (an AGSL shader). Above it sits a name seal, **暗夜麻將** ("dark-night mahjong"), in genuine seal script.
+- **A misty title screen.** A real photograph of Sanqing Mountain in cloud, darkened, with subtle film grain (an AGSL shader). Above it sits a name seal, **暗夜麻將** ("dark-night mahjong"), in genuine seal script.
 - **Dark everywhere else too.** One quiet colour palette, minimalist menus, no light theme.
 
 ### A different look

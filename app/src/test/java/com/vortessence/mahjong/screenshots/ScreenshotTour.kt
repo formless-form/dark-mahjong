@@ -4,9 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -75,8 +72,6 @@ class ScreenshotTour {
                     onPlayLevels = {},
                     onChooseConstellation = {},
                     onSettings = {},
-                    fogStartSeconds = 14f,
-                    animateFog = false,
                 )
             }
         }
@@ -136,24 +131,5 @@ class ScreenshotTour {
         }
         compose.onNodeWithText("Thai Straw").performScrollTo()
         shoot("settings")
-    }
-
-    /** Frames of the title fog half a second apart over 30 seconds, for a real-speed clip. */
-    @Test
-    fun titleFogFrames() {
-        var t by mutableFloatStateOf(0f)
-        compose.setContent {
-            MahjongTheme {
-                MainMenuScreen(
-                    onPlayLevels = {}, onChooseConstellation = {}, onSettings = {},
-                    fogStartSeconds = t, animateFog = false,
-                )
-            }
-        }
-        for (i in 0 until 61) {
-            t = i * 0.5f
-            compose.waitForIdle()
-            compose.onRoot().captureRoboImage("build/screenshots/fog/frame_%02d.png".format(i))
-        }
     }
 }
