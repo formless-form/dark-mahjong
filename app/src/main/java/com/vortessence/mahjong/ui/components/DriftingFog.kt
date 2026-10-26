@@ -21,11 +21,12 @@ import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 /**
- * Clouds of mist moving across the title photograph. Three layers at different depths and speeds
- * (broad slow banks behind, mid mist, quicker wisps in front), each billowing as it goes: its
- * shape is folded by noise fields that themselves evolve, so it churns rather than slides. Cloud
- * tops catch the sky's light, undersides are cooler; density becomes opacity the way real mist
- * thins (Beer-Lambert), so every edge is soft, and the band's own top and bottom are ragged.
+ * Large, soft masses of mist moving slowly and straight from right to left across the title
+ * photograph, in three layers composited back to front: each a procession of large masses (one to
+ * three screen-widths) with gaps between them; the furthest broadest, palest and slowest,
+ * nearer ones lower in the valley and a little quicker (parallax). Masses keep their shape as
+ * they travel (no swirling) and are soft and even, denser in their cores, with no bright wispy
+ * edges; each layer's top and bottom are ragged and travel with it.
  *
  * Fog has no fine detail, so it is rendered at a third of the screen resolution into its own
  * layer and smoothly scaled up, at about 30 fps. [startSeconds] fixes the moment shown, so
@@ -92,51 +93,64 @@ float vnoise(float2 p) {
                mix(hash21(i + float2(0.0, 1.0)), hash21(i + float2(1.0, 1.0)), u.x), u.y);
 }
 
+// Only broad octaves: large, soft masses with no fine wisps
 float fbm(float2 p) {
     float v = 0.0;
     float a = 0.5;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
         v += a * vnoise(p);
-        p = p * 2.03 + float2(1.7, 9.2);
+        p = p * 2.07 + float2(1.7, 9.2);
         a *= 0.5;
     }
-    return v;
+    return v / 0.875;
 }
 
-// One cloud layer's density: drifting sideways while folding in on itself. The warp fields
-// evolve with time, so the cloud billows and churns instead of sliding as a fixed pattern
+// One layer of cloud masses. Each mass keeps its shape (a fixed, gentle warp gives it an
+// irregular outline) and the whole layer travels straight from right to left
 float cloud(float2 uv, float t, float speed, float scale, float seed) {
-    float2 q = float2(uv.x * scale + t * speed, uv.y * scale * 1.6 + seed);
-    float2 w1 = float2(fbm(q * 0.6 + float2(seed, t * 0.03)),
-                       fbm(q * 0.6 + float2(seed + 5.2, -t * 0.025)));
-    float2 w2 = float2(fbm(q + 2.0 * w1 + float2(1.7, 9.2) + t * 0.02),
-                       fbm(q + 2.0 * w1 + float2(8.3, 2.8) - t * 0.015));
-    return fbm(q + 2.2 * w2);
+    float2 q = float2(uv.x * scale + t * speed, uv.y * scale * 1.3 + seed);
+    float2 w = float2(fbm(q * 0.5 + seed) - 0.5, fbm(q * 0.5 + seed + 7.3) - 0.5) * 0.4;
+    return fbm(q + w);
+}
+
+// A band's weight at height y: soft, with ragged edges that travel with the clouds
+float band(float y, float lo, float hi, float2 uv, float t, float speed, float seed) {
+    float rag = (vnoise(float2(uv.x * 1.2 + t * speed + seed, 3.3)) - 0.5) * 0.16;
+    return smoothstep(lo - 0.16 + rag, lo + 0.14 + rag, y) * (1.0 - smoothstep(hi - 0.14 - rag, hi + 0.16 - rag, y));
+}
+
+// Composite one layer over what is behind it (premultiplied)
+float4 over(float4 back, float3 col, float a) {
+    return float4(col * a + back.rgb * (1.0 - a), a + back.a * (1.0 - a));
+}
+
+// Soft, even mist: a little denser in each mass's core, no bright edges
+float mass(float d, float lo, float hi) {
+    return smoothstep(lo, hi, d) * (0.75 + 0.25 * smoothstep(hi, hi + 0.15, d));
 }
 
 half4 main(float2 p) {
     float2 uv = p / res.y;
     float t = time;
-    // Three depths: broad slow banks, mid mist, quicker wisps in front (parallax)
-    float d1 = cloud(uv, t, 0.012, 1.1, 0.0);
-    float d2 = cloud(uv + 3.1, t, 0.022, 1.9, 11.0);
-    float d3 = cloud(uv + 7.4, t, 0.038, 3.2, 23.0);
-    float od = max(d1 - 0.42, 0.0) * 2.2 + max(d2 - 0.48, 0.0) * 1.5 + max(d3 - 0.56, 0.0) * 1.0;
-
-    // Heaviest in the valley; the band's top and bottom are ragged and shifting, never straight
     float y = p.y / res.y;
-    float rag = (vnoise(float2(uv.x * 2.2 + t * 0.02, 3.3)) - 0.5) * 0.16
-              + (vnoise(float2(uv.x * 6.0 - t * 0.03, 7.1)) - 0.5) * 0.06;
-    float band = smoothstep(0.04 + rag, 0.36 + rag, y) * (1.0 - smoothstep(0.56 - rag, 0.92 - rag, y));
-    od *= 0.25 + 0.75 * band;
+    float4 acc = float4(0.0);
 
-    // Density to opacity as real mist thins: soft everywhere, never a hard edge
-    float alpha = (1.0 - exp(-od * 1.7)) * 0.6;
+    // Three layers back to front, each a procession of large, soft masses with gaps between
+    // them, travelling straight leftwards. Screen speeds (in screen heights per second) rise
+    // towards the front for parallax. Noise speed = screen speed x scale keeps them in step
+    // Back: the broadest, palest banks
+    float s1 = 0.0055;
+    acc = over(acc, float3(0.68, 0.72, 0.71),
+        mass(cloud(uv, t, s1 * 0.62, 0.62, 0.0), 0.475, 0.7) * band(y, 0.14, 0.6, uv, t, s1 * 1.2, 0.0) * 0.45);
+    // Middle: broad masses through the valley
+    float s2 = 0.008;
+    acc = over(acc, float3(0.60, 0.65, 0.64),
+        mass(cloud(uv + 3.1, t, s2 * 0.91, 0.91, 11.0), 0.495, 0.72) * band(y, 0.26, 0.74, uv, t, s2 * 1.2, 4.0) * 0.5);
+    // Front: nearer masses, lowest, over the forest
+    float s3 = 0.0102;
+    acc = over(acc, float3(0.53, 0.58, 0.57),
+        mass(cloud(uv + 7.4, t, s3 * 1.27, 1.27, 23.0), 0.52, 0.74) * band(y, 0.42, 0.9, uv, t, s3 * 1.2, 9.0) * 0.475);
 
-    // Light from the sky above: tops brighter, undersides cooler and greyer
-    float above = cloud(uv - float2(0.0, 0.025), t, 0.012, 1.1, 0.0);
-    float lit = clamp(0.62 + (d1 - above) * 5.0, 0.25, 1.0);
-    float3 col = mix(float3(0.40, 0.45, 0.45), float3(0.72, 0.76, 0.74), lit);
-    return half4(half3(col * alpha), half(alpha));
+    return half4(acc);
 }
 """

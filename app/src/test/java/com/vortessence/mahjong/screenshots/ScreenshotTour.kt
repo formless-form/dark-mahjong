@@ -138,7 +138,7 @@ class ScreenshotTour {
         shoot("settings")
     }
 
-    /** Frames of the title fog a second apart, for a short clip of it drifting. */
+    /** Frames of the title fog half a second apart over 30 seconds, for a real-speed clip. */
     @Test
     fun titleFogFrames() {
         var t by mutableFloatStateOf(0f)
@@ -150,8 +150,8 @@ class ScreenshotTour {
                 )
             }
         }
-        for (i in 0 until 30) {
-            t = i.toFloat()
+        for (i in 0 until 61) {
+            t = i * 0.5f
             compose.waitForIdle()
             compose.onRoot().captureRoboImage("build/screenshots/fog/frame_%02d.png".format(i))
         }

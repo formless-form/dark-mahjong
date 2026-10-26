@@ -53,11 +53,9 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 ### Title screen
 
 - **Photo:** full-bleed, darkened, misty Chinese mountains, cropped to a tall portrait frame with the lone pine in the middle: *Sanqing Mountain is surrounded by clouds and mists* (Huangdan2060, CC0, Wikimedia Commons). Scaled uniformly and never stretched, with subtle film grain (AGSL). A tiny courtesy credit sits bottom-right.
-- **Moving cloud:** three AGSL layers at different depths and speeds (broad slow banks, mid mist, quicker wisps in front).
-  - **Billowing:** each layer is folded by noise fields that themselves evolve, so the cloud churns rather than slides.
-  - **Light:** tops catch the sky's light, undersides are cooler.
-  - **Soft edges:** density becomes opacity as real mist thins (Beer-Lambert), and the band's top and bottom are ragged and shifting.
-  - **Cost:** rendered at a third of the screen resolution and smoothly scaled up, at about 30 fps.
+- **Moving cloud:** three AGSL layers of large, soft mist masses (one to three screen-widths, with gaps between them) travelling slowly and straight from right to left. The back layer is broadest, palest and slowest; nearer layers sit lower in the valley and move a little faster.
+  - **Shape:** masses keep their shape as they travel (no swirling), soft and even and denser in their cores, with no bright wisps. Each layer's ragged top and bottom travel with it.
+  - **Cost:** rendered at a third of the screen resolution and smoothly scaled up, at about 30 fps. Tuned with Gareth through real-time MP4 samples on 2026-10-26.
 - **Top, over the misty sky:** the **暗夜麻將** name seal (seal script, from Taiwan's CNS 11643 說文解字 font, subset; white on deep vermilion with carved-stone wear) and "DARK MAHJONG" in **Cinzel**, 19sp.
 - **Bottom, over the dark forest:** a plain text menu in Cinzel 17sp, left-aligned (Continue · Play · Layouts · Settings). Items brighten while pressed and give a soft click plus a light haptic.
 
