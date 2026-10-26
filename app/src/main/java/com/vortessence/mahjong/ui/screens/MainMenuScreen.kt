@@ -129,19 +129,23 @@ fun MainMenuScreen(
             MenuItem("Settings", menuStyle, onMenuClick = onMenuClick, onClick = onSettings)
         }
 
-        // System sans (Google Sans / Roboto) renders crispest at this size; the extra 30 px keeps
-        // the end of the line clear of the screen's rounded corner
-        val cornerClearance = with(LocalDensity.current) { 30.toDp() }
+        // System sans (Google Sans / Roboto) renders crispest at this size. Centred at the foot
+        // of the screen, its lowest letters 5 px above the bottom edge (the line box adds about
+        // 1 px below them)
+        val bottomGap = with(LocalDensity.current) { 4.toDp() }
         Text(
             text = PHOTO_CREDIT,
-            fontFamily = FontFamily.SansSerif,
-            fontSize = 6.5.sp,
-            letterSpacing = 0.02.em,
-            color = TitleText.copy(alpha = 0.45f),
+            // Its own style, not the theme's 24 sp line height, so the box hugs the letters
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 6.5.sp,
+                letterSpacing = 0.02.em,
+                color = TitleText.copy(alpha = 0.45f),
+            ),
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.displayCutout)
-                .padding(end = 10.dp + cornerClearance, bottom = 3.dp),
+                .padding(bottom = bottomGap),
         )
     }
 }

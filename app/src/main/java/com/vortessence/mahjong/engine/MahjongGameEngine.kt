@@ -17,8 +17,6 @@ sealed class TileTapResult {
 
 object MahjongGameEngine {
 
-    /** Boards up to this size are searched exhaustively for dead ends after every change. */
-    private const val DEAD_END_CHECK_MAX_TILES = 20
 
     /**
      * Initializes a new game state with a solvable board layout.
@@ -230,16 +228,12 @@ object MahjongGameEngine {
     }
 
     /**
-     * Whether the game cannot be finished from here: either no free pair is left, or the few
-     * remaining tiles provably can no longer be cleared (e.g. two matching tiles stacked).
+     * Whether play has run out: tiles are left but no free pair matches. While any pair can
+     * still be taken the player keeps going, even if the board can no longer be cleared in the
+     * end (e.g. two matching tiles stacked on each other); the reshuffle then fixes it.
      */
-    fun isStuck(tiles: List<BoardTile>, availablePairs: List<Pair<Int, Int>>): Boolean {
-        val activeTiles = tiles.filter { !it.isRemoved }
-        if (activeTiles.isEmpty()) return false
-        if (availablePairs.isEmpty()) return true
-        if (activeTiles.size > DEAD_END_CHECK_MAX_TILES) return false
-        return BoardSolvabilityGenerator.canBeCleared(activeTiles.map { it.position to it.tile }) == false
-    }
+    fun isStuck(tiles: List<BoardTile>, availablePairs: List<Pair<Int, Int>>): Boolean =
+        availablePairs.isEmpty() && tiles.any { !it.isRemoved }
 
     /**
      * Recalculates the `isFree` status for every active tile on the board.

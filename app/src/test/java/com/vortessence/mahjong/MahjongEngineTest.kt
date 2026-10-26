@@ -462,12 +462,15 @@ class MahjongEngineTest {
         return GameState(constellation = constellation, tiles = refreshed)
     }
 
+    // Play only stops when no pair can be taken: a board that can't be cleared in the end
+    // still lets the player take the pairs that are left
     @Test
-    fun testStackedMatchingTilesAreDetectedAsDeadEnd() {
+    fun testPlayContinuesWhileAnyPairIsLeft() {
         val state = stackedDeadEndState()
         val pairs = MahjongGameEngine.findAvailablePairs(state.tiles)
         assertEquals("East Winds are still a free pair", 1, pairs.size)
-        assertTrue("Board must be detected as stuck", MahjongGameEngine.isStuck(state.tiles, pairs))
+        assertEquals(false, BoardSolvabilityGenerator.canBeCleared(state.tiles.map { it.position to it.tile }))
+        assertFalse("A pair is left, so play goes on", MahjongGameEngine.isStuck(state.tiles, pairs))
     }
 
     @Test

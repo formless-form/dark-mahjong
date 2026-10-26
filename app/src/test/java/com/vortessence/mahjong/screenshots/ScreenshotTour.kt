@@ -185,7 +185,7 @@ class ScreenshotTour {
         compose.setContent {
             MahjongTheme {
                 Box(Modifier.fillMaxSize().background(Color(0xFF0C1110)))
-                StalemateDialog(canUndo = true, hasFreePairs = false, onReshuffle = {}, onUndo = {}, onRestart = {})
+                StalemateDialog(canUndo = true, onReshuffle = {}, onUndo = {}, onRestart = {})
             }
         }
         compose.waitForIdle()
