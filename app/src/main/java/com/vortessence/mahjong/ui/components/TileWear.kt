@@ -178,10 +178,10 @@ object TileWear {
                 val mask = (corner + 0.5f - sqrt(qx * qx + qy * qy)).coerceIn(0f, 1f)
                 if (mask <= 0f) continue
 
-                // Handled grime: a little everywhere, gathered towards the edges and corners
+                // Handled grime: a little everywhere, and patches of it worked into the edges
                 val e = min(min(fx, w - fx), min(fy, h - fy))
                 val g = fbm(fx / w * 5f + off, fy / h * 6.5f)
-                var a = (0.025f + 0.09f * g * g + 0.15f * exp(-e / 7f) * (0.6f + 0.8f * g)).coerceAtMost(0.32f)
+                var a = (0.025f + 0.09f * g * g + 0.16f * exp(-e / 5f) * smoothstep(0.42f, 0.72f, g)).coerceAtMost(0.3f)
                 var r = 88f; var gg = 66f; var b = 36f
 
                 // Uneven glaze: broad, faint ripples where it pooled thicker or ran thinner

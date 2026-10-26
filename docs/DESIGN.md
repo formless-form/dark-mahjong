@@ -64,9 +64,9 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 - **Used, glazed tiles:** every tile looks like a real tile from a well-played set, varying from tile to tile but stable for each one (`TileWear`, chosen from the tile id).
   - **Wear:** handled grime worked into the edges and corners, hairline scratches that catch the light, the odd tiny ding, a faint fingerprint haze. There are 8 generated textures × 4 orientations.
   - **Ageing and placement:** ivory from crisp to warmly yellowed, and a fraction-off-square placement.
-  - **Thick clear glaze:** drawn over the artwork as on a real tile. It has a sheen towards the top and a dark-room reflection at the bottom, plus a bright rounded rim where the coat curves over the face edge, with a depth shadow inside its lower rim.
+  - **Thick clear glaze on a flat face:** drawn over the artwork as on a real tile. The base tone stays even, and the gloss shows in sharp features rather than shading: a fine crisp edge glint, the reflections below, and bevel glints.
   - **Reflections that reveal the surface:** streaky specular highlights where the lamp's reflection is broken up by ripples in the glaze, with scratches flaring brighter inside the reflection. A crisp lamp reflection with a wavering lower edge and a slight per-tile tilt, plus a sharp hotspot near the lamp.
-  - **Not quite flat:** each face is very slightly domed, with its crown sitting a little differently per tile, and broad, faint ripples where the glaze pooled thicker or ran thinner.
+  - **Flat, but not machine-perfect:** faces are flat (no dome shading, which read as pillowed). Imperfection comes from broad, faint ripples where the glaze pooled thicker or ran thinner, and from patchy grime rather than an even ring around the edge.
   - **Engraved artwork:** the paint sits in carved grooves, so a fine shadow falls along each stroke's upper edge and a fine light edge along its lower lip.
 - **Tabletops:** all are drawn by one full-screen AGSL shader in true perspective.
   - **Green Mat:** fine felt fibres and soft mottling, matte.

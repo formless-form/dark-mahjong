@@ -274,10 +274,9 @@ object TileRenderer {
         // 7. Wear from years of play: grime, hairline scratches, dings, fingerprint haze
         drawWear(scope, boardTile.id, faceTopLeft, faceSize)
 
-        // 8. The clear glaze, over everything painted on the face. The lamp hangs above and
-        // slightly beyond the far edge: each face brightens towards its top, a reflection band
-        // of the lamp shade crosses its upper part (strongest near the lamp's mirror point, with
-        // a hotspot there), and the bevels glint
+        // 8. The clear glaze, over everything painted on the face. The face is flat; its gloss
+        // shows in sharp reflections of the lamp (streaked by tiny ripples in the glaze, strongest
+        // near the lamp's mirror point, with a hotspot there), scratch flares and edge glints
         drawGlaze(scope, boardTile.id, faceTopLeft, faceSize, cornerR, faceCorner, width, glare)
     }
 
@@ -315,29 +314,13 @@ object TileRenderer {
         width: Float,
         glare: Float,
     ) {
-        // The face is very slightly domed, never quite flat: a hint lighter where it bulges towards
-        // the lamp, falling away a little towards the edges. Each tile's crown sits differently
-        val (cxShift, cyShift, wobbleRaw) = TileWear.surface(id)
-        val crown = Offset(topLeft.x + size.width * (0.5f + cxShift), topLeft.y + size.height * (0.4f + cyShift))
-        scope.drawRoundRect(
-            brush = Brush.radialGradient(
-                0f to Color.White.copy(alpha = 0.035f),
-                0.5f to Color.Transparent,
-                0.85f to Color.Black.copy(alpha = 0.02f),
-                1f to Color.Black.copy(alpha = 0.06f),
-                center = crown,
-                radius = size.height * 0.62f,
-            ),
-            topLeft = topLeft,
-            size = size,
-            cornerRadius = corner,
-        )
+        val (_, _, wobbleRaw) = TileWear.surface(id)
         scope.drawRoundRect(
             brush = Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.32f),
-                0.3f to Color.White.copy(alpha = 0.07f),
-                0.7f to Color.Transparent,
-                1f to Color.Black.copy(alpha = 0.16f),
+                0f to Color.White.copy(alpha = 0.14f),
+                0.2f to Color.White.copy(alpha = 0.03f),
+                0.85f to Color.Transparent,
+                1f to Color.Black.copy(alpha = 0.06f),
                 startY = topLeft.y,
                 endY = topLeft.y + size.height,
             ),
@@ -362,7 +345,7 @@ object TileRenderer {
                 },
             )
         }
-        val band = 0.13f + 0.27f * glare
+        val band = 0.05f + 0.15f * glare
         val bandTopLeft = Offset(topLeft.x + size.width * 0.06f, topLeft.y + size.height * 0.03f)
         val bandSize = Size(size.width * 0.88f, size.height * 0.34f)
         scope.drawOval(
@@ -441,37 +424,20 @@ object TileRenderer {
                 center = hot,
             )
         }
-        // A thick clear coat rounds over at the edge of the face: its rim catches the light as a
-        // bright band (strongest at the top, nearest the lamp), and just inside the lower rim the
-        // coat's depth shows as a faint shadow
-        val rimWidth = width * 0.035f
-        val rimInset = rimWidth * 0.5f
+        // The clear coat ends in a fine, crisp edge glint (a flat face, not a rounded cushion)
+        val rimWidth = width * 0.012f
         scope.drawRoundRect(
             brush = Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.55f),
-                0.25f to Color.White.copy(alpha = 0.22f),
-                0.7f to Color.White.copy(alpha = 0.08f),
-                1f to Color.White.copy(alpha = 0.04f),
+                0f to Color.White.copy(alpha = 0.5f),
+                0.3f to Color.White.copy(alpha = 0.16f),
+                1f to Color.White.copy(alpha = 0.05f),
                 startY = topLeft.y,
                 endY = topLeft.y + size.height,
             ),
-            topLeft = Offset(topLeft.x + rimInset, topLeft.y + rimInset),
+            topLeft = Offset(topLeft.x + rimWidth * 0.5f, topLeft.y + rimWidth * 0.5f),
             size = Size(size.width - rimWidth, size.height - rimWidth),
-            cornerRadius = CornerRadius(corner.x - rimInset, corner.y - rimInset),
+            cornerRadius = CornerRadius(corner.x - rimWidth * 0.5f, corner.y - rimWidth * 0.5f),
             style = Stroke(width = rimWidth),
-        )
-        scope.drawRoundRect(
-            brush = Brush.verticalGradient(
-                0f to Color.Transparent,
-                0.8f to Color.Transparent,
-                1f to Color.Black.copy(alpha = 0.12f),
-                startY = topLeft.y,
-                endY = topLeft.y + size.height,
-            ),
-            topLeft = Offset(topLeft.x + rimWidth * 1.4f, topLeft.y + rimWidth * 1.4f),
-            size = Size(size.width - rimWidth * 2.8f, size.height - rimWidth * 2.8f),
-            cornerRadius = CornerRadius(corner.x * 0.8f, corner.y * 0.8f),
-            style = Stroke(width = rimWidth * 0.8f),
         )
         // Bevel glints: bright along the top edge, softer down the left, a touch of shade below
         scope.drawLine(
@@ -487,7 +453,7 @@ object TileRenderer {
             strokeWidth = width * 0.01f,
         )
         scope.drawLine(
-            color = Color.Black.copy(alpha = 0.12f),
+            color = Color.Black.copy(alpha = 0.07f),
             start = Offset(topLeft.x + cornerR, topLeft.y + size.height - width * 0.006f),
             end = Offset(topLeft.x + size.width - cornerR, topLeft.y + size.height - width * 0.006f),
             strokeWidth = width * 0.012f,
