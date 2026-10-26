@@ -10,12 +10,12 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="240" alt="Title screen: misty mountains, the name seal and a plain text menu"/>
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="240" alt="A board on the walnut table"/>
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="240" alt="A board on the Thai straw mat"/>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="240" alt="Zoomed in on a board on the Thai straw mat"/>
 </p>
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="240" alt="A board on the green mat"/>
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="240" alt="Winning: fireworks seen from above and a warm message"/>
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="Settings in Android 17's Material 3 Expressive style"/>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="The levels list, easy to hard"/>
 </p>
 
 ## What's different from the original

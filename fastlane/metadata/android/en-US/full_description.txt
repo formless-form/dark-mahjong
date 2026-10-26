@@ -1,32 +1,25 @@
-A calm, moody mahjong solitaire, played by lamplight: glossy, well-worn tiles on a softly lit table in a dark room, and misty mountains on the title screen. No timers, scores or interruptions.
+A calm, moody mahjong solitaire, played by lamplight: glossy, well-worn tiles on a softly lit table in a dark room, with misty mountains on the title screen. No timers, no scores, no interruptions.
 
-<b>A darker ambience</b>
+A DARKER AMBIENCE
+• One lamp over the table: warm light in the middle, the room falling away into darkness.
+• A misty mountain photograph and a seal-script name seal on the title screen.
+• Dark everywhere, with quiet, modern menus.
 
-<ul>
-<li><b>One lamp over the table:</b> warm light in the middle, the room falling away into darkness.</li>
-<li><b>Misty title screen:</b> a mountain photograph with fog drifting slowly across it.</li>
-<li><b>Dark everywhere:</b> one quiet palette, minimalist menus.</li>
-</ul>
+A DIFFERENT LOOK
+• The table seen at a slight angle, in true perspective, with every tile face visible.
+• Glossy, well-used tiles: a thick glaze with streaky reflections, hairline scratches, aged ivory and engraved artwork. No two tiles alike.
+• Three tabletops: lacquered walnut, green felt and a woven Thai straw mat.
+• Pinch to zoom in on the stacks, and tap once to zoom back out.
 
-<b>A different look</b>
+RELAXED PLAY
+• 54 layouts, from small, gentle boards to full 144-tile challenges, and 41 levels that run from easy to hard.
+• No timer, no scores, no statistics.
+• Unlimited hints, undo and reshuffles, and every board can be cleared.
+• A guided tutorial for newcomers.
+• Clearing a board brings fireworks, a short bamboo-flute melody and a warm, never-repeating message.
+• Soft wooden taps and tile clacks, gentle music and haptics, each optional.
 
-<ul>
-<li><b>Seen at an angle:</b> the table in true perspective, every tile face fully visible.</li>
-<li><b>Glossy, well-used tiles:</b> a thick glaze with streaky reflections, hairline scratches, aged ivory and engraved artwork; no two tiles alike.</li>
-<li><b>Three tabletops:</b> lacquered walnut, green felt mat and a woven Thai straw mat.</li>
-</ul>
+PRIVACY
+No ads, no tracking, no accounts and no internet access. Everything stays on your device.
 
-<b>Relaxed play</b>
-
-<ul>
-<li>No timer, no scores, no statistics.</li>
-<li>Unlimited hints, undo and reshuffles; every board is guaranteed solvable.</li>
-<li>Fireworks and a warm, never-repeating message when you clear a board.</li>
-<li>Guided tutorial, auto-save, soft sounds, music and haptics (all optional).</li>
-</ul>
-
-<b>Privacy</b>
-
-No ads, no tracking, no network access. Everything happens on your device.
-
-Dark Mahjong is a fork of Mahjong Solitaire by PcmciaKai, under the GPL v3.
+Dark Mahjong is free and open source (GPL v3), built on Mahjong Solitaire by PcmciaKai. Layouts include boards from Mah by ffalt.

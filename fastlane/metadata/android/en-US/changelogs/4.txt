@@ -1,0 +1,1 @@
+First release of Dark Mahjong: a calm, lamp-lit mahjong solitaire with 54 layouts, pinch-to-zoom and no timers or scores.

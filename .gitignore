@@ -32,3 +32,6 @@ Thumbs.db
 # IDE caches & scratch space
 .kotlin/
 .artifacts/
+
+# Release bundles for Google Play
+/dist
