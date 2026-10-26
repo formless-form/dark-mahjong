@@ -1,24 +1,32 @@
 package com.vortessence.mahjong.ui.components
 
+import android.view.WindowManager
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogWindowProvider
 
 @Composable
 fun StalemateDialog(
@@ -29,70 +37,68 @@ fun StalemateDialog(
     onRestart: () -> Unit,
 ) {
     Dialog(onDismissRequest = {}) {
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        BlurBehindDialog()
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
+                modifier = Modifier.padding(24.dp),
             ) {
-                Text(
-                    text = "No Available Moves",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
+                Icon(
+                    Icons.Rounded.Shuffle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(24.dp),
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "No moves left",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(16.dp))
                 Text(
                     text = if (hasFreePairs) {
-                        "The remaining tiles can no longer be cleared. You can reshuffle the remaining tiles, undo the last move, or restart."
+                        "The tiles that are left can't all be cleared now. Reshuffle them, undo your last move, or start the board again."
                     } else {
-                        "There are no matching pairs left among the free tiles. You can reshuffle the remaining tiles, undo the last move, or restart."
+                        "None of the free tiles match. Reshuffle the tiles that are left, undo your last move, or start the board again."
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = onReshuffle,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Reshuffle Tiles", fontWeight = FontWeight.Bold)
-                }
-
-                if (canUndo) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = onUndo,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Undo Last Move")
+                Spacer(Modifier.height(24.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    BigButton("Reshuffle", onClick = onReshuffle, primary = true, icon = Icons.Rounded.Shuffle, modifier = Modifier.fillMaxWidth())
+                    if (canUndo) {
+                        BigButton("Undo last move", onClick = onUndo, icon = Icons.AutoMirrored.Rounded.Undo, modifier = Modifier.fillMaxWidth())
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onRestart,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Restart Board")
+                    BigButton("Restart", onClick = onRestart, icon = Icons.Rounded.RestartAlt, modifier = Modifier.fillMaxWidth())
                 }
             }
         }
+    }
+}
+
+/**
+ * Blurs whatever is behind the dialog's window, as Android 17 does behind its own dialogs and
+ * menus, with a lighter dim since the blur already sets the dialog apart. Phones that have
+ * blur turned off (battery saver, or the accessibility setting) just get the dim.
+ */
+@Composable
+fun BlurBehindDialog(radius: Dp = 28.dp) {
+    val view = LocalView.current
+    val radiusPx = with(LocalDensity.current) { radius.roundToPx() }
+    DisposableEffect(view, radiusPx) {
+        (view.parent as? DialogWindowProvider)?.window?.let { window ->
+            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.attributes = window.attributes.apply { blurBehindRadius = radiusPx }
+            window.setDimAmount(0.35f)
+        }
+        onDispose {}
     }
 }

@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -12,18 +14,27 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.vortessence.mahjong.data.model.ContinueInfo
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
+import com.vortessence.mahjong.engine.TutorialScript
+import com.vortessence.mahjong.ui.components.PredictiveBackState
+import com.vortessence.mahjong.ui.components.StalemateDialog
 import com.vortessence.mahjong.ui.components.TableSurfaceRenderer
 import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.components.fireworksSnapshot
+import com.vortessence.mahjong.ui.components.predictiveBack
+import com.vortessence.mahjong.ui.screens.ConstellationSelectScreen
 import com.vortessence.mahjong.ui.screens.GameScreen
+import com.vortessence.mahjong.ui.screens.LevelSelectScreen
 import com.vortessence.mahjong.ui.screens.MainMenuScreen
 import com.vortessence.mahjong.ui.screens.SettingsScreen
+import com.vortessence.mahjong.ui.screens.TitleMenuStyle
 import com.vortessence.mahjong.ui.theme.MahjongTheme
 import org.junit.Rule
 import org.junit.Test
@@ -63,19 +74,101 @@ class ScreenshotTour {
     @Test fun tabletopWalnut() = tabletop(TableSurface.WALNUT)
     @Test fun tabletopThaiStraw() = tabletop(TableSurface.THAI_STRAW)
 
+    @Composable
+    private fun TitleScreen(style: TitleMenuStyle = TitleMenuStyle.SERIF) = MainMenuScreen(
+        continueInfo = ContinueInfo("Level 3: Celestial Lantern", "40 tiles remaining"),
+        menuStyle = style,
+        onPlayLevels = {},
+        onChooseConstellation = {},
+        onSettings = {},
+    )
+
     @Test
     fun title() {
+        compose.setContent { MahjongTheme { TitleScreen() } }
+        shoot("title")
+    }
+
+    @Test
+    fun titleSansMenu() {
+        compose.setContent { MahjongTheme { TitleScreen(TitleMenuStyle.SANS) } }
+        shoot("title_sans_menu")
+    }
+
+    private val someProgress = Progress(highestLevelReached = 4, completedConstellations = setOf("tutorial"))
+
+    @Test
+    fun levels() {
         compose.setContent {
             MahjongTheme {
-                MainMenuScreen(
-                    continueInfo = ContinueInfo("Level 3: Celestial Lantern", "40 tiles remaining"),
-                    onPlayLevels = {},
-                    onChooseConstellation = {},
-                    onSettings = {},
+                LevelSelectScreen(
+                    progress = someProgress.copy(
+                        highestLevelReached = 4,
+                        completedConstellations = ConstellationRepository.getLevelConstellations(false).take(3).map { it.id }.toSet() + "tutorial",
+                    ),
+                    levels = ConstellationRepository.getLevelConstellations(false),
+                    onLevelSelected = {},
+                    onBack = {},
                 )
             }
         }
-        shoot("title")
+        shoot("levels")
+    }
+
+    @Test
+    fun layouts() {
+        compose.setContent {
+            MahjongTheme { ConstellationSelectScreen(progress = someProgress, onConstellationSelected = {}, onBack = {}) }
+        }
+        shoot("layouts")
+    }
+
+    @Test
+    fun tutorial() {
+        TileWear.prepareNow()
+        val tutorial = ConstellationRepository.tutorialConstellation
+        compose.setContent {
+            MahjongTheme {
+                GameScreen(
+                    gameState = MahjongGameEngine.startNewGame(tutorial),
+                    levelIndex = ConstellationRepository.TUTORIAL_LEVEL,
+                    tutorialStep = TutorialScript.steps.first(),
+                    onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
+                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                )
+            }
+        }
+        shoot("tutorial")
+    }
+
+    @Test
+    fun noMovesDialog() {
+        TileWear.prepareNow()
+        compose.setContent {
+            MahjongTheme {
+                Box(Modifier.fillMaxSize().background(Color(0xFF0C1110)))
+                StalemateDialog(canUndo = true, hasFreePairs = false, onReshuffle = {}, onUndo = {}, onRestart = {})
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage("build/screenshots/no_moves.png")
+    }
+
+    // Settings part-way through a back swipe from the left edge, the title screen behind it
+    @Test
+    fun predictiveBackMidGesture() {
+        val back = PredictiveBackState().apply { progress = 0.7f }
+        compose.setContent {
+            MahjongTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TitleScreen()
+                    Box(Modifier.fillMaxSize().predictiveBack(back).background(MaterialTheme.colorScheme.background)) {
+                        SettingsScreen(settings = GameSettings(), onSettingsChanged = {}, onBack = {})
+                    }
+                }
+            }
+        }
+        shoot("predictive_back")
     }
 
     private fun level(index: Int): GameState =
@@ -129,7 +222,7 @@ class ScreenshotTour {
                 SettingsScreen(settings = GameSettings(tableSurface = TableSurface.THAI_STRAW), onSettingsChanged = {}, onBack = {})
             }
         }
-        compose.onNodeWithText("Thai Straw").performScrollTo()
+        compose.onNodeWithText("Thai straw").performScrollTo()
         shoot("settings")
     }
 }

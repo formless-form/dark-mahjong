@@ -1,6 +1,5 @@
 package com.vortessence.mahjong.ui.screens
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,339 +8,241 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.FitScreen
+import androidx.compose.material.icons.rounded.Highlight
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Tag
+import androidx.compose.material.icons.rounded.Texture
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.ui.components.CheckSwitch
+import com.vortessence.mahjong.ui.components.ExpressiveScreen
+import com.vortessence.mahjong.ui.components.LeadingIcon
+import com.vortessence.mahjong.ui.components.SectionHeader
+import com.vortessence.mahjong.ui.components.SegmentGap
+import com.vortessence.mahjong.ui.components.segmentColors
 
-@OptIn(ExperimentalMaterial3Api::class)
+private typealias Segment = @Composable (ListItemShapes) -> Unit
+
 @Composable
 fun SettingsScreen(
     settings: GameSettings,
     onSettingsChanged: (GameSettings) -> Unit,
     onBack: () -> Unit,
 ) {
-    BackHandler {
-        onBack()
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Settings",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
+    ExpressiveScreen(title = "Settings", onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
-            // Audio Section
-            SettingsSectionHeader(title = "Sound & Music")
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    // Game Sounds Toggle
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            Text(
-                                text = "Game Sounds",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Tile tap, match, and completion sounds",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = settings.soundEnabled,
-                            onCheckedChange = { onSettingsChanged(settings.copy(soundEnabled = it)) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
-                        )
+            SectionHeader("Sound & music")
+            SegmentedGroup(
+                buildList {
+                    add { shapes ->
+                        ToggleRow(
+                            shapes, Icons.AutoMirrored.Rounded.VolumeUp, "Game sounds", "Tile taps, matches and the finish",
+                            settings.soundEnabled,
+                        ) { onSettingsChanged(settings.copy(soundEnabled = it)) }
                     }
-
                     if (settings.soundEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Sound Volume: ${(settings.soundVolume * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = settings.soundVolume,
-                            onValueChange = { onSettingsChanged(settings.copy(soundVolume = it)) },
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                    // Background Music Toggle
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            Text(
-                                text = "Background Music",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Tranquil Chinese pentatonic melody",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        add { shapes ->
+                            SliderRow(shapes, "Sound volume", settings.soundVolume) {
+                                onSettingsChanged(settings.copy(soundVolume = it))
+                            }
                         }
-                        Switch(
-                            checked = settings.musicEnabled,
-                            onCheckedChange = { onSettingsChanged(settings.copy(musicEnabled = it)) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
-                        )
                     }
-
+                    add { shapes ->
+                        ToggleRow(
+                            shapes, Icons.Rounded.MusicNote, "Background music", "Tranquil Chinese pentatonic melody",
+                            settings.musicEnabled,
+                        ) { onSettingsChanged(settings.copy(musicEnabled = it)) }
+                    }
                     if (settings.musicEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Music Volume: ${(settings.musicVolume * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = settings.musicVolume,
-                            onValueChange = { onSettingsChanged(settings.copy(musicVolume = it)) },
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
-                    }
-                }
-            }
-
-            // Gameplay Section
-            SettingsSectionHeader(title = "Gameplay")
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    // Highlight Selectable Tiles
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Highlight Selectable Tiles",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Visually distinguish tiles that can currently be selected",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = settings.highlightFreeTiles,
-                            onCheckedChange = { onSettingsChanged(settings.copy(highlightFreeTiles = it)) }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                    // Auto-Zoom
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Automatic Board Scaling",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Dynamically sizes the board to fit all screen sizes",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = settings.autoZoomEnabled,
-                            onCheckedChange = { onSettingsChanged(settings.copy(autoZoomEnabled = it)) }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                    // Vibration / Haptics
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Vibration & Haptics",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Gentle physical feedback on tile selection and matches",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = settings.vibrationEnabled,
-                            onCheckedChange = { onSettingsChanged(settings.copy(vibrationEnabled = it)) }
-                        )
-                    }
-                }
-            }
-
-            // Appearance / Theme Section
-            SettingsSectionHeader(title = "Appearance")
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Table Surface",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Material surface of the playing table",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        TableSurface.entries.forEach { surface ->
-                            FilterChip(
-                                selected = settings.tableSurface == surface,
-                                onClick = { onSettingsChanged(settings.copy(tableSurface = surface)) },
-                                label = { Text(surface.displayName) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurface
-                                )
-                            )
+                        add { shapes ->
+                            SliderRow(shapes, "Music volume", settings.musicVolume) {
+                                onSettingsChanged(settings.copy(musicVolume = it))
+                            }
                         }
                     }
+                },
+            )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            SectionHeader("Gameplay")
+            SegmentedGroup(
+                listOf(
+                    { shapes ->
+                        ToggleRow(
+                            shapes, Icons.Rounded.Highlight, "Highlight selectable tiles", "Dim the tiles that can't be picked yet",
+                            settings.highlightFreeTiles,
+                        ) { onSettingsChanged(settings.copy(highlightFreeTiles = it)) }
+                    },
+                    { shapes ->
+                        ToggleRow(
+                            shapes, Icons.Rounded.FitScreen, "Automatic board scaling", "Grow the board to fill the screen as it clears",
+                            settings.autoZoomEnabled,
+                        ) { onSettingsChanged(settings.copy(autoZoomEnabled = it)) }
+                    },
+                    { shapes ->
+                        ToggleRow(
+                            shapes, Icons.Rounded.Vibration, "Vibration", "Gentle feedback on taps and matches",
+                            settings.vibrationEnabled,
+                        ) { onSettingsChanged(settings.copy(vibrationEnabled = it)) }
+                    },
+                ),
+            )
 
-                    // Tile Corner Index Toggle
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Draw Corner Index",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Display corner numbers and letters on tiles for easy reading",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = settings.showCornerIndex,
-                            onCheckedChange = { onSettingsChanged(settings.copy(showCornerIndex = it)) }
-                        )
-                    }
-                }
-            }
+            SectionHeader("Appearance")
+            SegmentedGroup(
+                listOf(
+                    { shapes ->
+                        TableSurfaceRow(shapes, settings.tableSurface) { onSettingsChanged(settings.copy(tableSurface = it)) }
+                    },
+                    { shapes ->
+                        ToggleRow(
+                            shapes, Icons.Rounded.Tag, "Corner index", "Numbers and letters in each tile's corner",
+                            settings.showCornerIndex,
+                        ) { onSettingsChanged(settings.copy(showCornerIndex = it)) }
+                    },
+                ),
+            )
+        }
+    }
+}
+
+// A run of list items drawn as one rounded block: big outer corners, small inner ones, hairline gaps
+@Composable
+private fun SegmentedGroup(segments: List<Segment>) {
+    Column(verticalArrangement = Arrangement.spacedBy(SegmentGap)) {
+        segments.forEachIndexed { index, segment ->
+            segment(ListItemDefaults.segmentedShapes(index = index, count = segments.size))
         }
     }
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-    )
+private fun ToggleRow(
+    shapes: ListItemShapes,
+    icon: ImageVector,
+    title: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    SegmentedListItem(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        // Keep the segment's corners when switched on
+        shapes = shapes.copy(selectedShape = shapes.shape),
+        colors = segmentColors(),
+        leadingContent = { LeadingIcon(icon) },
+        trailingContent = { CheckSwitch(checked = checked, onCheckedChange = null) },
+        supportingContent = { Text(summary) },
+    ) {
+        Text(title)
+    }
+}
+
+@Composable
+private fun SliderRow(shapes: ListItemShapes, title: String, value: Float, onValueChange: (Float) -> Unit) {
+    SegmentedListItem(
+        shapes = shapes,
+        colors = segmentColors(),
+        // Lines the slider up with the titles above, past the leading icons
+        leadingContent = { Spacer(Modifier.width(40.dp)) },
+        trailingContent = {
+            Text(
+                "${(value * 100).toInt()}%",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        supportingContent = {
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                colors = SliderDefaults.colors(
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
+        },
+    ) {
+        Text(title)
+    }
+}
+
+// The table choice: a connected button group, the chosen surface filled in and fully rounded
+@Composable
+private fun TableSurfaceRow(shapes: ListItemShapes, selected: TableSurface, onSelect: (TableSurface) -> Unit) {
+    Surface(shape = shapes.shape, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LeadingIcon(Icons.Rounded.Texture)
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text("Table surface", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        "What the tiles are played on",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            val surfaces = TableSurface.entries
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                surfaces.forEachIndexed { index, surface ->
+                    ToggleButton(
+                        checked = surface == selected,
+                        onCheckedChange = { onSelect(surface) },
+                        shapes = when (index) {
+                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                            surfaces.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                        },
+                        colors = ToggleButtonDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { role = Role.RadioButton },
+                    ) {
+                        Text(surface.displayName, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
 }

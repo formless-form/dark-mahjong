@@ -34,6 +34,19 @@ Classic mahjong solitaire, unchanged from upstream: remove pairs of identical *f
 
 Dark only. Near-black, slightly warm surfaces (deep charcoal, never pure `#000`, so tile edges and shadows still read). Text is soft off-white, not pure white. Accent: a muted amber/jade glow for selection and primary buttons. All UI colours come from one token set, so a later tweak is a single file.
 
+### Android 17 conventions (since 2026-10-26)
+
+The menus and controls follow **Material 3 Expressive**, Android 16–17's design language, on the same dark palette (no wallpaper colours):
+
+- **Type:** **Google Sans Flex** (OFL; Android's own typeface) everywhere except the title screen, on the Material 3 Expressive type scale. The bundled file keeps its weight and optical-size axes; three families use optical sizes tuned to small, medium and large text.
+- **Screens:** a large title that shrinks into the top bar on scroll, with a round tonal back button. Settings, Levels and Layouts are **segmented lists**: rounded groups with small inner corners and hairline gaps, leading icons in soft circles, switches with a tick in the thumb, sentence-case labels.
+- **Shapes:** level badges use the Expressive shape set (a "sunny" burst for the level you're up to, a soft cookie with a tick once cleared). Buttons are pills whose corners square off slightly when pressed. The table choice is a connected button group.
+- **In game:** the level and layout name sit at the top; **Hint · Undo · Restart** are big labelled buttons in a floating toolbar under the board (the first step of M2b's big-button bar).
+- **Depth and blur:** dialogs blur what's behind them (window blur), and the board blurs softly behind the win celebration.
+- **Motion:** springy expressive motion; screens change with a shared-axis depth transition, and the back gesture is **predictive**: the screen shrinks toward the swipe with rounded corners, the title screen visible behind it.
+- **Loading:** Material's shape-morphing loading indicator.
+- **Launcher icon:** the name seal itself, as an adaptive icon: vermilion background, the carved white characters on the foreground, plus a monochrome layer for themed icons. Drawn by `tools/make-launcher-icon.py` from the seal font, with the title seal's roughened edges but no worn flecks.
+
 ### The board: softly lit
 
 - **Lighting:** one gentle overhead "lamp". A soft pool of light falls on the centre of the table and fades to dark at the edges (vignette). Tiles are lit from the upper-left with a low-intensity highlight, so they read as solid objects without shine or glare.
@@ -56,6 +69,7 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 - **Moving cloud: parked (2026-10-26).** A slowly drifting mist layer over the photo was tried. On the Pixel its reduced-resolution layer showed a hard-edged rectangle (part of the layer not refreshing), so it was removed for now. The last version is in commit `ef2c448` (`DriftingFog.kt`) if we revisit it; a fix would render it at full resolution or into a properly invalidated offscreen bitmap.
 - **Top, over the misty sky:** the **暗夜麻將** name seal (seal script, from Taiwan's CNS 11643 說文解字 font, subset; white on deep vermilion with carved-stone wear) and "DARK MAHJONG" in **Cinzel**, 19sp.
 - **Bottom, over the dark forest:** a plain text menu in Cinzel 17sp, left-aligned (Continue · Play · Layouts · Settings). Items brighten while pressed and give a soft click plus a light haptic.
+- **Alternative under consideration (2026-10-26):** the same menu in Google Sans Flex 20sp, with the title in bold Cinzel at 20sp (`TitleMenuStyle.SANS`). The Cinzel menu stays the default until one is chosen.
 
 ### The table: tilted camera, lamp light
 
@@ -92,7 +106,7 @@ Clearing a board sets off a fireworks light show **seen from directly above**. T
 - **Pinch-to-zoom + pan** (one-finger drag pans once zoomed), double-tap to zoom in/out, a big **Fit** button, and upstream's auto-fit as the board empties. A generous touch slop keeps a pan from ever selecting a tile.
 - **Highlight free tiles** (dim blocked tiles), on by default for early levels.
 - **Larger text:** 100 / 130 / 160 % on top of the system font size.
-- **Big buttons:** in portrait the controls live in a **bottom bar** under the board (planned for M2b). Four large labelled buttons: Hint · Undo · Shuffle · Menu, each at least 72 dp, icon plus word. Menus use big cards.
+- **Big buttons:** in portrait the controls live in a **bottom bar** under the board: a floating toolbar of large labelled buttons, icon plus word (Hint · Undo · Restart since 2026-10-26; M2b may add Shuffle). Back is the round button at the top left, or the back gesture. Menus use big list rows.
 - Sounds, music and haptics stay, each with its own toggle.
 
 ## Screens (all portrait)
@@ -146,9 +160,9 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 ## Licences
 
 - Code: GPLv3 with upstream's app-store exception; keep `NOTICE.md` and add Dark Mahjong's changes.
-- Tiles: samoheen, CC0. Music: upstream's Suno tracks, CC0. Font: Tomorrow, OFL.
+- Tiles: samoheen, CC0. Music: upstream's Suno tracks, CC0. Fonts: Google Sans Flex and Cinzel, OFL (upstream's Tomorrow is no longer bundled).
 - Layouts from ffalt/mah: MIT; add its copyright notice.
-- Sounds: T-STUDIO pack (not GPL), kept for personal use; swap later for CC0 sounds (e.g. Kenney's CC0 packs).
+- Sounds: T-STUDIO pack (not GPL), kept for personal use only. **Next milestone (M3):** replace every sound with open-source files (CC0 preferred, e.g. Kenney's packs), so the app can go on Google Play.
 - Backgrounds: our own shader code, so nothing to license.
 
 ## Testing
@@ -165,13 +179,14 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M0 | Toolchain + unmodified upstream running on the Pixel ✅ done 2026-10-25 (adb over Tailscale) |
 | M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/moves/Ko-fi; photo title screen with name seal; win fireworks + varied messages ✅ 2026-10-25 (win celebration not yet seen on the phone) |
 | M2 | Portrait refocus; fireworks seen from above; tilted camera; walnut / green mat / Thai straw (photo) tabletops; shiny lamp-lit tiles in the dark; drifting title fog; JVM screenshot tests ✅ 2026-10-26 |
-| M2b | Board renderer: tile atlas, pinch/pan zoom, tile-size setting, big-button bar |
-| M3 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
-| M4 | Layout conversion (ffalt/mah), difficulty tool, 300-level table, journey map |
-| M5 | Today's Puzzle + calendar, Quick Game |
-| M6 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
-| M7 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
-| M8 | CC0 sound swap (later) |
+| M2c | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar; the name seal as launcher icon ✅ 2026-10-26 |
+| M2b | Board renderer: tile atlas, pinch/pan zoom, tile-size setting, Shuffle in the button bar |
+| M3 | **Next:** open-source sounds only (CC0 preferred; every file's licence recorded in NOTICE.md), replacing the T-STUDIO pack, so the app can be listed on Google Play |
+| M4 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
+| M5 | Layout conversion (ffalt/mah), difficulty tool, 300-level table, journey map |
+| M6 | Today's Puzzle + calendar, Quick Game |
+| M7 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
+| M8 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
 
 ## Remaining decisions
 

@@ -1,6 +1,13 @@
 package com.vortessence.mahjong
 
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -8,10 +15,16 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vortessence.mahjong.ui.components.PredictiveBackHandling
+import com.vortessence.mahjong.ui.components.PredictiveBackState
+import com.vortessence.mahjong.ui.components.predictiveBack
 import com.vortessence.mahjong.ui.screens.ConstellationSelectScreen
 import com.vortessence.mahjong.ui.screens.GameScreen
 import com.vortessence.mahjong.ui.screens.LevelSelectScreen
@@ -32,77 +45,110 @@ fun MahjongApp(viewModel: MahjongViewModel) {
     val tutorialStep by viewModel.tutorialStep.collectAsStateWithLifecycle()
     val winMessage by viewModel.winMessage.collectAsStateWithLifecycle()
 
+    val back = remember { PredictiveBackState() }
+    val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
+    // Every screen but the title goes back to the title, with the predictive back animation
+    PredictiveBackHandling(enabled = currentScreen !is Screen.MainMenu, state = back, onBack = toMenu)
+    LaunchedEffect(currentScreen) { back.reset() }
+
+    val mainMenu = @Composable {
+        MainMenuScreen(
+            continueInfo = continueInfo,
+            onContinue = { viewModel.continueGame() },
+            onPlayLevels = { viewModel.navigateTo(Screen.LevelSelect) },
+            onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
+            onSettings = { viewModel.navigateTo(Screen.Settings) },
+            onMenuClick = { viewModel.audioManager.playMenuClick() },
+        )
+    }
+
     MahjongTheme(tableSurface = settings.tableSurface) {
-        Crossfade(targetState = currentScreen, label = "ScreenTransition") { screen ->
-            // Every screen but the title (whose scenery runs full-bleed) keeps its content clear
-            // of the camera cutout
-            val contentModifier = if (screen is Screen.MainMenu) {
-                Modifier.fillMaxSize()
-            } else {
-                Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .windowInsetsPadding(WindowInsets.displayCutout)
+        val motion = MaterialTheme.motionScheme
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            // The title screen, revealed behind a screen that's being swiped back
+            if (back.revealing) {
+                Box(Modifier.fillMaxSize()) { mainMenu() }
             }
-            Box(modifier = contentModifier) {
-                when (screen) {
-                    is Screen.MainMenu -> {
-                        MainMenuScreen(
-                            continueInfo = continueInfo,
-                            onContinue = { viewModel.continueGame() },
-                            onPlayLevels = { viewModel.navigateTo(Screen.LevelSelect) },
-                            onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
-                            onSettings = { viewModel.navigateTo(Screen.Settings) },
-                            onMenuClick = { viewModel.audioManager.playMenuClick() },
-                        )
-                    }
 
-                    is Screen.LevelSelect -> {
-                        LevelSelectScreen(
-                            progress = progress,
-                            levels = viewModel.currentLevelConstellations,
-                            onLevelSelected = { level -> viewModel.startLevel(level) },
-                            onBack = { viewModel.navigateTo(Screen.MainMenu) },
-                        )
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    when {
+                        // The back gesture has already shown this change
+                        back.committed -> EnterTransition.None togetherWith ExitTransition.None
+                        // Material's shared-axis depth motion: forward comes up from below, back recedes
+                        targetState is Screen.MainMenu ->
+                            (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 1.06f)) togetherWith
+                                (fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), targetScale = 0.94f))
+                        else ->
+                            (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f)) togetherWith
+                                (fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), targetScale = 1.06f))
                     }
+                },
+                modifier = Modifier.predictiveBack(back),
+                label = "ScreenTransition",
+            ) { screen ->
+                // Every screen but the title (whose scenery runs full-bleed) keeps its content clear
+                // of the camera cutout
+                val contentModifier = if (screen is Screen.MainMenu) {
+                    Modifier.fillMaxSize()
+                } else {
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .windowInsetsPadding(WindowInsets.displayCutout)
+                }
+                Box(modifier = contentModifier) {
+                    when (screen) {
+                        is Screen.MainMenu -> mainMenu()
 
-                    is Screen.ConstellationSelect -> {
-                        ConstellationSelectScreen(
-                            progress = progress,
-                            onConstellationSelected = { constellation -> viewModel.startConstellation(constellation) },
-                            onBack = { viewModel.navigateTo(Screen.MainMenu) },
-                        )
-                    }
+                        is Screen.LevelSelect -> {
+                            LevelSelectScreen(
+                                progress = progress,
+                                levels = viewModel.currentLevelConstellations,
+                                onLevelSelected = { level -> viewModel.startLevel(level) },
+                                onBack = toMenu,
+                            )
+                        }
 
-                    is Screen.Game -> {
-                        GameScreen(
-                            gameState = gameState,
-                            levelIndex = levelIndex,
-                            settings = settings,
-                            tutorialStep = tutorialStep,
-                            winMessage = winMessage,
-                            totalLevels = viewModel.currentLevelConstellations.size,
-                            onBack = { viewModel.navigateTo(Screen.MainMenu) },
-                            onTileClick = { tileId -> viewModel.onTileTapped(tileId) },
-                            onTileMatch = { viewModel.playTileMatch() },
-                            onHint = { viewModel.requestHint() },
-                            onUndo = { viewModel.undo() },
-                            onRestart = { viewModel.restartGame() },
-                            onReshuffle = { viewModel.reshuffle() },
-                            onNextLevel = { viewModel.playNextLevel() },
-                            onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
-                            onMainMenu = { viewModel.navigateTo(Screen.MainMenu) },
-                            onTutorialContinue = { viewModel.advanceTutorial() },
-                            onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
-                        )
-                    }
+                        is Screen.ConstellationSelect -> {
+                            ConstellationSelectScreen(
+                                progress = progress,
+                                onConstellationSelected = { constellation -> viewModel.startConstellation(constellation) },
+                                onBack = toMenu,
+                            )
+                        }
 
-                    is Screen.Settings -> {
-                        SettingsScreen(
-                            settings = settings,
-                            onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
-                            onBack = { viewModel.navigateTo(Screen.MainMenu) },
-                        )
+                        is Screen.Game -> {
+                            GameScreen(
+                                gameState = gameState,
+                                levelIndex = levelIndex,
+                                settings = settings,
+                                tutorialStep = tutorialStep,
+                                winMessage = winMessage,
+                                totalLevels = viewModel.currentLevelConstellations.size,
+                                onBack = toMenu,
+                                onTileClick = { tileId -> viewModel.onTileTapped(tileId) },
+                                onTileMatch = { viewModel.playTileMatch() },
+                                onHint = { viewModel.requestHint() },
+                                onUndo = { viewModel.undo() },
+                                onRestart = { viewModel.restartGame() },
+                                onReshuffle = { viewModel.reshuffle() },
+                                onNextLevel = { viewModel.playNextLevel() },
+                                onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
+                                onMainMenu = toMenu,
+                                onTutorialContinue = { viewModel.advanceTutorial() },
+                                onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
+                            )
+                        }
+
+                        is Screen.Settings -> {
+                            SettingsScreen(
+                                settings = settings,
+                                onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
+                                onBack = toMenu,
+                            )
+                        }
                     }
                 }
             }

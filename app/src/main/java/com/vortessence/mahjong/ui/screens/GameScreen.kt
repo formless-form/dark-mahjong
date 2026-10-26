@@ -1,6 +1,6 @@
 package com.vortessence.mahjong.ui.screens
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,12 +8,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.TutorialStep
 import com.vortessence.mahjong.ui.components.GameHeader
+import com.vortessence.mahjong.ui.components.GameToolbar
+import com.vortessence.mahjong.ui.components.LoadingPage
+import com.vortessence.mahjong.ui.components.levelLabel
 import com.vortessence.mahjong.ui.components.WinCelebration
 import com.vortessence.mahjong.ui.components.MahjongBoard
 import com.vortessence.mahjong.ui.components.StalemateDialog
@@ -40,16 +46,8 @@ fun GameScreen(
     onTutorialContinue: () -> Unit = {},
     onSettingsChanged: (GameSettings) -> Unit = {},
 ) {
-    BackHandler {
-        onBack()
-    }
-
     if (gameState == null) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        )
+        LoadingPage(Modifier.background(MaterialTheme.colorScheme.background))
         return
     }
 
@@ -61,20 +59,25 @@ fun GameScreen(
         else -> tutorialStep.targetTileIds
     }
 
+    // When the board is cleared it softly blurs behind the celebration, as Android 17 blurs
+    // what sits behind its own panels
+    val blur by animateDpAsState(
+        targetValue = if (gameState.isWon) 14.dp else 0.dp,
+        animationSpec = MaterialTheme.motionScheme.slowEffectsSpec(),
+        label = "BoardBlur",
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .then(if (blur > 0.dp) Modifier.blur(blur) else Modifier)
             .navigationBarsPadding()
     ) {
         GameHeader(
             gameState = gameState,
             levelIndex = levelIndex,
             onBackClick = onBack,
-            onHintClick = onHint,
-            onUndoClick = onUndo,
-            onRestartClick = onRestart,
-            hintAndUndoEnabled = tutorialStep == null
         )
 
         Box(modifier = Modifier.weight(1f)) {
@@ -95,6 +98,13 @@ fun GameScreen(
                 onContinue = onTutorialContinue,
                 onSettingsChanged = onSettingsChanged
             )
+        } else {
+            GameToolbar(
+                gameState = gameState,
+                onHintClick = onHint,
+                onUndoClick = onUndo,
+                onRestartClick = onRestart,
+            )
         }
     }
 
@@ -102,7 +112,7 @@ fun GameScreen(
     if (gameState.isWon) {
         WinCelebration(
             message = winMessage,
-            subtitle = if (levelIndex != null) "Level $levelIndex · ${gameState.constellation.name}" else gameState.constellation.name,
+            subtitle = listOfNotNull(levelLabel(levelIndex), gameState.constellation.name).distinct().joinToString(" · "),
             hasNextLevel = hasNextLevel,
             animationsEnabled = settings.animationsEnabled,
             onNextLevel = onNextLevel,

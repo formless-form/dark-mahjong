@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,8 @@ import com.vortessence.mahjong.ui.components.NameSeal
 import com.vortessence.mahjong.ui.components.rememberFilmGrain
 import com.vortessence.mahjong.ui.theme.Cinzel
 import com.vortessence.mahjong.ui.theme.MahjongTheme
+import com.vortessence.mahjong.ui.theme.SansText
+import com.vortessence.mahjong.ui.theme.SansTitle
 
 private val TitleText = Color(0xFFE6DFD1)
 private val TitleTextBright = Color(0xFFFFF7E8)
@@ -59,6 +62,7 @@ private const val PHOTO_CREDIT = "Photo: Huangdan2060 · CC0 · Wikimedia Common
 @Composable
 fun MainMenuScreen(
     continueInfo: ContinueInfo? = null,
+    menuStyle: TitleMenuStyle = TitleMenuStyle.SERIF,
     onContinue: () -> Unit = {},
     onPlayLevels: () -> Unit,
     onChooseConstellation: () -> Unit,
@@ -98,7 +102,13 @@ fun MainMenuScreen(
         ) {
             NameSeal(size = 70.dp)
             Spacer(Modifier.height(14.dp))
-            Text(text = "DARK MAHJONG", style = titleStyle(TitleText, size = 19.sp))
+            Text(
+                text = "DARK MAHJONG",
+                style = when (menuStyle) {
+                    TitleMenuStyle.SERIF -> titleStyle(TitleText, size = 19.sp)
+                    TitleMenuStyle.SANS -> titleStyle(TitleText, size = 20.sp).copy(fontWeight = FontWeight.Bold)
+                },
+            )
         }
 
         Column(
@@ -110,11 +120,11 @@ fun MainMenuScreen(
                 .fillMaxWidth(),
         ) {
             if (continueInfo != null) {
-                MenuItem("Continue", subtitle = continueInfo.title, onMenuClick = onMenuClick, onClick = onContinue)
+                MenuItem("Continue", menuStyle, subtitle = continueInfo.title, onMenuClick = onMenuClick, onClick = onContinue)
             }
-            MenuItem("Play", onMenuClick = onMenuClick, onClick = onPlayLevels)
-            MenuItem("Layouts", onMenuClick = onMenuClick, onClick = onChooseConstellation)
-            MenuItem("Settings", onMenuClick = onMenuClick, onClick = onSettings)
+            MenuItem("Play", menuStyle, onMenuClick = onMenuClick, onClick = onPlayLevels)
+            MenuItem("Layouts", menuStyle, onMenuClick = onMenuClick, onClick = onChooseConstellation)
+            MenuItem("Settings", menuStyle, onMenuClick = onMenuClick, onClick = onSettings)
         }
 
         // System sans (Google Sans / Roboto) renders crispest at this size; the extra 30 px keeps
@@ -134,6 +144,12 @@ fun MainMenuScreen(
     }
 }
 
+/**
+ * How the title screen's menu is set: in the title's Cinzel capitals, or (the alternative under
+ * consideration) in Google Sans Flex like the rest of the app, with a bolder, larger title.
+ */
+enum class TitleMenuStyle { SERIF, SANS }
+
 private fun titleStyle(color: Color, size: TextUnit = 17.sp) = TextStyle(
     fontFamily = Cinzel,
     fontSize = size,
@@ -148,6 +164,7 @@ private fun titleStyle(color: Color, size: TextUnit = 17.sp) = TextStyle(
 @Composable
 private fun MenuItem(
     text: String,
+    style: TitleMenuStyle,
     onClick: () -> Unit,
     onMenuClick: () -> Unit,
     subtitle: String? = null,
@@ -166,16 +183,33 @@ private fun MenuItem(
                 onClick()
             },
     ) {
-        Text(text = text, style = titleStyle(textColor))
-        subtitle?.let {
-            Text(
-                text = it,
-                fontFamily = Cinzel,
-                fontSize = 10.sp,
-                letterSpacing = 0.12.em,
-                color = TitleText.copy(alpha = 0.55f),
-                maxLines = 1,
-            )
+        when (style) {
+            TitleMenuStyle.SERIF -> {
+                Text(text = text, style = titleStyle(textColor))
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        fontFamily = Cinzel,
+                        fontSize = 10.sp,
+                        letterSpacing = 0.12.em,
+                        color = TitleText.copy(alpha = 0.55f),
+                        maxLines = 1,
+                    )
+                }
+            }
+            TitleMenuStyle.SANS -> {
+                Text(text = text, fontFamily = SansTitle, fontSize = 20.sp, letterSpacing = 0.03.em, color = textColor)
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        fontFamily = SansText,
+                        fontSize = 12.sp,
+                        letterSpacing = 0.02.em,
+                        color = TitleText.copy(alpha = 0.6f),
+                        maxLines = 1,
+                    )
+                }
+            }
         }
     }
 }

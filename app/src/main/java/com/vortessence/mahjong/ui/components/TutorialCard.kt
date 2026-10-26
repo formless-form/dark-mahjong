@@ -8,17 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.engine.TutorialAction
@@ -36,10 +31,9 @@ fun TutorialCard(
     onSettingsChanged: (GameSettings) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
             .fillMaxWidth()
             .padding(12.dp)
@@ -52,13 +46,13 @@ fun TutorialCard(
             ) {
                 Text(
                     text = "Step ${TutorialScript.steps.indexOf(current) + 1} of ${TutorialScript.steps.size}",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = current.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLargeEmphasized,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -73,12 +67,12 @@ fun TutorialCard(
                 if (current.showSettingsToggles) {
                     Spacer(modifier = Modifier.height(12.dp))
                     SettingToggle(
-                        title = "Highlight Selectable Tiles",
+                        title = "Highlight selectable tiles",
                         checked = settings.highlightFreeTiles,
                         onCheckedChange = { onSettingsChanged(settings.copy(highlightFreeTiles = it)) }
                     )
                     SettingToggle(
-                        title = "Draw Corner Index",
+                        title = "Corner index",
                         checked = settings.showCornerIndex,
                         onCheckedChange = { onSettingsChanged(settings.copy(showCornerIndex = it)) }
                     )
@@ -87,12 +81,12 @@ fun TutorialCard(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (current.action == TutorialAction.CONTINUE) {
-                    Button(
+                    BigButton(
+                        text = current.continueLabel,
                         onClick = onContinue,
+                        primary = true,
                         modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text(current.continueLabel, fontWeight = FontWeight.Bold)
-                    }
+                    )
                 } else {
                     Text(
                         text = if (current.action == TutorialAction.TAP_BLOCKED) {
@@ -100,8 +94,7 @@ fun TutorialCard(
                         } else {
                             "Match the blue tiles"
                         },
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelLargeEmphasized,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.align(Alignment.End)
                     )
@@ -124,11 +117,10 @@ private fun SettingToggle(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        CheckSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

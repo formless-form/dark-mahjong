@@ -7,136 +7,76 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import com.vortessence.mahjong.R
-
-// Main font for the app (Tomorrow-Medium)
-val TomorrowMedium = FontFamily(
-    Font(R.font.tomorrow_medium, FontWeight.Normal),
-    Font(R.font.tomorrow_medium, FontWeight.Medium),
-    Font(R.font.tomorrow_medium, FontWeight.SemiBold),
-    Font(R.font.tomorrow_medium, FontWeight.Bold),
-)
 
 // Title and title-screen menu: Roman inscriptional capitals (lowercase renders as small capitals)
 @OptIn(ExperimentalTextApi::class)
 val Cinzel = FontFamily(
-    Font(
-        R.font.cinzel,
-        FontWeight.SemiBold,
-        variationSettings = FontVariation.Settings(FontVariation.weight(600)),
-    ),
+    listOf(600, 700).map { weight ->
+        Font(R.font.cinzel, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+    },
 )
 
 // Seal script (篆書), subset to the four characters of the name seal 暗夜麻將
 val SealScript = FontFamily(Font(R.font.seal_script_name, FontWeight.Normal))
 
-// Exclusively for main menu heading (Tomorrow-Bold)
-val TomorrowBold = FontFamily(
-    Font(R.font.tomorrow_bold, FontWeight.Bold),
+// Everything else: Google Sans Flex, Android's own typeface since Material 3 Expressive. The
+// bundled file keeps its weight and optical-size axes. Android doesn't pick an optical size by
+// itself, so there are three families, each tuned to a band of text sizes.
+@OptIn(ExperimentalTextApi::class)
+private fun googleSansFlex(opticalSize: Float) = FontFamily(
+    listOf(300, 400, 500, 600, 700, 800).map { weight ->
+        Font(
+            R.font.google_sans_flex,
+            FontWeight(weight),
+            variationSettings = FontVariation.Settings(
+                FontVariation.weight(weight),
+                FontVariation.Setting("opsz", opticalSize),
+            ),
+        )
+    },
 )
 
+val SansText = googleSansFlex(opticalSize = 14f)
+val SansTitle = googleSansFlex(opticalSize = 22f)
+val SansDisplay = googleSansFlex(opticalSize = 40f)
+
+private val Baseline = Typography()
+
+private fun TextStyle.text() = copy(fontFamily = SansText)
+private fun TextStyle.title() = copy(fontFamily = SansTitle)
+private fun TextStyle.display() = copy(fontFamily = SansDisplay)
+
+// The Material 3 Expressive type scale (sizes, weights and the emphasized set), in Google Sans Flex
 val Typography = Typography(
-    displayLarge = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 57.sp,
-        lineHeight = 64.sp,
-        letterSpacing = (-0.25).sp,
-    ),
-    displayMedium = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 45.sp,
-        lineHeight = 52.sp,
-    ),
-    displaySmall = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 36.sp,
-        lineHeight = 44.sp,
-    ),
-    headlineLarge = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
-        letterSpacing = 1.5.sp,
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
-        letterSpacing = 0.5.sp,
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 20.sp,
-        lineHeight = 28.sp,
-    ),
-    titleLarge = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 20.sp,
-        lineHeight = 26.sp,
-        letterSpacing = 0.25.sp,
-    ),
-    titleMedium = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp,
-    ),
-    titleSmall = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp,
-    ),
-    bodyLarge = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 15.sp,
-        lineHeight = 22.sp,
-        letterSpacing = 0.25.sp,
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.2.sp,
-    ),
-    bodySmall = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp,
-    ),
-    labelLarge = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.5.sp,
-    ),
-    labelMedium = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
-    ),
-    labelSmall = TextStyle(
-        fontFamily = TomorrowMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
-    ),
+    displayLarge = Baseline.displayLarge.display(),
+    displayMedium = Baseline.displayMedium.display(),
+    displaySmall = Baseline.displaySmall.display(),
+    headlineLarge = Baseline.headlineLarge.display(),
+    headlineMedium = Baseline.headlineMedium.title(),
+    headlineSmall = Baseline.headlineSmall.title(),
+    titleLarge = Baseline.titleLarge.title(),
+    titleMedium = Baseline.titleMedium.text(),
+    titleSmall = Baseline.titleSmall.text(),
+    bodyLarge = Baseline.bodyLarge.text(),
+    bodyMedium = Baseline.bodyMedium.text(),
+    bodySmall = Baseline.bodySmall.text(),
+    labelLarge = Baseline.labelLarge.text(),
+    labelMedium = Baseline.labelMedium.text(),
+    labelSmall = Baseline.labelSmall.text(),
+    displayLargeEmphasized = Baseline.displayLargeEmphasized.display(),
+    displayMediumEmphasized = Baseline.displayMediumEmphasized.display(),
+    displaySmallEmphasized = Baseline.displaySmallEmphasized.display(),
+    headlineLargeEmphasized = Baseline.headlineLargeEmphasized.display(),
+    headlineMediumEmphasized = Baseline.headlineMediumEmphasized.title(),
+    headlineSmallEmphasized = Baseline.headlineSmallEmphasized.title(),
+    titleLargeEmphasized = Baseline.titleLargeEmphasized.title(),
+    titleMediumEmphasized = Baseline.titleMediumEmphasized.text(),
+    titleSmallEmphasized = Baseline.titleSmallEmphasized.text(),
+    bodyLargeEmphasized = Baseline.bodyLargeEmphasized.text(),
+    bodyMediumEmphasized = Baseline.bodyMediumEmphasized.text(),
+    bodySmallEmphasized = Baseline.bodySmallEmphasized.text(),
+    labelLargeEmphasized = Baseline.labelLargeEmphasized.text(),
+    labelMediumEmphasized = Baseline.labelMediumEmphasized.text(),
+    labelSmallEmphasized = Baseline.labelSmallEmphasized.text(),
 )

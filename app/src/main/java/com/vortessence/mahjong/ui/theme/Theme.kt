@@ -1,6 +1,8 @@
 package com.vortessence.mahjong.ui.theme
 
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -50,8 +52,12 @@ fun MahjongTheme(
     @Suppress("UNUSED_PARAMETER") tableSurface: TableSurface = TableSurface.GREEN_MAT,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
+    // Android 17's Material 3 Expressive: springy motion, its larger rounded shapes and the
+    // Google Sans Flex type scale, on Dark Mahjong's own dark palette (no wallpaper colours)
+    MaterialExpressiveTheme(
         colorScheme = MahjongColorScheme,
+        motionScheme = MotionScheme.expressive(),
+        shapes = Shapes(),
         typography = Typography,
         content = content,
     )

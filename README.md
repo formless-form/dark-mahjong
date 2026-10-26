@@ -15,7 +15,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="240" alt="A board on the green mat"/>
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="240" alt="Winning: fireworks seen from above and a warm message"/>
-  <img src="docs/screenshots/fireworks.jpg" width="240" alt="The fireworks light show, seen from above"/>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="Settings in Android 17's Material 3 Expressive style"/>
 </p>
 
 ## What's different from the original
@@ -24,6 +24,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 - **One lamp over the table.** The table is lit by a single warm lamp and the room falls away into darkness. Tiles and tabletop share the same light, brightest in the middle and dim at the edges, but never too dark to read a tile.
 - **A misty title screen.** A real photograph of Sanqing Mountain in cloud, darkened, with subtle film grain (an AGSL shader). Above it sits a name seal, **暗夜麻將** ("dark-night mahjong"), in genuine seal script.
 - **Dark everywhere else too.** One quiet colour palette, minimalist menus, no light theme.
+- **Android 17's look.** Material 3 Expressive throughout the menus and controls, set in Google Sans Flex: collapsing large titles, segmented settings lists, shape-morphing buttons, a floating game toolbar, blur behind dialogs, and the predictive back gesture. The launcher icon is the name seal.
 
 ### A different look
 - **Seen at an angle.** The table is viewed slightly away from overhead, in true perspective: far rows recede and each tile's front edge shows, without ever hiding a tile's face.
@@ -74,7 +75,7 @@ The original project's code was largely written with AI tools (see the [upstream
 - **Title photograph:** *Sanqing Mountain is surrounded by clouds and mists* by Huangdan2060, [CC0](https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg), Wikimedia Commons (cropped and graded).
 - **Thai straw mat:** drawn procedurally, modelled on *Cambodian mat motifs* by Willuconquer ([CC BY-SA 4.0](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg), Wikimedia Commons). No image is included.
 - **Name seal:** 全字庫說文解字 seal-script font, CNS11643, Ministry of Digital Affairs, Taiwan ([cns11643.gov.tw](https://www.cns11643.gov.tw)), Open Government Data License 1.0 (subset to four characters).
-- **Fonts:** [Cinzel](https://fonts.google.com/specimen/Cinzel) by Natanael Gama and [Tomorrow](https://fonts.google.com/specimen/Tomorrow) by Tony de Marco & Monica Rizzolli, both SIL OFL 1.1.
+- **Fonts:** [Cinzel](https://fonts.google.com/specimen/Cinzel) by Natanael Gama and [Google Sans Flex](https://fonts.google.com/specimen/Google+Sans+Flex) by the Google Sans Flex Project Authors, both SIL OFL 1.1.
 - **Background music:** from the original project, AI-generated with Suno and dedicated to the public domain (CC0).
 - **Sound effects:** [Mahjong Sound Pack by T-STUDIO](https://t-studio-tst.itch.io/free-sound-mahjong-sound-pack) (みんなの創作支援サイトＴスタ), included with the author's permission as in the original. These sounds are **not** covered by the GPL. Contact T-STUDIO before reusing them elsewhere.
 

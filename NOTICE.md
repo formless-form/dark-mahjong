@@ -64,12 +64,13 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 
 ## 4. Font Assets
 
-### Tomorrow
+### Google Sans Flex
 
-* **Author:** Tony de Marco & Monica Rizzolli (The Tomorrow Project Authors)
-* **Source:** [Tomorrow (Google Fonts)](https://fonts.google.com/specimen/Tomorrow) / [MonicaRizzolli/Tomorrow (GitHub)](https://github.com/MonicaRizzolli/Tomorrow)
-* **Files:** `tomorrow_bold.ttf` (main menu heading), `tomorrow_medium.ttf` (all other text)
-* **License:** SIL Open Font License, Version 1.1 — see [LICENSES/OFL-1.1-Tomorrow.txt](LICENSES/OFL-1.1-Tomorrow.txt)
+* **Author:** The Google Sans Flex Project Authors — [googlefonts/googlesans-flex](https://github.com/googlefonts/googlesans-flex), via [Google Fonts](https://fonts.google.com/specimen/Google+Sans+Flex)
+* **File:** `app/src/main/res/font/google_sans_flex.ttf` (all text except the title screen)
+* **Changes:** pinned to upright, normal width and no rounding (the weight and optical-size axes are kept) and subset to Latin, using fontTools. No Reserved Font Names apply.
+* **License:** SIL Open Font License, Version 1.1 — see [LICENSES/OFL-1.1-GoogleSansFlex.txt](LICENSES/OFL-1.1-GoogleSansFlex.txt). "Google Sans Flex" is a trademark of Google LLC; its use here is only to identify the font and implies no affiliation with or endorsement by Google.
+* **Replaced:** upstream's Tomorrow font, no longer bundled.
 
 ---
 

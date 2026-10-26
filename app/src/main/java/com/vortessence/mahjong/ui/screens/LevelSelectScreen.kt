@@ -1,51 +1,30 @@
 package com.vortessence.mahjong.ui.screens
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.repository.ConstellationRepository
-import com.vortessence.mahjong.ui.theme.GoldAccent
+import com.vortessence.mahjong.ui.components.BadgeState
+import com.vortessence.mahjong.ui.components.DifficultyStars
+import com.vortessence.mahjong.ui.components.ExpressiveScreen
+import com.vortessence.mahjong.ui.components.LevelBadge
+import com.vortessence.mahjong.ui.components.SegmentGap
+import com.vortessence.mahjong.ui.components.segmentColors
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LevelSelectScreen(
     progress: Progress,
@@ -54,178 +33,52 @@ fun LevelSelectScreen(
     onLevelSelected: (Int) -> Unit,
     onBack: () -> Unit,
 ) {
-    BackHandler {
-        onBack()
-    }
-
     val highestUnlocked = progress.highestLevelReached.coerceAtLeast(1)
+    // The tutorial first (always open), then the levels in order
+    val rows = listOf(ConstellationRepository.TUTORIAL_LEVEL to tutorial) + levels.mapIndexed { i, c -> (i + 1) to c }
+    // Open near the level you're up to rather than at level 1
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (highestUnlocked - 1).coerceIn(0, rows.lastIndex))
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Levels",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
+    ExpressiveScreen(title = "Levels", onBack = onBack) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = padding.calculateTopPadding() + 8.dp,
+                bottom = padding.calculateBottomPadding() + 32.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(SegmentGap),
         ) {
-            // The tutorial is always unlocked, independent of level progress
-            item {
-                LevelCard(
-                    levelIndex = ConstellationRepository.TUTORIAL_LEVEL,
-                    name = tutorial.name,
-                    difficultyName = tutorial.difficulty.displayName,
-                    stars = tutorial.difficulty.stars,
-                    tileCount = tutorial.tileCount,
-                    isUnlocked = true,
-                    isCompleted = progress.completedConstellations.contains(tutorial.id),
-                    onClick = { onLevelSelected(ConstellationRepository.TUTORIAL_LEVEL) }
-                )
-            }
-
-            itemsIndexed(levels) { index, constellation ->
-                val levelIndex = index + 1
-                val isUnlocked = levelIndex <= highestUnlocked
-                val isCompleted = progress.completedConstellations.contains(constellation.id)
-
-                LevelCard(
-                    levelIndex = levelIndex,
-                    name = constellation.name,
-                    difficultyName = constellation.difficulty.displayName,
-                    stars = constellation.difficulty.stars,
-                    tileCount = constellation.tileCount,
-                    isUnlocked = isUnlocked,
-                    isCompleted = isCompleted,
-                    onClick = {
-                        if (isUnlocked) {
-                            onLevelSelected(levelIndex)
-                        }
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LevelCard(
-    levelIndex: Int,
-    name: String,
-    difficultyName: String,
-    stars: Int,
-    tileCount: Int,
-    isUnlocked: Boolean,
-    isCompleted: Boolean,
-    onClick: () -> Unit
-) {
-    val containerColor = if (isUnlocked) {
-        MaterialTheme.colorScheme.surface
-    } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-    }
-
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isUnlocked) 2.dp else 0.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = isUnlocked, onClick = onClick)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Level badge / Status circle
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when {
-                            isCompleted -> MaterialTheme.colorScheme.primaryContainer
-                            isUnlocked -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            else -> MaterialTheme.colorScheme.surfaceVariant
-                        }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isCompleted) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Completed",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                } else if (!isUnlocked) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Locked",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                } else {
-                    Text(
-                        text = levelIndex.toString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+            itemsIndexed(rows, key = { _, row -> row.first }) { index, (levelIndex, constellation) ->
+                val isTutorial = levelIndex == ConstellationRepository.TUTORIAL_LEVEL
+                val unlocked = isTutorial || levelIndex <= highestUnlocked
+                val cleared = progress.completedConstellations.contains(constellation.id)
+                val state = when {
+                    cleared -> BadgeState.CLEARED
+                    !unlocked -> BadgeState.LOCKED
+                    levelIndex == highestUnlocked -> BadgeState.CURRENT
+                    else -> BadgeState.OPEN
                 }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Details
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Level $levelIndex: $name",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(stars) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = if (isUnlocked) GoldAccent else GoldAccent.copy(alpha = 0.4f),
-                            modifier = Modifier.size(14.dp)
+                SegmentedListItem(
+                    onClick = { onLevelSelected(levelIndex) },
+                    enabled = unlocked,
+                    shapes = ListItemDefaults.segmentedShapes(index = index, count = rows.size),
+                    colors = segmentColors(),
+                    leadingContent = {
+                        LevelBadge(state, label = levelIndex.toString(), icon = if (isTutorial) Icons.Rounded.School else null)
+                    },
+                    overlineContent = {
+                        Text(
+                            if (isTutorial) "Tutorial" else "Level $levelIndex",
+                            color = if (unlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "$difficultyName • $tileCount tiles",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    },
+                    supportingContent = { Text("${constellation.difficulty.displayName} · ${constellation.tileCount} tiles") },
+                    trailingContent = { DifficultyStars(constellation.difficulty.stars, dimmed = !unlocked) },
+                ) {
+                    Text(constellation.name)
                 }
             }
         }

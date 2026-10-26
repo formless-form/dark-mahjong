@@ -2,9 +2,9 @@ package com.vortessence.mahjong.data.model
 
 // Order matters: the table shader selects the surface by ordinal
 enum class TableSurface(val displayName: String) {
-    GREEN_MAT("Green Mat"),
+    GREEN_MAT("Green mat"),
     WALNUT("Walnut"),
-    THAI_STRAW("Thai Straw"),
+    THAI_STRAW("Thai straw"),
 }
 
 @Suppress("unused")

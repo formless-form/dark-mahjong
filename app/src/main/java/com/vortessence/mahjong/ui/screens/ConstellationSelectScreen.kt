@@ -1,68 +1,50 @@
 package com.vortessence.mahjong.ui.screens
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.repository.ConstellationRepository
-import com.vortessence.mahjong.ui.theme.GoldAccent
+import com.vortessence.mahjong.ui.components.BadgeState
+import com.vortessence.mahjong.ui.components.DifficultyStars
+import com.vortessence.mahjong.ui.components.ExpressiveScreen
+import com.vortessence.mahjong.ui.components.LevelBadge
+import com.vortessence.mahjong.ui.components.SegmentGap
+import com.vortessence.mahjong.ui.components.segmentColors
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConstellationSelectScreen(
     progress: Progress,
     onConstellationSelected: (Constellation) -> Unit,
     onBack: () -> Unit,
 ) {
-    BackHandler {
-        onBack()
-    }
-
     var selectedDifficultyFilter by remember { mutableStateOf<Difficulty?>(null) }
     var selectedLayoutFilter by remember { mutableStateOf<Boolean?>(null) }
 
@@ -75,128 +57,64 @@ fun ConstellationSelectScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Layouts",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
+    ExpressiveScreen(title = "Layouts", onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = padding.calculateTopPadding()),
         ) {
-            // Difficulty Filter Chips
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    FilterChip(
-                        selected = selectedDifficultyFilter == null,
-                        onClick = { selectedDifficultyFilter = null },
-                        label = { Text("All Difficulties") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ChipRow {
+                listOf<Difficulty?>(null).plus(Difficulty.entries).forEach { diff ->
+                    item {
+                        FilterOption(
+                            label = diff?.displayName ?: "All difficulties",
+                            selected = selectedDifficultyFilter == diff,
+                            onClick = { selectedDifficultyFilter = if (diff != null && selectedDifficultyFilter == diff) null else diff },
                         )
-                    )
+                    }
                 }
-                items(Difficulty.entries.toTypedArray()) { diff ->
-                    FilterChip(
-                        selected = selectedDifficultyFilter == diff,
-                        onClick = {
-                            selectedDifficultyFilter = if (selectedDifficultyFilter == diff) null else diff
-                        },
-                        label = { Text(diff.displayName) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+            }
+            ChipRow {
+                listOf<Pair<String, Boolean?>>("All shapes" to null, "Tall" to true, "Wide" to false).forEach { (label, tall) ->
+                    item {
+                        FilterOption(
+                            label = label,
+                            selected = selectedLayoutFilter == tall,
+                            onClick = { selectedLayoutFilter = if (tall != null && selectedLayoutFilter == tall) null else tall },
                         )
-                    )
+                    }
                 }
             }
 
-            // Layout Filter Chips
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    FilterChip(
-                        selected = selectedLayoutFilter == null,
-                        onClick = { selectedLayoutFilter = null },
-                        label = { Text("All Layouts") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = selectedLayoutFilter == true,
-                        onClick = {
-                            selectedLayoutFilter = if (selectedLayoutFilter == true) null else true
-                        },
-                        label = { Text("Tall") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = selectedLayoutFilter == false,
-                        onClick = {
-                            selectedLayoutFilter = if (selectedLayoutFilter == false) null else false
-                        },
-                        label = { Text("Wide") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    )
-                }
-            }
-
-            // Constellations List
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = padding.calculateBottomPadding() + 32.dp),
+                verticalArrangement = Arrangement.spacedBy(SegmentGap),
             ) {
-                items(filteredConstellations) { constellation ->
-                    val isCompleted = progress.completedConstellations.contains(constellation.id)
-
-                    ConstellationCard(
-                        constellation = constellation,
-                        isCompleted = isCompleted,
-                        onClick = { onConstellationSelected(constellation) }
-                    )
+                itemsIndexed(filteredConstellations, key = { _, c -> c.id }) { index, constellation ->
+                    val cleared = progress.completedConstellations.contains(constellation.id)
+                    SegmentedListItem(
+                        onClick = { onConstellationSelected(constellation) },
+                        shapes = ListItemDefaults.segmentedShapes(index = index, count = filteredConstellations.size),
+                        colors = segmentColors(),
+                        leadingContent = {
+                            LevelBadge(
+                                state = if (cleared) BadgeState.CLEARED else BadgeState.OPEN,
+                                label = constellation.name.first().toString(),
+                            )
+                        },
+                        overlineContent = { Text(layoutLabel(constellation), color = MaterialTheme.colorScheme.primary) },
+                        supportingContent = {
+                            Text(
+                                "${constellation.difficulty.displayName} · ${constellation.tileCount} tiles\n${constellation.description}",
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        trailingContent = { DifficultyStars(constellation.difficulty.stars) },
+                    ) {
+                        Text(constellation.name)
+                    }
                 }
             }
         }
@@ -204,98 +122,37 @@ fun ConstellationSelectScreen(
 }
 
 private fun layoutLabel(constellation: Constellation): String = when {
-    constellation.id == ConstellationRepository.TUTORIAL_ID -> "🎓 Tutorial"
+    constellation.id == ConstellationRepository.TUTORIAL_ID -> "Guided lesson"
     constellation.isPortraitOptimized -> "Tall"
     else -> "Wide"
 }
 
 @Composable
-private fun ConstellationCard(
-    constellation: Constellation,
-    isCompleted: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Emblem / Check badge
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isCompleted)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isCompleted) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Completed",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Text(
-                        text = constellation.name.first().toString(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+private fun ChipRow(content: LazyListScope.() -> Unit) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        content = content,
+    )
+}
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = constellation.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(constellation.difficulty.stars) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = GoldAccent,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "${layoutLabel(constellation)} • ${constellation.difficulty.displayName} • ${constellation.tileCount} tiles",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = constellation.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 2
-                )
-            }
-        }
-    }
+// A filter chip that shows a tick when selected, as Android's own filter chips do
+@Composable
+private fun FilterOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon = if (selected) {
+            { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+        } else {
+            null
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ),
+    )
 }
