@@ -28,7 +28,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 ### A different look
 - **Seen at an angle.** The table is viewed slightly away from overhead, in true perspective: far rows recede and each tile's front edge shows, without ever hiding a tile's face.
 - **Glossy, well-used tiles.** A thick clear glaze reflects the lamp in streaks, broken up by tiny ripples in the glaze. Every tile is a little different: hairline scratches, grime in patches, the odd ding, ivory from crisp to yellowed, sitting a fraction off-square. The artwork is engraved into the face.
-- **Three tabletops,** all rendered live in perspective: **Walnut** (lacquered boards), **Green Mat** (felt) and **Thai Straw** (a real woven sedge mat).
+- **Three tabletops,** all rendered live in perspective: **Walnut** (lacquered boards), **Green Mat** (felt) and **Thai Straw** (a well-used woven sedge mat).
 - **Portrait-first,** because most layouts are taller than they are wide.
 
 ### More relaxed play
@@ -72,7 +72,7 @@ The original project's code was largely written with AI tools (see the [upstream
 - **Code:** [GNU GPL v3](LICENSE), with the original's [App Store Exception](NOTICE.md#app-store-exception-additional-permission-under-gplv3-section-7). Original code © 2026 PcmciaKai.
 - **Tile artwork:** [samoheen/mahjong-tiles](https://github.com/samoheen/mahjong-tiles), CC0.
 - **Title photograph:** *Sanqing Mountain is surrounded by clouds and mists* by Huangdan2060, [CC0](https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg), Wikimedia Commons (cropped and graded).
-- **Thai straw mat texture:** *Cambodian mat motifs* by Willuconquer, [CC BY-SA 4.0](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg), Wikimedia Commons (graded). The modified texture is likewise CC BY-SA 4.0.
+- **Thai straw mat:** drawn procedurally, modelled on *Cambodian mat motifs* by Willuconquer ([CC BY-SA 4.0](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg), Wikimedia Commons). No image is included.
 - **Name seal:** 全字庫說文解字 seal-script font, CNS11643, Ministry of Digital Affairs, Taiwan ([cns11643.gov.tw](https://www.cns11643.gov.tw)), Open Government Data License 1.0 (subset to four characters).
 - **Fonts:** [Cinzel](https://fonts.google.com/specimen/Cinzel) by Natanael Gama and [Tomorrow](https://fonts.google.com/specimen/Tomorrow) by Tony de Marco & Monica Rizzolli, both SIL OFL 1.1.
 - **Background music:** from the original project, AI-generated with Suno and dedicated to the public domain (CC0).

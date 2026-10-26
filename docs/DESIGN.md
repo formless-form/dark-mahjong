@@ -71,7 +71,10 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 - **Tabletops:** all are drawn by one full-screen AGSL shader in true perspective.
   - **Green Mat:** fine felt fibres and soft mottling, matte.
   - **Walnut:** procedural narrow boards with uneven straight grain, heartwood streaks, tiny pores, fine seams and a glossy clearcoat reflecting the lamp.
-  - **Thai Straw:** a real photograph of a woven sedge mat (Willuconquer, CC BY-SA 4.0), graded to soft natural tones and tiled seamlessly by mirroring.
+  - **Thai Straw:** a woven sedge mat, redrawn procedurally from measurements of a real one (Willuconquer's photo, CC BY-SA 4.0; the photo itself bowed, so tiling it looked wavy). It lies perfectly flat, with rows square to the tiles.
+    - **Weave:** tightly packed reed spindles about 11.5 strand-widths long with slightly staggered pointed tips, binding thread glimpsed between the tips.
+    - **Pattern:** straw/jade stripe bands, rose separator rows, and rose motif rows with stepped blocks.
+    - **Wear:** sun-faded scuffed patches, the odd frayed reed, faint stains with tide-marks, and loose fibres.
 
 ### Winning: fireworks and a warm message
 

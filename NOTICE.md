@@ -82,12 +82,9 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication)
 * **Changes:** cropped to a tall portrait frame without distortion, darkened and colour-graded. No attribution is required; the title screen carries a small courtesy credit.
 
-### Thai straw mat texture
+### Thai straw mat
 
-* **File:** `app/src/main/res/drawable-nodpi/thai_mat.webp`
-* **Original:** [Cambodian mat motifs](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg) by **Willuconquer**, via Wikimedia Commons: a woven sedge mat of the kind made and sold across Cambodia and Thailand
-* **License:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
-* **Changes:** downscaled, desaturated and warmed towards natural straw. The modified image is likewise released under CC BY-SA 4.0. Settings shows the credit whenever the Thai Straw table is selected.
+* Drawn procedurally by the table shader (no image is included). Its proportions, palette and motif bands were measured from, and modelled on, [Cambodian mat motifs](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg) by **Willuconquer** (CC BY-SA 4.0, Wikimedia Commons), a woven sedge mat of the kind made across Cambodia and Thailand. Thanks to the photographer.
 
 ### Name seal (seal script)
 
