@@ -108,7 +108,7 @@ fun MainMenuScreen(
                 text = "DARK MAHJONG",
                 style = when (menuStyle) {
                     TitleMenuStyle.SERIF -> titleStyle(TitleText, size = 19.sp)
-                    TitleMenuStyle.SANS -> titleStyle(TitleText, size = 20.sp).copy(fontWeight = FontWeight.Bold)
+                    TitleMenuStyle.SANS -> titleStyle(TitleText, size = 21.sp).copy(fontWeight = FontWeight.Bold, letterSpacing = 0.28.em)
                 },
             )
         }
