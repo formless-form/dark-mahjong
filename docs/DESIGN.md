@@ -67,9 +67,9 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 
 - **Photo:** full-bleed, darkened, misty Chinese mountains, cropped to a tall portrait frame with the lone pine in the middle: *Sanqing Mountain is surrounded by clouds and mists* (Huangdan2060, CC0, Wikimedia Commons). Scaled uniformly and never stretched, with subtle film grain (AGSL). A tiny courtesy credit sits bottom-right.
 - **Moving cloud: parked (2026-10-26).** A slowly drifting mist layer over the photo was tried. On the Pixel its reduced-resolution layer showed a hard-edged rectangle (part of the layer not refreshing), so it was removed for now. The last version is in commit `ef2c448` (`DriftingFog.kt`) if we revisit it; a fix would render it at full resolution or into a properly invalidated offscreen bitmap.
-- **Top, over the misty sky:** the **暗夜麻將** name seal (seal script, from Taiwan's CNS 11643 說文解字 font, subset; white on deep vermilion with carved-stone wear) and "DARK MAHJONG" in **Cinzel**, 19sp.
-- **Bottom, over the dark forest:** a plain text menu in Cinzel 17sp, left-aligned (Continue · Play · Layouts · Settings). Items brighten while pressed and give a soft click plus a light haptic.
-- **Alternative under consideration (2026-10-26):** the same menu in Google Sans Flex 20sp, with the title in bold Cinzel at 20sp (`TitleMenuStyle.SANS`). The Cinzel menu stays the default until one is chosen.
+- **Top, over the misty sky:** the **暗夜麻將** name seal (seal script, from Taiwan's CNS 11643 說文解字 font, subset; white on deep vermilion with carved-stone wear) and, close beneath it (about 10 dp of visible gap), "DARK MAHJONG" in bold **Cinzel**, 20sp.
+- **Bottom, over the dark forest:** a plain text menu in **Google Sans Flex** 20sp, left-aligned (Continue · Play · Layouts · Settings). Items brighten while pressed and give a soft click plus a light haptic.
+- **Chosen 2026-10-26** over the original all-Cinzel layout (menu in Cinzel 17sp, title 19sp semibold, 20 dp gap), which remains available as `TitleMenuStyle.SERIF`.
 
 ### The table: tilted camera, lamp light
 

@@ -75,7 +75,7 @@ class ScreenshotTour {
     @Test fun tabletopThaiStraw() = tabletop(TableSurface.THAI_STRAW)
 
     @Composable
-    private fun TitleScreen(style: TitleMenuStyle = TitleMenuStyle.SERIF) = MainMenuScreen(
+    private fun TitleScreen(style: TitleMenuStyle = TitleMenuStyle.SANS) = MainMenuScreen(
         continueInfo = ContinueInfo("Level 3: Celestial Lantern", "40 tiles remaining"),
         menuStyle = style,
         onPlayLevels = {},
@@ -90,9 +90,9 @@ class ScreenshotTour {
     }
 
     @Test
-    fun titleSansMenu() {
-        compose.setContent { MahjongTheme { TitleScreen(TitleMenuStyle.SANS) } }
-        shoot("title_sans_menu")
+    fun titleSerifMenu() {
+        compose.setContent { MahjongTheme { TitleScreen(TitleMenuStyle.SERIF) } }
+        shoot("title_serif_menu")
     }
 
     private val someProgress = Progress(highestLevelReached = 4, completedConstellations = setOf("tutorial"))

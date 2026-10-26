@@ -62,7 +62,7 @@ private const val PHOTO_CREDIT = "Photo: Huangdan2060 · CC0 · Wikimedia Common
 @Composable
 fun MainMenuScreen(
     continueInfo: ContinueInfo? = null,
-    menuStyle: TitleMenuStyle = TitleMenuStyle.SERIF,
+    menuStyle: TitleMenuStyle = TitleMenuStyle.SANS,
     onContinue: () -> Unit = {},
     onPlayLevels: () -> Unit,
     onChooseConstellation: () -> Unit,
@@ -101,7 +101,9 @@ fun MainMenuScreen(
                 .padding(start = 40.dp, top = 72.dp),
         ) {
             NameSeal(size = 70.dp)
-            Spacer(Modifier.height(14.dp))
+            // The Sans layout sits the title closer under the seal: about 10 dp of visible gap
+            // rather than 20 (the rest is the font's own space above the capitals)
+            Spacer(Modifier.height(if (menuStyle == TitleMenuStyle.SANS) 4.dp else 14.dp))
             Text(
                 text = "DARK MAHJONG",
                 style = when (menuStyle) {
@@ -145,8 +147,8 @@ fun MainMenuScreen(
 }
 
 /**
- * How the title screen's menu is set: in the title's Cinzel capitals, or (the alternative under
- * consideration) in Google Sans Flex like the rest of the app, with a bolder, larger title.
+ * How the title screen's menu is set: in Google Sans Flex like the rest of the app, under a bold
+ * Cinzel title (the default since 2026-10-26), or in the title's Cinzel capitals (the original).
  */
 enum class TitleMenuStyle { SERIF, SANS }
 
