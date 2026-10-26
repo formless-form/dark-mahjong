@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Highlight
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Texture
 import androidx.compose.material.icons.rounded.Vibration
@@ -33,6 +34,7 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -133,9 +135,30 @@ fun SettingsScreen(
                     },
                 ),
             )
+
+            SectionHeader("About")
+            val uriHandler = LocalUriHandler.current
+            SegmentedGroup(
+                listOf(
+                    { shapes ->
+                        SegmentedListItem(
+                            onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) },
+                            shapes = shapes,
+                            colors = segmentColors(),
+                            leadingContent = { LeadingIcon(Icons.Rounded.PrivacyTip) },
+                            supportingContent = { Text("Dark Mahjong collects no data at all") },
+                        ) {
+                            Text("Privacy policy")
+                        }
+                    },
+                ),
+            )
         }
     }
 }
+
+// Opened in the browser; the app itself has no internet access
+private const val PRIVACY_POLICY_URL = "https://github.com/formless-form/dark-mahjong/blob/dark-mahjong/docs/PRIVACY.md"
 
 // A run of list items drawn as one rounded block: big outer corners, small inner ones, hairline gaps
 @Composable
