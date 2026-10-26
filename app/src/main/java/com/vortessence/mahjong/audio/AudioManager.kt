@@ -37,11 +37,13 @@ class AudioManager(private val context: Context) {
         soundPool.load(context.applicationContext, R.raw.mahjong_pick_4, 1),
     )
 
+    // Two tiles clacking together: one recording at four slightly different pitches (-4.5%,
+    // -1.5%, +1.5%, +4.5%), so repeated matches never sound mechanical
     private val matchSoundIds = intArrayOf(
-        soundPool.load(context.applicationContext, R.raw.mahjong_match_1, 1),
-        soundPool.load(context.applicationContext, R.raw.mahjong_match_2, 1),
-        soundPool.load(context.applicationContext, R.raw.mahjong_match_3, 1),
-        soundPool.load(context.applicationContext, R.raw.mahjong_match_4, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_clack_1, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_clack_2, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_clack_3, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_clack_4, 1),
     )
 
     private val vibrator: Vibrator? by lazy {

@@ -40,8 +40,14 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 
 ## 3. Audio Assets
 
+### Tile clack (match sound)
+
+* **Files:** `app/src/main/res/raw/tile_clack_1.ogg` to `tile_clack_4.ogg`, made from `sounds/tile_clack-original.wav` (mono, trimmed to 0.19 s, lowered 5.2 dB, pitched −4.5 %, −1.5 %, +1.5 % and +4.5 %, Ogg Vorbis)
+* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication); no attribution
+
 ### Mahjong Sound Pack
 
+* **Files still in use:** `mahjong_pick_1` to `mahjong_pick_4` (tile taps and the title-screen menu click). Its match sounds were replaced by the tile clack above; the pick sounds are next.
 * **Author / Publisher:** みんなの創作支援サイトＴスタ (T-STUDIO)
 * **Source:** [Free Sound Mahjong Sound Pack (itch.io)](https://t-studio-tst.itch.io/free-sound-mahjong-sound-pack)
 * **Credit:** みんなの創作支援サイトＴスタ

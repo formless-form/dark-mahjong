@@ -79,6 +79,6 @@ The original project's code was largely written with AI tools (see the [upstream
 - **Name seal:** 全字庫說文解字 seal-script font, CNS11643, Ministry of Digital Affairs, Taiwan ([cns11643.gov.tw](https://www.cns11643.gov.tw)), Open Government Data License 1.0 (subset to four characters).
 - **Fonts:** [Cinzel](https://fonts.google.com/specimen/Cinzel) by Natanael Gama and [Google Sans Flex](https://fonts.google.com/specimen/Google+Sans+Flex) by the Google Sans Flex Project Authors, both SIL OFL 1.1.
 - **Background music:** from the original project, AI-generated with Suno and dedicated to the public domain (CC0).
-- **Sound effects:** [Mahjong Sound Pack by T-STUDIO](https://t-studio-tst.itch.io/free-sound-mahjong-sound-pack) (みんなの創作支援サイトＴスタ), included with the author's permission as in the original. These sounds are **not** covered by the GPL. Contact T-STUDIO before reusing them elsewhere.
+- **Sound effects (being replaced):** [Mahjong Sound Pack by T-STUDIO](https://t-studio-tst.itch.io/free-sound-mahjong-sound-pack) (みんなの創作支援サイトＴスタ), included with the author's permission as in the original. These sounds are **not** covered by the GPL. Contact T-STUDIO before reusing them elsewhere.
 
 Full details are in [NOTICE.md](NOTICE.md).
