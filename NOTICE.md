@@ -42,7 +42,7 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 
 ### Tile clack (match sound)
 
-* **Files:** `app/src/main/res/raw/tile_clack_1.ogg` to `tile_clack_4.ogg`, made from `sounds/tile_clack-original.wav` (mono, trimmed to 0.19 s, lowered 5.2 dB, pitched −4.5 %, −1.5 %, +1.5 % and +4.5 %, Ogg Vorbis)
+* **Files:** `app/src/main/res/raw/tile_clack_1.ogg` to `tile_clack_4.ogg`, made from `sounds/tile_clack-original.wav` (mono, trimmed to 0.19 s, lowered 5.2 dB, sped up 1.4× (which raises the pitch about 6 semitones), then pitched −4.5 %, −1.5 %, +1.5 % and +4.5 %, Ogg Vorbis)
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication); no attribution
 
 ### Mahjong Sound Pack
