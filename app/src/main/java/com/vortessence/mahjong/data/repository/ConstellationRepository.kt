@@ -61,10 +61,18 @@ object ConstellationRepository {
     }
 
     /**
-     * All constellations available in the app (tutorial + level constellations + classic constellations).
+     * Layouts ported from Mah by ffalt (MIT licence): the ones that suit a phone held upright.
+     * Manual selection only, like the classic layouts.
+     */
+    val mahConstellations: List<Constellation> by lazy {
+        MahLayouts.boards.map { it.toConstellation() }
+    }
+
+    /**
+     * All constellations available in the app (tutorial + level, classic and Mah constellations).
      */
     val constellations: List<Constellation> by lazy {
-        listOf(tutorialConstellation) + levelConstellations + classicConstellations
+        listOf(tutorialConstellation) + levelConstellations + classicConstellations + mahConstellations
     }
 
     val tabletLevelConstellations: List<Constellation> by lazy {

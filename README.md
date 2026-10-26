@@ -31,6 +31,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 - **Glossy, well-used tiles.** A thick clear glaze reflects the lamp in streaks, broken up by tiny ripples in the glaze. Every tile is a little different: hairline scratches, grime in patches, the odd ding, ivory from crisp to yellowed, sitting a fraction off-square. The artwork is engraved into the face.
 - **Three tabletops,** all rendered live in perspective: **Walnut** (lacquered boards), **Green Mat** (felt) and **Thai Straw** (a well-used woven sedge mat).
 - **Portrait-first,** because most layouts are taller than they are wide.
+- **54 layouts:** the original's 25, plus 29 boards from [Mah](https://github.com/ffalt/mah) (animals, plants, symbols, shapes and buildings), chosen to suit a phone held upright. Pinch to zoom in on any of them.
 
 ### More relaxed play
 - **No timer, no scores, no statistics, no best times.** Progress is simply how far you've come.
@@ -72,6 +73,7 @@ The original project's code was largely written with AI tools (see the [upstream
 
 - **Code:** [GNU GPL v3](LICENSE), with the original's [App Store Exception](NOTICE.md#app-store-exception-additional-permission-under-gplv3-section-7). Original code © 2026 PcmciaKai.
 - **Tile artwork:** [samoheen/mahjong-tiles](https://github.com/samoheen/mahjong-tiles), CC0.
+- **Layouts:** 29 boards from [Mah](https://github.com/ffalt/mah) by ffalt, MIT licence.
 - **Title photograph:** *Sanqing Mountain is surrounded by clouds and mists* by Huangdan2060, [CC0](https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg), Wikimedia Commons (cropped and graded).
 - **Thai straw mat:** drawn procedurally, modelled on *Cambodian mat motifs* by Willuconquer ([CC BY-SA 4.0](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg), Wikimedia Commons). No image is included.
 - **Name seal:** 全字庫說文解字 seal-script font, CNS11643, Ministry of Digital Affairs, Taiwan ([cns11643.gov.tw](https://www.cns11643.gov.tw)), Open Government Data License 1.0 (subset to four characters).

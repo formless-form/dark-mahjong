@@ -11,7 +11,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
@@ -125,6 +129,36 @@ class ScreenshotTour {
             MahjongTheme { ConstellationSelectScreen(progress = someProgress, onConstellationSelected = {}, onBack = {}) }
         }
         shoot("layouts")
+    }
+
+    // Boards ported from Mah: a tall one, and one of the widest kept (tiles about 30 dp)
+    private fun mahGame(name: String, surface: TableSurface, shot: String) {
+        TileWear.prepareNow()
+        val state = MahjongGameEngine.startNewGame(ConstellationRepository.mahConstellations.first { it.name == name })
+        compose.setContent {
+            MahjongTheme {
+                GameScreen(
+                    gameState = state,
+                    levelIndex = null,
+                    settings = GameSettings(tableSurface = surface),
+                    onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
+                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                )
+            }
+        }
+        shoot(shot)
+    }
+
+    @Test fun mahCactus() = mahGame("Cactus", TableSurface.GREEN_MAT, "mah_cactus")
+    @Test fun mahFence() = mahGame("Fence", TableSurface.WALNUT, "mah_fence")
+
+    @Test
+    fun layoutsMah() {
+        compose.setContent {
+            MahjongTheme { ConstellationSelectScreen(progress = someProgress, onConstellationSelected = {}, onBack = {}) }
+        }
+        compose.onAllNodes(hasScrollAction()).onLast().performScrollToNode(hasText("Clover"))
+        shoot("layouts_mah")
     }
 
     @Test

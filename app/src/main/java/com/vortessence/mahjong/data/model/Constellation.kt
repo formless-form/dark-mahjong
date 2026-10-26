@@ -9,6 +9,8 @@ data class Constellation(
     val isPortraitOptimized: Boolean = true,
     // Predefined tile for each entry in [positions]; null means tiles are dealt randomly
     val fixedTiles: List<Tile>? = null,
+    // A grouping for imported layouts, e.g. "Animals"; null for Dark Mahjong's own
+    val category: String? = null,
 ) {
     val tileCount: Int get() = positions.size
 }

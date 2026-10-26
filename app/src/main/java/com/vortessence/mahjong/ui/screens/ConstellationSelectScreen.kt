@@ -106,7 +106,9 @@ fun ConstellationSelectScreen(
                         overlineContent = { Text(layoutLabel(constellation), color = MaterialTheme.colorScheme.primary) },
                         supportingContent = {
                             Text(
-                                "${constellation.difficulty.displayName} · ${constellation.tileCount} tiles\n${constellation.description}",
+                                listOf("${constellation.difficulty.displayName} · ${constellation.tileCount} tiles", constellation.description)
+                                    .filter { it.isNotBlank() }
+                                    .joinToString("\n"),
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -121,10 +123,10 @@ fun ConstellationSelectScreen(
     }
 }
 
+// "Tall", "Wide", or for an imported layout its shape and group, e.g. "Tall · Animals"
 private fun layoutLabel(constellation: Constellation): String = when {
     constellation.id == ConstellationRepository.TUTORIAL_ID -> "Guided lesson"
-    constellation.isPortraitOptimized -> "Tall"
-    else -> "Wide"
+    else -> listOfNotNull(if (constellation.isPortraitOptimized) "Tall" else "Wide", constellation.category).joinToString(" · ")
 }
 
 @Composable
