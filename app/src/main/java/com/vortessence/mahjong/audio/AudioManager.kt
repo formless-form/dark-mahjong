@@ -30,11 +30,12 @@ class AudioManager(private val context: Context) {
         )
         .build()
 
+    // A light wooden tap: two takes at two pitches each. Built by tools/make-tap-sounds.py
     private val pickSoundIds = intArrayOf(
-        soundPool.load(context.applicationContext, R.raw.mahjong_pick_1, 1),
-        soundPool.load(context.applicationContext, R.raw.mahjong_pick_2, 1),
-        soundPool.load(context.applicationContext, R.raw.mahjong_pick_3, 1),
-        soundPool.load(context.applicationContext, R.raw.mahjong_pick_4, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_tap_1, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_tap_2, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_tap_3, 1),
+        soundPool.load(context.applicationContext, R.raw.tile_tap_4, 1),
     )
 
     // Two tiles clacking together over a soft burst of stardust (chimes and glitter), in four

@@ -45,19 +45,11 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 * **Files:** `app/src/main/res/raw/tile_match_1.ogg` to `tile_match_4.ogg`, built by `tools/make-match-sounds.py`: a tile clack from `sounds/tile_clack-original.wav` (mono, trimmed, levelled, sped up 1.4×, four slightly different pitches) over synthesised stardust (pentatonic chimes and a glitter fizz)
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication); no attribution
 
-### Mahjong Sound Pack
+### Tile tap
 
-* **Files still in use:** `mahjong_pick_1` to `mahjong_pick_4` (tile taps and the title-screen menu click). Its match sounds were replaced by the match sound above; the pick sounds are next.
-* **Author / Publisher:** みんなの創作支援サイトＴスタ (T-STUDIO)
-* **Source:** [Free Sound Mahjong Sound Pack (itch.io)](https://t-studio-tst.itch.io/free-sound-mahjong-sound-pack)
-* **Credit:** みんなの創作支援サイトＴスタ
-* **License:** [T-STUDIO terms of use](https://tnosite.com/agreement-4/)
-* **Permission:** The author, Tatsuro, confirmed by private message on 3 October 2026 that
-  including these files in this open-source repository is fine, provided they
-  are not presented as anyone else's work.
-* **Note:** These sound files are NOT covered by the GPL. If you fork or
-  redistribute this project, please keep this attribution, and contact
-  T-STUDIO before reusing the sounds elsewhere.
+* **Files:** `app/src/main/res/raw/tile_tap_1.ogg` to `tile_tap_4.ogg`, built by `tools/make-tap-sounds.py` (mono, trimmed, levelled, two slightly different pitches each) from `impactWood_light_000.ogg` and `impactWood_light_002.ogg` in `sounds/kenney/`
+* **Source:** [Impact Sounds](https://kenney.nl/assets/impact-sounds) by **Kenney** (www.kenney.nl)
+* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/); see `sounds/kenney/License.txt`
 
 ### Background Music
 

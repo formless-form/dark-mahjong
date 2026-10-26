@@ -165,7 +165,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 - Code: GPLv3 with upstream's app-store exception; keep `NOTICE.md` and add Dark Mahjong's changes.
 - Tiles: samoheen, CC0. Music: upstream's Suno tracks, CC0. Fonts: Google Sans Flex and Cinzel, OFL (upstream's Tomorrow is no longer bundled).
 - Layouts from ffalt/mah: MIT; add its copyright notice.
-- Sounds: T-STUDIO pack (not GPL), kept for personal use only. **Next milestone (M4, sound design):** replace every sound with open-source files (CC0 preferred, e.g. Kenney's packs), so the app can go on Google Play.
+- Sounds: all open source since 2026-10-26 (M4): the match sound made for the game and Kenney's wood taps, both CC0, plus the synthesised blocked and win sounds in code. The T-STUDIO pack is gone.
 - Backgrounds: our own shader code, so nothing to license.
 
 ## Testing
@@ -183,7 +183,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/moves/Ko-fi; photo title screen with name seal; win fireworks + varied messages ✅ 2026-10-25 (win celebration not yet seen on the phone) |
 | M2 | Portrait refocus; fireworks seen from above; tilted camera; walnut / green mat / Thai straw (photo) tabletops; shiny lamp-lit tiles in the dark; drifting title fog; JVM screenshot tests ✅ 2026-10-26 |
 | M3 | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar, Sans Flex title menu; the name seal as launcher icon; pinch-to-zoom with one-tap zoom-out; 29 layouts ported from ffalt/mah ✅ 2026-10-26 |
-| M4 | **In progress: sound design.** Match sound replaced (2026-10-26, CC0): a tile clack made for the game, sped up 1.4×, over a soft burst of synthesised stardust (pentatonic chimes over a glitter fizz), in four takes at slightly different pitches, each match also played at a random speed within ±3 %; built by `tools/make-match-sounds.py`; the four T-STUDIO pick sounds are left. Open-source sounds only (CC0 preferred; every file's licence recorded in NOTICE.md), replacing the T-STUDIO pack, so the app can be listed on Google Play |
+| M4 | **In progress: sound design.** Match sound replaced (2026-10-26, CC0): a tile clack made for the game, sped up 1.4×, over a soft burst of synthesised stardust (pentatonic chimes over a glitter fizz), in four takes at slightly different pitches, each match also played at a random speed within ±3 %; built by `tools/make-match-sounds.py`; tile taps replaced by two light wood impacts from Kenney (CC0), each at two pitches, built by `tools/make-tap-sounds.py`. No T-STUDIO sounds remain, so every sound in the app is now open source. Open-source sounds only (CC0 preferred; every file's licence recorded in NOTICE.md), replacing the T-STUDIO pack, so the app can be listed on Google Play |
 | M5 | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar |
 | M6 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
 | M7 | Difficulty tool, 300-level table, journey map |
