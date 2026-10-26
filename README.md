@@ -22,7 +22,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 
 ### A darker ambience
 - **One lamp over the table.** The table is lit by a single warm lamp and the room falls away into darkness. Tiles and tabletop share the same light, brightest in the middle and dim at the edges, but never too dark to read a tile.
-- **A misty title screen.** A real photograph of Sanqing Mountain in cloud, darkened, with subtle film grain and fog drifting slowly across it (an AGSL shader). Above it sits a name seal, **暗夜麻將** ("dark-night mahjong"), in genuine seal script.
+- **A misty title screen.** A real photograph of Sanqing Mountain in cloud, darkened, with subtle film grain and live clouds of mist billowing slowly across it (an AGSL shader). Above it sits a name seal, **暗夜麻將** ("dark-night mahjong"), in genuine seal script.
 - **Dark everywhere else too.** One quiet colour palette, minimalist menus, no light theme.
 
 ### A different look

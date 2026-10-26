@@ -53,7 +53,11 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 ### Title screen
 
 - **Photo:** full-bleed, darkened, misty Chinese mountains, cropped to a tall portrait frame with the lone pine in the middle: *Sanqing Mountain is surrounded by clouds and mists* (Huangdan2060, CC0, Wikimedia Commons). Scaled uniformly and never stretched, with subtle film grain (AGSL). A tiny courtesy credit sits bottom-right.
-- **Drifting fog:** two layers of soft, warped AGSL noise drift slowly sideways at different speeds, reshaping as they go and thickest in the valley band. Redrawn at about 30 fps.
+- **Moving cloud:** three AGSL layers at different depths and speeds (broad slow banks, mid mist, quicker wisps in front).
+  - **Billowing:** each layer is folded by noise fields that themselves evolve, so the cloud churns rather than slides.
+  - **Light:** tops catch the sky's light, undersides are cooler.
+  - **Soft edges:** density becomes opacity as real mist thins (Beer-Lambert), and the band's top and bottom are ragged and shifting.
+  - **Cost:** rendered at a third of the screen resolution and smoothly scaled up, at about 30 fps.
 - **Top, over the misty sky:** the **暗夜麻將** name seal (seal script, from Taiwan's CNS 11643 說文解字 font, subset; white on deep vermilion with carved-stone wear) and "DARK MAHJONG" in **Cinzel**, 19sp.
 - **Bottom, over the dark forest:** a plain text menu in Cinzel 17sp, left-aligned (Continue · Play · Layouts · Settings). Items brighten while pressed and give a soft click plus a light haptic.
 
@@ -70,7 +74,7 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
   - **Engraved artwork:** the paint sits in carved grooves, so a fine shadow falls along each stroke's upper edge and a fine light edge along its lower lip.
 - **Tabletops:** all are drawn by one full-screen AGSL shader in true perspective.
   - **Green Mat:** fine felt fibres and soft mottling, matte.
-  - **Walnut:** procedural narrow boards with uneven straight grain, heartwood streaks, tiny pores, fine seams and a glossy clearcoat reflecting the lamp.
+  - **Walnut:** procedural narrow boards whose grain runs strictly parallel to the board edges, so every line converges with the perspective like the tile columns. Ring spacing varies across a board but not along it. Heartwood streaks, tiny pores, fine seams, and a glossy clearcoat reflecting the lamp.
   - **Thai Straw:** a woven sedge mat, redrawn procedurally from measurements of a real one (Willuconquer's photo, CC BY-SA 4.0; the photo itself bowed, so tiling it looked wavy). It lies perfectly flat, with rows square to the tiles.
     - **Weave:** tightly packed reed spindles about 11.5 strand-widths long with slightly staggered pointed tips, binding thread glimpsed between the tips.
     - **Pattern:** straw/jade stripe bands, rose separator rows, and rose motif rows with stepped blocks.

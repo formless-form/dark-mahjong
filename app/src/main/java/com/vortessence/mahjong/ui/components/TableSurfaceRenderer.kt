@@ -94,12 +94,11 @@ float3 walnut(float2 q, float fp) {
     float plank = floor(q.x / pw + 0.5);
     float lx = q.x - plank * pw;
     float seed = hash11(plank + 3.0);
-    // Ring position across the grain: mostly straight, gently and irregularly drifting
-    float drift = (fbm(float2(lx * 6.0 + seed * 9.0, q.y * 0.6 + seed * 21.0)) - 0.5) * 2.4
-                + (fbm(float2(lx * 2.0 + seed * 4.0, q.y * 0.18)) - 0.5) * 5.0;
-    // Ring spacing varies across the board, from tight to open growth
-    float density = 50.0 + 40.0 * vnoise(float2(lx * 5.0 + seed * 11.0, q.y * 0.15 + seed));
-    float d = (lx + seed) * density + drift;
+    // Grain runs strictly along the board, parallel to its edges, so (like the tile columns)
+    // every line converges with the perspective. Ring spacing varies across the board, from
+    // tight to open growth, but stays constant along it; only a tiny natural waver remains
+    float density = 50.0 + 40.0 * vnoise(float2(lx * 5.0 + seed * 11.0, seed * 3.0));
+    float d = (lx + seed) * density + 0.16 * (vnoise(float2(lx * 40.0 + seed, q.y * 1.2)) - 0.5);
     float ring = fract(d);
     // Soft earlywood into a narrow, darker latewood line; uneven ring strength
     float late = smoothstep(0.7, 0.92, ring) * (1.0 - smoothstep(0.92, 1.0, ring));
