@@ -41,7 +41,7 @@ The menus and controls follow **Material 3 Expressive**, Android 16–17's desig
 - **Type:** **Google Sans Flex** (OFL; Android's own typeface) everywhere except the title screen, on the Material 3 Expressive type scale. The bundled file keeps its weight and optical-size axes; three families use optical sizes tuned to small, medium and large text.
 - **Screens:** a large title that shrinks into the top bar on scroll, with a round tonal back button. Settings, Levels and Layouts are **segmented lists**: rounded groups with small inner corners and hairline gaps, leading icons in soft circles, switches with a tick in the thumb, sentence-case labels.
 - **Shapes:** level badges use the Expressive shape set (a "sunny" burst for the level you're up to, a soft cookie with a tick once cleared). Buttons are pills whose corners square off slightly when pressed. The table choice is a connected button group.
-- **In game:** the level and layout name sit at the top; **Hint · Undo · Restart** are big labelled buttons in a floating toolbar under the board (the first step of M2b's big-button bar).
+- **In game:** the level and layout name sit at the top; **Hint · Undo · Restart** are big labelled buttons in a floating toolbar under the board (the first step of the big-button bar; M5 may add Shuffle).
 - **Depth and blur:** dialogs blur what's behind them (window blur), and the board blurs softly behind the win celebration.
 - **Motion:** springy expressive motion; screens change with a shared-axis depth transition, and the back gesture is **predictive**: the screen shrinks toward the swipe with rounded corners, the title screen visible behind it.
 - **Loading:** Material's shape-morphing loading indicator.
@@ -107,7 +107,7 @@ Clearing a board sets off a fireworks light show **seen from directly above**. T
 - **Turning the play area:** tried 2026-10-26 (the tabletop and tiles turned 2° together) and dropped; the board stays square to the screen.
 - **Highlight free tiles** (dim blocked tiles), on by default for early levels.
 - **Larger text:** 100 / 130 / 160 % on top of the system font size.
-- **Big buttons:** in portrait the controls live in a **bottom bar** under the board: a floating toolbar of large labelled buttons, icon plus word (Hint · Undo · Restart since 2026-10-26; M2b may add Shuffle). Back is the round button at the top left, or the back gesture. Menus use big list rows.
+- **Big buttons:** in portrait the controls live in a **bottom bar** under the board: a floating toolbar of large labelled buttons, icon plus word (Hint · Undo · Restart since 2026-10-26; M5 may add Shuffle). Back is the round button at the top left, or the back gesture. Menus use big list rows.
 - Sounds, music and haptics stay, each with its own toggle.
 
 ## Screens (all portrait)
@@ -163,7 +163,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 - Code: GPLv3 with upstream's app-store exception; keep `NOTICE.md` and add Dark Mahjong's changes.
 - Tiles: samoheen, CC0. Music: upstream's Suno tracks, CC0. Fonts: Google Sans Flex and Cinzel, OFL (upstream's Tomorrow is no longer bundled).
 - Layouts from ffalt/mah: MIT; add its copyright notice.
-- Sounds: T-STUDIO pack (not GPL), kept for personal use only. **Next milestone (M3):** replace every sound with open-source files (CC0 preferred, e.g. Kenney's packs), so the app can go on Google Play.
+- Sounds: T-STUDIO pack (not GPL), kept for personal use only. **Next milestone (M4, sound design):** replace every sound with open-source files (CC0 preferred, e.g. Kenney's packs), so the app can go on Google Play.
 - Backgrounds: our own shader code, so nothing to license.
 
 ## Testing
@@ -180,14 +180,16 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M0 | Toolchain + unmodified upstream running on the Pixel ✅ done 2026-10-25 (adb over Tailscale) |
 | M1 | Rebrand + strip: Dark Mahjong name/ID, landscape lock, minSdk 33, dark token theme, remove stats/timer/moves/Ko-fi; photo title screen with name seal; win fireworks + varied messages ✅ 2026-10-25 (win celebration not yet seen on the phone) |
 | M2 | Portrait refocus; fireworks seen from above; tilted camera; walnut / green mat / Thai straw (photo) tabletops; shiny lamp-lit tiles in the dark; drifting title fog; JVM screenshot tests ✅ 2026-10-26 |
-| M2c | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar; the name seal as launcher icon ✅ 2026-10-26 |
-| M2b | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar (pinch/pan zoom ✅ 2026-10-26) |
-| M3 | **Next:** open-source sounds only (CC0 preferred; every file's licence recorded in NOTICE.md), replacing the T-STUDIO pack, so the app can be listed on Google Play |
-| M4 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
-| M5 | Difficulty tool, 300-level table, journey map (layout conversion from ffalt/mah ✅ 2026-10-26: 29 boards) |
-| M6 | Today's Puzzle + calendar, Quick Game |
-| M7 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
-| M8 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
+| M3 | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar, Sans Flex title menu; the name seal as launcher icon; pinch-to-zoom with one-tap zoom-out; 29 layouts ported from ffalt/mah ✅ 2026-10-26 |
+| M4 | **Next: sound design.** Open-source sounds only (CC0 preferred; every file's licence recorded in NOTICE.md), replacing the T-STUDIO pack, so the app can be listed on Google Play |
+| M5 | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar |
+| M6 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
+| M7 | Difficulty tool, 300-level table, journey map |
+| M8 | Today's Puzzle + calendar, Quick Game |
+| M9 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
+| M10 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
+
+Each finished milestone is tagged in git (`milestone-01`, `milestone-02`, `milestone-03`).
 
 ## Remaining decisions
 

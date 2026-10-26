@@ -41,7 +41,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 - **No ads, no tracking, no network access.**
 
 ### Coming next
-A 300-level journey with gradual difficulty, a daily puzzle, quick games by difficulty, extra-large tiles with pinch-to-zoom, and high-contrast tile sets. See [docs/DESIGN.md](docs/DESIGN.md).
+Next up is a new sound design, using only open-source sounds. After that: a 300-level journey with gradual difficulty, a daily puzzle, quick games by difficulty, and high-contrast tile sets. See [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Requirements
 
