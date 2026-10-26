@@ -1,1 +1,1 @@
-A performance-oriented classic Mahjong Solitaire game.
+A calm, moody mahjong solitaire played by lamplight. No timers, no scores.
