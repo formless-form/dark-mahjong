@@ -9,7 +9,7 @@ This repository uses a multi-license model to clearly separate source code permi
 
 * **Source Code:** Licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE) with an [App Store Exception](#1-source-code-license).
 * **Graphics:** Dedicated to the [Public Domain (CC0 1.0)](#2-graphics-assets).
-* **Sound Effects:** Royalty-free sound effects requiring [Attribution](#3-audio-assets).
+* **Sound Effects:** Dedicated to the [Public Domain (CC0 1.0)](#3-audio-assets).
 * **Background Music:** [AI-generated](#background-music) with Suno, dedicated to the Public Domain (CC0 1.0).
 * **Fonts:** Licensed under the [SIL Open Font License 1.1](#4-font-assets).
 
