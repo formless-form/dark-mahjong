@@ -43,6 +43,7 @@ class PreferencesRepository(private val context: Context) {
         val SAVED_GAME = stringPreferencesKey("saved_game")
         val TABLE_SURFACE = stringPreferencesKey("table_surface")
         val LIGHTING = stringPreferencesKey("lighting")
+        val FIRE_INTENSITY = floatPreferencesKey("fire_intensity")
         val LAST_WIN_DAY = longPreferencesKey("last_win_epoch_day")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
@@ -71,6 +72,7 @@ class PreferencesRepository(private val context: Context) {
             showCornerIndex = prefs[Keys.SHOW_CORNER_INDEX] ?: false,
             tableSurface = surface,
             lighting = TableLighting.entries.firstOrNull { it.name == prefs[Keys.LIGHTING] } ?: TableLighting.LAMP,
+            fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: 0.5f,
         )
     }
 
@@ -95,6 +97,7 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.TABLE_SURFACE] = settings.tableSurface.name
             prefs[Keys.THEME] = settings.tableSurface.name
             prefs[Keys.LIGHTING] = settings.lighting.name
+            prefs[Keys.FIRE_INTENSITY] = settings.fireIntensity
         }
     }
 

@@ -18,7 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The lamp alone, and with the candle, side by side on each table surface, at the Pixel 9 Pro's size.
+ * The lamp alone, with the candle, and with the fireplace, side by side on each table surface, at the Pixel 9 Pro's size.
  * Rendered into build/lighting-preview. Run: ./gradlew testDebugUnitTest --tests '*LightingPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -48,9 +48,12 @@ class LightingPreview {
     }
 
     @Test fun walnutLamp() = shoot(TableSurface.WALNUT, TableLighting.LAMP)
-    @Test fun walnutCandles() = shoot(TableSurface.WALNUT, TableLighting.CANDLES)
+    @Test fun walnutCandles() = shoot(TableSurface.WALNUT, TableLighting.CANDLE)
+    @Test fun walnutFireplace() = shoot(TableSurface.WALNUT, TableLighting.FIREPLACE)
     @Test fun greenMatLamp() = shoot(TableSurface.GREEN_MAT, TableLighting.LAMP)
-    @Test fun greenMatCandles() = shoot(TableSurface.GREEN_MAT, TableLighting.CANDLES)
+    @Test fun greenMatCandles() = shoot(TableSurface.GREEN_MAT, TableLighting.CANDLE)
+    @Test fun greenMatFireplace() = shoot(TableSurface.GREEN_MAT, TableLighting.FIREPLACE)
     @Test fun strawLamp() = shoot(TableSurface.THAI_STRAW, TableLighting.LAMP)
-    @Test fun strawCandles() = shoot(TableSurface.THAI_STRAW, TableLighting.CANDLES)
+    @Test fun strawCandles() = shoot(TableSurface.THAI_STRAW, TableLighting.CANDLE)
+    @Test fun strawFireplace() = shoot(TableSurface.THAI_STRAW, TableLighting.FIREPLACE)
 }

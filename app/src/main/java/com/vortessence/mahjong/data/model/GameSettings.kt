@@ -10,7 +10,8 @@ enum class TableSurface(val displayName: String) {
 // How the table is lit. Order matters: the table shader selects the lighting by ordinal
 enum class TableLighting(val displayName: String) {
     LAMP("Lamp"),
-    CANDLES("Candle"),
+    CANDLE("Candle"),
+    FIREPLACE("Fireplace"),
 }
 
 @Suppress("unused")
@@ -28,6 +29,8 @@ data class GameSettings(
     val showCornerIndex: Boolean = false,
     val tableSurface: TableSurface = TableSurface.GREEN_MAT,
     val lighting: TableLighting = TableLighting.LAMP,
+    // How brightly the fireplace burns, 0..1; the middle is its natural strength
+    val fireIntensity: Float = 0.5f,
 ) {
     val theme: TableSurface get() = tableSurface
 }

@@ -125,7 +125,7 @@ fun SettingsScreen(
 
             SectionHeader("Appearance")
             SegmentedGroup(
-                listOf(
+                listOf<@Composable (ListItemShapes) -> Unit>(
                     { shapes ->
                         ChoiceRow(
                             shapes, Icons.Rounded.Texture, "Table surface", "What the tiles are played on",
@@ -134,10 +134,19 @@ fun SettingsScreen(
                     },
                     { shapes ->
                         ChoiceRow(
-                            shapes, Icons.Rounded.WbIncandescent, "Lighting", "A lamp overhead, or with a candle beside the board",
+                            shapes, Icons.Rounded.WbIncandescent, "Lighting", "The lamp overhead, alone or with firelight",
                             TableLighting.entries, { it.displayName }, settings.lighting,
                         ) { onSettingsChanged(settings.copy(lighting = it)) }
                     },
+                ) + if (settings.lighting == TableLighting.FIREPLACE) {
+                    listOf<@Composable (ListItemShapes) -> Unit> { shapes ->
+                        SliderRow(shapes, "Fire intensity", settings.fireIntensity) {
+                            onSettingsChanged(settings.copy(fireIntensity = it))
+                        }
+                    }
+                } else {
+                    emptyList()
+                } + listOf<@Composable (ListItemShapes) -> Unit>(
                     { shapes ->
                         ToggleRow(
                             shapes, Icons.Rounded.Tag, "Corner index", "Numbers and letters in each tile's corner",
