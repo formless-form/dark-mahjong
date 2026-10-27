@@ -72,6 +72,7 @@ class BoardShadowMap private constructor(
             val height = FloatArray(mw * mh)
             val depthX = transform.tileWidth * BoardTransform.LAYER_SHIFT_FACTOR_X
             val depthY = transform.tileHeight * BoardTransform.LAYER_SHIFT_FACTOR_Y
+            val radius = transform.tileWidth * 0.085f * SCALE
             var tallest = 0f
             for (tile in tiles) {
                 if (tile.isRemoved) continue
@@ -79,13 +80,24 @@ class BoardShadowMap private constructor(
                 tallest = maxOf(tallest, top)
                 val x = transform.tilePixelX(tile.x, tile.z)
                 val y = transform.tilePixelY(tile.y, tile.z)
-                val x0 = (x * SCALE).toInt().coerceIn(0, mw - 1)
-                val x1 = ((x + transform.tileWidth + depthX) * SCALE).toInt().coerceIn(0, mw - 1)
-                val y0 = (y * SCALE).toInt().coerceIn(0, mh - 1)
-                val y1 = ((y + transform.tileHeight + depthY) * SCALE).toInt().coerceIn(0, mh - 1)
-                for (j in y0..y1) for (i in x0..x1) {
-                    val k = j * mw + i
-                    if (height[k] < top) height[k] = top
+                // The tile's outline in map cells, with its rounded corners (as TileRenderer draws
+                // them), so its shadow's corners are rounded too
+                val left = x * SCALE
+                val right = (x + transform.tileWidth + depthX) * SCALE
+                val upper = y * SCALE
+                val lower = (y + transform.tileHeight + depthY) * SCALE
+                val cx = (left + right) / 2f
+                val cy = (upper + lower) / 2f
+                val innerX = (right - left) / 2f - radius
+                val innerY = (lower - upper) / 2f - radius
+                for (j in upper.toInt().coerceIn(0, mh - 1)..lower.toInt().coerceIn(0, mh - 1)) {
+                    for (i in left.toInt().coerceIn(0, mw - 1)..right.toInt().coerceIn(0, mw - 1)) {
+                        val dx = maxOf(kotlin.math.abs(i + 0.5f - cx) - innerX, 0f)
+                        val dy = maxOf(kotlin.math.abs(j + 0.5f - cy) - innerY, 0f)
+                        if (dx * dx + dy * dy > radius * radius) continue
+                        val k = j * mw + i
+                        if (height[k] < top) height[k] = top
+                    }
                 }
             }
 
