@@ -15,7 +15,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
-import com.vortessence.mahjong.data.model.TableLighting
 import com.vortessence.mahjong.data.model.TableSurface
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -42,7 +41,8 @@ class PreferencesRepository(private val context: Context) {
         val COMPLETED_CONSTELLATIONS = stringSetPreferencesKey("completed_constellations")
         val SAVED_GAME = stringPreferencesKey("saved_game")
         val TABLE_SURFACE = stringPreferencesKey("table_surface")
-        val LIGHTING = stringPreferencesKey("lighting")
+        val LAMP_BRIGHTNESS = floatPreferencesKey("lamp_brightness")
+        val FIREPLACE = booleanPreferencesKey("fireplace")
         val FIRE_INTENSITY = floatPreferencesKey("fire_intensity")
         val LAST_WIN_DAY = longPreferencesKey("last_win_epoch_day")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
@@ -71,7 +71,8 @@ class PreferencesRepository(private val context: Context) {
             vibrationEnabled = prefs[Keys.VIBRATION] ?: true,
             showCornerIndex = prefs[Keys.SHOW_CORNER_INDEX] ?: false,
             tableSurface = surface,
-            lighting = TableLighting.entries.firstOrNull { it.name == prefs[Keys.LIGHTING] } ?: TableLighting.LAMP,
+            lampBrightness = prefs[Keys.LAMP_BRIGHTNESS] ?: 0.5f,
+            fireplaceLit = prefs[Keys.FIREPLACE] ?: false,
             fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: 0.5f,
         )
     }
@@ -96,7 +97,8 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.SHOW_CORNER_INDEX] = settings.showCornerIndex
             prefs[Keys.TABLE_SURFACE] = settings.tableSurface.name
             prefs[Keys.THEME] = settings.tableSurface.name
-            prefs[Keys.LIGHTING] = settings.lighting.name
+            prefs[Keys.LAMP_BRIGHTNESS] = settings.lampBrightness
+            prefs[Keys.FIREPLACE] = settings.fireplaceLit
             prefs[Keys.FIRE_INTENSITY] = settings.fireIntensity
         }
     }

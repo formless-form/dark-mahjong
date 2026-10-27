@@ -53,7 +53,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -68,7 +67,6 @@ import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
-import com.vortessence.mahjong.data.model.TableLighting
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -335,9 +333,8 @@ private fun BoardContent(
     // Flat table layout -> screen through the tilted camera, and back again for taps
     val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
     val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
-    val lampLight = remember(canvasW, canvasH) { lampLightBrush(canvasW, canvasH) }
     // Firelight flickers, so it is redrawn every frame; the lamp alone never changes
-    val firelit = settings.lighting != TableLighting.LAMP
+    val firelit = settings.fireplaceLit
     val flameSeconds by produceState(0f, firelit) {
         if (firelit) while (true) withFrameNanos { value = it / 1e9f }
     }
@@ -402,7 +399,7 @@ private fun BoardContent(
             drawContext.canvas.translate(pan.x, pan.y)
             drawContext.canvas.scale(zoom, zoom)
 
-            val flame = FlameLight.at(settings.lighting, flameSeconds, settings.fireIntensity)
+            val flame = FlameLight.at(flameSeconds, settings.lampBrightness, settings.fireplaceLit, settings.fireIntensity)
             TableSurfaceRenderer.drawTableSurface(
                 scope = this,
                 surface = settings.tableSurface,
@@ -447,6 +444,10 @@ private fun BoardContent(
                     highlightFreeTiles = settings.highlightFreeTiles,
                     showCornerIndex = settings.showCornerIndex,
                     glare = tileGlare(px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, canvasW, canvasH, flame),
+                    shadows = tileShadows(
+                        px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, tile.z,
+                        currentTransform.tileWidth, canvasW, canvasH, flame,
+                    ),
                 )
             }
 
@@ -460,10 +461,10 @@ private fun BoardContent(
                 )
             }
 
-            // Lamp or candlelight: multiplies everything drawn on the table (alpha untouched), full and
+            // Lamp and firelight: multiplies everything drawn on the table (alpha untouched), full and
             // warm under the lamp, falling off towards the dark edges
             drawRect(
-                brush = flame?.let { TableSurfaceRenderer.flameTileLight(canvasW, canvasH, it) } ?: lampLight,
+                brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame),
                 topLeft = Offset(-canvasW * 0.25f, -canvasH * 0.25f),
                 size = Size(canvasW * 1.5f, canvasH * 1.5f),
                 blendMode = BlendMode.Modulate,
@@ -500,25 +501,53 @@ private fun BoardContent(
 }
 
 /**
- * Radial light from the lamp in flat table pixels: warm and nearly full under the lamp, falling
- * off towards the edges but never so dark that a tile's face stops being readable.
+ * Shadows cast away from each light, as a point light casts them: a tile's top, standing zh
+ * above whatever it rests on, throws its shadow (centre - light) * zh / (lightHeight - zh). A
+ * raised tile's shadow mostly lands on the tiles beneath it, one tile's height down, so every
+ * tile casts as one tile tall. The lamp hangs high, so its shadows only lean a little outwards;
+ * firelight is low, so its shadows reach far, and they stretch, shrink and fade as the flames move.
+ *
+ * Each shadow is as dark as its light's share of all the light reaching the tile: a shadow keeps
+ * out one light and the other still fills it. Near the hearth the fire's shadows are deep and the
+ * lamp's soften; across the table, the other way round. The fire's shadows follow every flicker;
+ * the lamp's hold still, weighed against the fire as it burns on average, so they change only
+ * with the two sliders.
  */
-private fun lampLightBrush(w: Float, h: Float): Brush {
-    val centre = Offset(w / 2f, h / 2f - 0.06f * h)
-    val stops = (0..8).map { i ->
-        val d = i / 8f * 0.95f
-        // The trailing factor is the room's overall exposure (matching the table shader's 0.9)
-        val light = (0.30f + 0.70f * kotlin.math.exp(-d * d * 3.2f)) * 0.9f * 0.9f
-        (i / 8f) to Color(light, light * 0.95f, light * 0.88f)
-    }.toTypedArray()
-    return Brush.radialGradient(*stops, center = centre, radius = 0.95f * h)
-}
-
-/** How strongly a tile's glossy face reflects the lamp, by its centre in flat table pixels. */
-private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLight?): Float {
+private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h: Float, flame: FlameLight): TileShadows {
+    // A tile stands about an eighth of its width tall; the light's height counts from the
+    // surface the tile rests on
+    val top = tileW * 0.12f
+    val base = z * tileW * 0.12f
+    fun cast(lx: Float, ly: Float, lightHeight: Float, cap: Float): Offset {
+        val k = top / (lightHeight - base - top).coerceAtLeast(top)
+        val s = Offset((cx - lx) * k, (cy - ly) * k)
+        val len = s.getDistance()
+        return if (len > cap) s * (cap / len) else s
+    }
+    val lamp = cast(w / 2f, h / 2f - 0.06f * h, 1.4f * h, tileW * 0.25f)
+    if (flame.power <= 0f) return TileShadows(lamp, Offset.Zero, 0f)
+    val fire = cast(w / 2f + flame.u * h, h / 2f - flame.v * h, flame.height * h, tileW * 0.9f)
+    // The light reaching this tile from each, as the shaders light it (the fire by its brightness)
     val u = (cx - w / 2f) / h
     val v = (h / 2f - cy) / h
-    return if (flame != null) TableSurfaceRenderer.flameGlare(u, v, flame) else TableSurfaceRenderer.lampGlare(u, v)
+    val lampHere = flame.lamp * TableSurfaceRenderer.lampLight(u, v)
+    fun fireShare(fu: Float, fv: Float, power: Float): Float {
+        val du = u - fu
+        val dv = v - fv
+        val fireHere = power / (1f + (du * du + dv * dv) / flame.reach) * 0.6f // the fire's brightness
+        return fireHere / (fireHere + lampHere)
+    }
+    val flickering = fireShare(flame.u, flame.v, flame.power)
+    val steady = fireShare(flame.steadyU, flame.steadyV, flame.steadyPower)
+    // The lamp's resting shadow is partly the tile's own contact shadow, which no light fills
+    return TileShadows(lamp, fire, fireAlpha = 0.6f * flickering, lampDarkness = 1f - 0.6f * steady)
+}
+
+/** How strongly a tile's glossy face reflects the lamp and the fire, by its centre in flat table pixels. */
+private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLight): Float {
+    val u = (cx - w / 2f) / h
+    val v = (h / 2f - cy) / h
+    return TableSurfaceRenderer.flameGlare(u, v, flame)
 }
 
 private const val SMASH_MILLIS = 420

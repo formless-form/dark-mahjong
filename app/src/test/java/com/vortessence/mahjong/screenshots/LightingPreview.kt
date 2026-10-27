@@ -4,7 +4,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.vortessence.mahjong.data.model.GameSettings
-import com.vortessence.mahjong.data.model.TableLighting
 import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
@@ -18,7 +17,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The lamp alone, with the candle, and with the fireplace, side by side on each table surface, at the Pixel 9 Pro's size.
+ * The lamp alone, and with the fireplace, side by side on each table surface, at the Pixel 9 Pro's size.
  * Rendered into build/lighting-preview. Run: ./gradlew testDebugUnitTest --tests '*LightingPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -27,16 +26,16 @@ class LightingPreview {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun shoot(surface: TableSurface, lighting: TableLighting) {
+    private fun shoot(surface: TableSurface, fireplace: Boolean, lamp: Float = 0.5f, name: String? = null) {
         TileWear.prepareNow()
-        // Candles animate for ever, so the clock is stepped by hand rather than run to idle
+        // Firelight animates for ever, so the clock is stepped by hand rather than run to idle
         compose.mainClock.autoAdvance = false
         compose.setContent {
             MahjongTheme {
                 GameScreen(
                     gameState = MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(18)),
                     levelIndex = 18,
-                    settings = GameSettings(tableSurface = surface, lighting = lighting),
+                    settings = GameSettings(tableSurface = surface, fireplaceLit = fireplace, lampBrightness = lamp),
                     winMessage = null,
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
                     onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
@@ -44,16 +43,16 @@ class LightingPreview {
             }
         }
         compose.mainClock.advanceTimeBy(1500)
-        compose.onRoot().captureRoboImage("build/lighting-preview/${surface.name.lowercase()}-${lighting.name.lowercase()}.png")
+        compose.onRoot().captureRoboImage("build/lighting-preview/${surface.name.lowercase()}-${name ?: if (fireplace) "fireplace" else "lamp"}.png")
     }
 
-    @Test fun walnutLamp() = shoot(TableSurface.WALNUT, TableLighting.LAMP)
-    @Test fun walnutCandles() = shoot(TableSurface.WALNUT, TableLighting.CANDLE)
-    @Test fun walnutFireplace() = shoot(TableSurface.WALNUT, TableLighting.FIREPLACE)
-    @Test fun greenMatLamp() = shoot(TableSurface.GREEN_MAT, TableLighting.LAMP)
-    @Test fun greenMatCandles() = shoot(TableSurface.GREEN_MAT, TableLighting.CANDLE)
-    @Test fun greenMatFireplace() = shoot(TableSurface.GREEN_MAT, TableLighting.FIREPLACE)
-    @Test fun strawLamp() = shoot(TableSurface.THAI_STRAW, TableLighting.LAMP)
-    @Test fun strawCandles() = shoot(TableSurface.THAI_STRAW, TableLighting.CANDLE)
-    @Test fun strawFireplace() = shoot(TableSurface.THAI_STRAW, TableLighting.FIREPLACE)
+    @Test fun walnutLamp() = shoot(TableSurface.WALNUT, false)
+    @Test fun walnutFireplace() = shoot(TableSurface.WALNUT, true)
+    @Test fun greenMatLamp() = shoot(TableSurface.GREEN_MAT, false)
+    @Test fun greenMatFireplace() = shoot(TableSurface.GREEN_MAT, true)
+    @Test fun strawLamp() = shoot(TableSurface.THAI_STRAW, false)
+    @Test fun strawFireplace() = shoot(TableSurface.THAI_STRAW, true)
+    @Test fun walnutDimLamp() = shoot(TableSurface.WALNUT, false, lamp = 0f, name = "lamp-dim")
+    @Test fun walnutBrightLamp() = shoot(TableSurface.WALNUT, false, lamp = 1f, name = "lamp-bright")
+    @Test fun walnutDimLampFire() = shoot(TableSurface.WALNUT, true, lamp = 0f, name = "fireplace-dim-lamp")
 }

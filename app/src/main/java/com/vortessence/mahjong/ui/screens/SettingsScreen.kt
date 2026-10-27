@@ -20,7 +20,7 @@ import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Texture
 import androidx.compose.material.icons.rounded.Vibration
-import androidx.compose.material.icons.rounded.WbIncandescent
+import androidx.compose.material.icons.rounded.Fireplace
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
@@ -42,7 +42,6 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
-import com.vortessence.mahjong.data.model.TableLighting
 import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.ui.components.CheckSwitch
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
@@ -133,12 +132,17 @@ fun SettingsScreen(
                         ) { onSettingsChanged(settings.copy(tableSurface = it)) }
                     },
                     { shapes ->
-                        ChoiceRow(
-                            shapes, Icons.Rounded.WbIncandescent, "Lighting", "The lamp overhead, alone or with firelight",
-                            TableLighting.entries, { it.displayName }, settings.lighting,
-                        ) { onSettingsChanged(settings.copy(lighting = it)) }
+                        SliderRow(shapes, "Lamp brightness", settings.lampBrightness) {
+                            onSettingsChanged(settings.copy(lampBrightness = it))
+                        }
                     },
-                ) + if (settings.lighting == TableLighting.FIREPLACE) {
+                    { shapes ->
+                        ToggleRow(
+                            shapes, Icons.Rounded.Fireplace, "Fireplace", "Firelight from a hearth beside the table",
+                            settings.fireplaceLit,
+                        ) { onSettingsChanged(settings.copy(fireplaceLit = it)) }
+                    },
+                ) + if (settings.fireplaceLit) {
                     listOf<@Composable (ListItemShapes) -> Unit> { shapes ->
                         SliderRow(shapes, "Fire intensity", settings.fireIntensity) {
                             onSettingsChanged(settings.copy(fireIntensity = it))

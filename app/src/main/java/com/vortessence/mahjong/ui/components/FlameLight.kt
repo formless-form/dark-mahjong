@@ -1,12 +1,12 @@
 package com.vortessence.mahjong.ui.components
 
 import android.graphics.RuntimeShader
-import com.vortessence.mahjong.data.model.TableLighting
 import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * Warm light from a flame out of view, added to the lamp: where it stands on the table plane
+ * How the table is lit this frame: the lamp overhead at strength [lamp], plus warm light from a
+ * fire out of view (none when [power] is 0): where it stands on the table plane
  * ([u], [v], in table heights, v up, as the table shader), its [power], its [reach] (the squared
  * distance at which it falls to half), its colour, and how far the [lamp] is turned down beside
  * it. Recomputed every frame, since flames never hold still.
@@ -20,6 +20,12 @@ class FlameLight(
     val g: Float,
     val b: Float,
     val lamp: Float,
+    // How high the light stands above the table, in table heights: sets how long shadows reach
+    val height: Float = 0.2f,
+    // The fire as it burns on average, without its flicker: for anything that must hold still
+    val steadyU: Float = u,
+    val steadyV: Float = v,
+    val steadyPower: Float = power,
 ) {
     fun setUniforms(s: RuntimeShader) {
         s.setFloatUniform("flame", u, v, power, reach)
@@ -28,29 +34,22 @@ class FlameLight(
     }
 
     companion object {
-        /** The lamp alone. */
-        val NONE = FlameLight(0f, 0f, 0f, 1f, 0f, 0f, 0f, lamp = 1f)
+        /** The lamp alone, at its natural strength. */
+        val NONE = lampOnly(1f)
+
+        private fun lampOnly(lamp: Float) = FlameLight(0f, 0f, 0f, 1f, 0f, 0f, 0f, lamp = lamp)
 
         /**
-         * The flame for [lighting] at [seconds], or null for the lamp alone. [fireIntensity]
-         * (0..1, the player's setting) runs the fireplace from embers (a quarter of its natural
-         * strength, at 0) to a roaring blaze (one and three quarters, at 1).
+         * The light at [seconds] for the player's settings, each 0..1 with its natural strength
+         * in the middle. [lampBrightness] runs the lamp from about a third of that to a third
+         * brighter again; [fireIntensity] runs a lit fire from embers (a quarter) to a roaring
+         * blaze (one and three quarters). Beside a fire the lamp is turned down a little.
          */
-        fun at(lighting: TableLighting, seconds: Float, fireIntensity: Float = 0.5f): FlameLight? = when (lighting) {
-            TableLighting.LAMP -> null
-            TableLighting.CANDLE -> candle(seconds)
-            TableLighting.FIREPLACE -> fireplace(seconds, 0.25f + 1.5f * fireIntensity.coerceIn(0f, 1f))
-        }
-
-        /**
-         * A candle on the table just out of view past the top-left of the board, about 1900 K.
-         * It breathes rather than strobes: a slow sway and a quicker shiver, a few percent each.
-         */
-        private fun candle(t: Float): FlameLight {
-            val sway = 0.5f * sin(t * 1.7f) + 0.5f * sin(t * 2.9f)
-            val shiver = sin(t * 11.3f) * sin(t * 17.9f)
-            val flicker = 1f + 0.035f * sway + 0.025f * shiver
-            return FlameLight(-0.30f, 0.56f, 0.7f * flicker, 0.09f, 1f, 0.62f, 0.30f, lamp = 0.75f)
+        fun at(seconds: Float, lampBrightness: Float, fireplaceLit: Boolean, fireIntensity: Float): FlameLight {
+            val x = lampBrightness.coerceIn(0f, 1f)
+            val lamp = if (x < 0.5f) 0.35f + 1.3f * x else 1f + 0.6f * (x - 0.5f)
+            if (!fireplaceLit) return lampOnly(lamp)
+            return fireplace(seconds, 0.25f + 1.5f * fireIntensity.coerceIn(0f, 1f), lamp * 0.65f)
         }
 
         /**
@@ -59,7 +58,7 @@ class FlameLight(
          * and lulls with quick licks of flame on top, and now and then a log catches and it flares.
          * As the flames move, so does the light, a little; brighter flames burn yellower.
          */
-        private fun fireplace(t: Float, strength: Float): FlameLight {
+        private fun fireplace(t: Float, strength: Float, lamp: Float): FlameLight {
             val surge = noise(t * 0.9f, 0f)
             val lick = noise(t * 3.7f, 17f)
             val flutter = noise(t * 11f, 41f)
@@ -75,7 +74,11 @@ class FlameLight(
                 r = 1f,
                 g = (0.47f + 0.16f * heat).coerceIn(0.3f, 0.7f),
                 b = (0.17f + 0.10f * heat).coerceIn(0.08f, 0.35f),
-                lamp = 0.65f,
+                lamp = lamp,
+                height = 0.28f,
+                steadyU = -0.50f,
+                steadyV = 0.10f,
+                steadyPower = strength,
             )
         }
 

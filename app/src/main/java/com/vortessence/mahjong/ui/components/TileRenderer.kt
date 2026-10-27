@@ -1,5 +1,6 @@
 package com.vortessence.mahjong.ui.components
 
+import android.graphics.BlurMaskFilter
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.ui.geometry.CornerRadius
@@ -66,6 +67,7 @@ object TileRenderer {
         highlightFreeTiles: Boolean = false,
         showCornerIndex: Boolean = false,
         glare: Float = 0f,
+        shadows: TileShadows = TileShadows.NONE,
     ) {
         if (boardTile.isRemoved) return
         // Real tiles never sit perfectly square: a fraction of a degree and a pixel or two off
@@ -78,7 +80,7 @@ object TileRenderer {
             drawBlock = {
                 drawTileBody(
                     scope, boardTile, x, y, width, height, isSelected, isHinted, isBlockedHighlight,
-                isTutorialHighlight, highlightFreeTiles, showCornerIndex, glare,
+                isTutorialHighlight, highlightFreeTiles, showCornerIndex, glare, shadows,
                 )
             },
         )
@@ -98,6 +100,7 @@ object TileRenderer {
         highlightFreeTiles: Boolean = false,
         showCornerIndex: Boolean = false,
         glare: Float = 0f,
+        shadows: TileShadows = TileShadows.NONE,
     ) {
         if (boardTile.isRemoved) return
 
@@ -120,11 +123,30 @@ object TileRenderer {
         val tintAlpha = if (isImportantHighlight) 0.5f else 0.15f
 
         // 1. Physically Grounded 3D Shadows
-        val shadowAlpha = (0.28f + (layerZ * 0.05f)).coerceAtMost(0.65f)
+        // The resting shadow under the lamp, filled in a little where firelight reaches
+        val shadowAlpha = (0.28f + (layerZ * 0.05f)).coerceAtMost(0.65f) * shadows.lampDarkness
+
+        // Firelight's shadow: long and soft-edged (the fire is broad). Blurred copies drawn out
+        // along its length overlap most near the tile, so it fades as it reaches away.
+        if (shadows.fireAlpha > 0.005f) {
+            val blur = (width * 0.14f).roundToInt().coerceAtLeast(1)
+            if (fireShadowBlur != blur) {
+                fireShadowPaint.maskFilter = BlurMaskFilter(blur.toFloat(), BlurMaskFilter.Blur.NORMAL)
+                fireShadowBlur = blur
+            }
+            fireShadowPaint.color = Color.Black.copy(alpha = shadows.fireAlpha * 0.3f).toArgb()
+            val canvas = scope.drawContext.canvas.nativeCanvas
+            for (k in 1..FIRE_SHADOW_STEPS) {
+                val reach = k / FIRE_SHADOW_STEPS.toFloat()
+                val left = x + depthX + shadows.fire.x * reach
+                val top = y + depthY + shadows.fire.y * reach
+                canvas.drawRoundRect(left, top, left + width, top + height, cornerR, cornerR, fireShadowPaint)
+            }
+        }
 
         if (layerZ == 0) {
             scope.drawRoundRect(
-                color = Color.Black.copy(alpha = 0.2f),
+                color = Color.Black.copy(alpha = 0.2f * shadows.lampDarkness),
                 topLeft = Offset(x + (depthX * 1.6f), y + (depthY * 1.6f)),
                 size = Size(width, height),
                 cornerRadius = CornerRadius(cornerR * 1.8f, cornerR * 1.8f),
@@ -133,7 +155,7 @@ object TileRenderer {
 
         scope.drawRoundRect(
             color = Color.Black.copy(alpha = shadowAlpha),
-            topLeft = Offset(x + depthX + (width * 0.01f), y + depthY + (height * 0.01f)),
+            topLeft = Offset(x + depthX + (width * 0.01f) + shadows.lamp.x, y + depthY + (height * 0.01f) + shadows.lamp.y),
             size = Size(width, height),
             cornerRadius = corner,
         )
@@ -699,6 +721,10 @@ object TileRenderer {
     }
 
     private val EngraveShadow = Color(0x5A3A2A18)
+
+    private const val FIRE_SHADOW_STEPS = 5
+    private val fireShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var fireShadowBlur = -1
     private val EngraveLight = Color(0x99FFFDF6)
 
     private fun drawVectorTile(
@@ -729,3 +755,14 @@ object TileRenderer {
     }
 }
 
+/**
+ * Where a tile's shadows fall, from the lights above the table: the lamp's ([lamp], added to the
+ * tile's resting shadow, which is [lampDarkness] as dark as under the lamp alone) and the
+ * firelight's ([fire], how far its far end reaches, and how dark, [fireAlpha]). In flat table
+ * pixels.
+ */
+data class TileShadows(val lamp: Offset, val fire: Offset, val fireAlpha: Float, val lampDarkness: Float = 1f) {
+    companion object {
+        val NONE = TileShadows(Offset.Zero, Offset.Zero, 0f)
+    }
+}

@@ -32,7 +32,7 @@ object TableSurfaceRenderer {
         context: Context? = null,
         zoom: Float = 1f,
         pan: Offset = Offset.Zero,
-        flame: FlameLight? = null,
+        flame: FlameLight = FlameLight.NONE,
     ) {
         val s = shader ?: RuntimeShader(TABLE_AGSL).also { shader = it }
         s.setFloatUniform("res", width, height)
@@ -41,15 +41,15 @@ object TableSurfaceRenderer {
         s.setFloatUniform("camDist", TableCamera.DISTANCE)
         s.setFloatUniform("zoom", zoom)
         s.setFloatUniform("pan", pan.x, pan.y)
-        (flame ?: FlameLight.NONE).setUniforms(s)
+        flame.setUniforms(s)
         scope.drawRect(ShaderBrush(s))
     }
 
     /**
-     * The firelight for the tiles in flat table pixels (as [MahjongBoard]'s lamp brush): drawn
-     * with BlendMode.Modulate over everything on the table, matching the table's own light.
+     * The lamp and firelight for the tiles in flat table pixels: drawn with BlendMode.Modulate
+     * over everything on the table, matching the table's own light.
      */
-    fun flameTileLight(width: Float, height: Float, flame: FlameLight): ShaderBrush {
+    fun tileLight(width: Float, height: Float, flame: FlameLight): ShaderBrush {
         val s = flameShader ?: RuntimeShader(FLAME_TILE_AGSL).also { flameShader = it }
         s.setFloatUniform("res", width, height)
         flame.setUniforms(s)
@@ -107,7 +107,8 @@ uniform float2 res;
 $FLAME_AGSL
 half4 main(float2 p) {
     float2 q = float2((p.x - 0.5 * res.x) / res.y, (0.5 * res.y - p.y) / res.y);
-    // The lamp brush's own falloff (lampLightBrush), dimmed, plus the flame; times the room's exposure
+    // The lamp's light on the tiles (softer than on the table, so no face is ever too dark to
+    // read), plus the flame; times the room's exposure
     float2 l = (q - float2(0.0, 0.06)) / 0.95;
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
     float3 c = (lampLevel * lamp * float3(1.0, 0.95, 0.88) + flameLight(q)) * 0.81;
@@ -317,23 +318,18 @@ half4 main(float2 p) {
     else if (mode < 1.5) { albedo = walnut(q, fp); gloss = 1.0; }
     else { albedo = straw(q, fp); gloss = 0.1; }
 
-    // One warm lamp over the table; the room falls away into darkness
+    // One warm lamp over the table, and perhaps firelight from out of view; the room falls away
+    // into darkness
     float2 lq = (q - float2(0.0, 0.06)) * float2(1.0, 0.85);
     float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
-    float3 c = albedo * pool * float3(1.0, 0.93, 0.84);
-    // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle
+    float3 c = albedo * (lampLevel * pool * float3(1.0, 0.93, 0.84) + flameLight(q));
+    // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
+    // and the fire just in front of its flames
     float2 m = (q - float2(0.0, 0.26)) * float2(3.4, 1.3);
-    float glare = exp(-dot(m, m) * 5.0);
-    if (flame.z > 0.0) {
-        // Or the lamp turned down, with firelight from out of view, reflected just in front of
-        // the flame
-        c = albedo * (lampLevel * pool * float3(1.0, 0.93, 0.84) + flameLight(q));
-        float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4, 2.2);
-        c += gloss * 0.85 * flame.z * exp(-dot(mc, mc) * 4.0) * flameColour * float3(0.26, 0.24, 0.2);
-        glare *= lampLevel;
-    }
+    float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4, 2.2);
     float grain = mode > 0.5 && mode < 1.5 ? 0.75 + 0.5 * vnoise(q * float2(60.0, 6.0)) : 1.0;
-    c += gloss * glare * grain * float3(0.24, 0.215, 0.18);
+    c += gloss * grain * (lampLevel * exp(-dot(m, m) * 5.0) * float3(0.24, 0.215, 0.18)
+        + 0.85 * flame.z * exp(-dot(mc, mc) * 4.0) * flameColour * float3(0.26, 0.24, 0.2));
     // Screen-edge vignette deepens the dark corners
     float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
     c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e)));
