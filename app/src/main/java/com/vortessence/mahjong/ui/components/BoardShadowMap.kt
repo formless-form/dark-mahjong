@@ -42,7 +42,7 @@ class BoardShadowMap private constructor(
     companion object {
         private const val SCALE = 0.25f
         private const val PER_LAYER = 31
-        private const val AMBIENT_OCCLUSION = 0.75f
+        private const val AMBIENT_OCCLUSION = 0.9f
 
         // A tile stands about this much of its width tall
         private const val TILE_HEIGHT = 0.15f

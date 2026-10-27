@@ -173,7 +173,7 @@ half4 main(float2 p) {
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
     float fire = fireShadow(q, boardHeight(q));
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
-    float3 c = (lampLevel * lamp * (1.0 - 0.4 * (1.0 - fire)) * float3(1.0, 0.95, 0.88) + flameLight(q) * fire)
+    float3 c = (lampLevel * lamp * (1.0 - 0.6 * (1.0 - fire)) * float3(1.0, 0.95, 0.88) + flameLight(q) * fire)
         * 0.81;
     return half4(half3(keepHue(c)), 1.0);
 }
@@ -387,7 +387,7 @@ half4 main(float2 p) {
     float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
     float fire = fireShadow(q, 0.0);
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
-    float3 c = albedo * (lampLevel * pool * (1.0 - 0.4 * (1.0 - fire)) * float3(1.0, 0.93, 0.84) + flameLight(q) * fire)
+    float3 c = albedo * (lampLevel * pool * (1.0 - 0.6 * (1.0 - fire)) * float3(1.0, 0.93, 0.84) + flameLight(q) * fire)
         * ambient(q);
     // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
     // and the fire just in front of its flames
