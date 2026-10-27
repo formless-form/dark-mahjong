@@ -66,13 +66,54 @@ internal fun fireworksSnapshot(seed: Long, seconds: Float): (DrawScope) -> Unit 
     return { scope -> show.draw(scope) }
 }
 
+/**
+ * Single shells burst over the table when a pair is matched, one per match. Each sim lives until
+ * its sparks die; several can overlap when the player matches quickly.
+ */
+internal class MatchBursts {
+    private val live = mutableListOf<FireworksSimulation>()
+
+    /** Bumped every frame while a burst is alive, so a Canvas that draws these redraws. */
+    var frame by mutableLongStateOf(0L)
+        private set
+
+    /**
+     * Bursts at ([x], [y]) on a canvas [canvasHeight] tall, with sparks reaching about [reach]
+     * pixels out. Suspends until every burst it is running has died away.
+     */
+    suspend fun burst(x: Float, y: Float, reach: Float, canvasHeight: Float, seed: Long = System.nanoTime()) {
+        if (canvasHeight <= 0f) return
+        // A spark's speed times its drag-limited travel: 0.40 / 2.1 of the shell size
+        val single = SingleBurst(x / canvasHeight, y / canvasHeight, size = reach / canvasHeight / 0.19f)
+        live += FireworksSimulation(Random(seed), single)
+        if (live.size > 1) return // the first caller's loop already runs every frame
+        var last = -1L
+        while (live.isNotEmpty()) {
+            withFrameNanos { now ->
+                val dt = if (last < 0) 0f else ((now - last) / 1e9f).coerceAtMost(1f / 20f)
+                last = now
+                live.forEach { it.step(dt) }
+                live.removeAll { it.finished }
+                frame = now
+            }
+        }
+    }
+
+    fun draw(scope: DrawScope) {
+        live.forEach { it.draw(scope) }
+    }
+}
+
+/** A lone shell: where it bursts (in canvas heights) and how big it is. */
+private class SingleBurst(val x: Float, val y: Float, val size: Float)
+
 private enum class BurstStyle { PEONY, RING, CHRYSANTHEMUM, WILLOW, CRACKLE, MULTI }
 
 /**
  * Particle state in flat arrays (no allocation per frame). Positions are in units of the canvas
  * height, so bursts look the same on any screen; x runs 0..aspect.
  */
-private class FireworksSimulation(private val rnd: Random) {
+private class FireworksSimulation(private val rnd: Random, private val single: SingleBurst? = null) {
     private val cap = 4200
     private val x = FloatArray(cap)
     private val y = FloatArray(cap)
@@ -107,7 +148,7 @@ private class FireworksSimulation(private val rnd: Random) {
     private var time = 0f
 
     // Dense schedule: an opening volley, a busy middle, and a closing barrage
-    private val burstTimes: FloatArray = buildList {
+    private val burstTimes: FloatArray = if (single != null) floatArrayOf(0f) else buildList {
         for (i in 0 until 4) add(0.02f + i * 0.09f + rnd.nextFloat() * 0.05f)
         var t = 0.45f
         while (t < 3.3f) {
@@ -147,13 +188,16 @@ private class FireworksSimulation(private val rnd: Random) {
     }
 
     private fun burst() {
-        val cx = aspect * (0.1f + 0.8f * rnd.nextFloat())
-        val cy = 0.08f + 0.84f * rnd.nextFloat()
-        val style = BurstStyle.entries[rnd.nextInt(BurstStyle.entries.size)]
+        val cx = single?.x ?: (aspect * (0.1f + 0.8f * rnd.nextFloat()))
+        val cy = single?.y ?: (0.08f + 0.84f * rnd.nextFloat())
+        // A match's shell is quick and light, so play goes on uncluttered: no long willows
+        val styles = if (single != null) BurstStyle.entries - BurstStyle.WILLOW else BurstStyle.entries
+        val style = styles[rnd.nextInt(styles.size)]
         // Widely varied colours: any hue, mostly saturated, sometimes pastel or gold/silver
         val (cr, cg, cb) = randomColour()
         val (sr, sg, sb) = randomColour()
-        val size = 0.75f + rnd.nextFloat() * 0.6f
+        val size = single?.size ?: (0.75f + rnd.nextFloat() * 0.6f)
+        val lifeScale = if (single != null) 0.55f else 1f
 
         val f = (0 until flashCount).firstOrNull { flashLife[it] <= 0f } ?: rnd.nextInt(flashCount)
         flashX[f] = cx; flashY[f] = cy; flashLife[f] = 0.4f
@@ -165,7 +209,7 @@ private class FireworksSimulation(private val rnd: Random) {
             BurstStyle.CHRYSANTHEMUM -> 170
             BurstStyle.CRACKLE -> 110
             else -> 150
-        }
+        } / (if (single != null) 2 else 1)
         for (k in 0 until count) {
             // Uniform direction on a sphere, seen from above: (x, y) of the unit vector.
             // Projected, this fills a disc that is densest towards its rim.
@@ -193,7 +237,7 @@ private class FireworksSimulation(private val rnd: Random) {
                 BurstStyle.WILLOW -> 2.4f + rnd.nextFloat() * 0.9f
                 BurstStyle.CHRYSANTHEMUM -> 1.5f + rnd.nextFloat() * 0.5f
                 else -> 1.1f + rnd.nextFloat() * 0.6f
-            }
+            } * lifeScale
             // Willows burn gold; chrysanthemums fade towards their second colour
             val (er, eg, eb) = when (style) {
                 BurstStyle.WILLOW -> Triple(1f, 0.72f, 0.32f)
@@ -203,7 +247,7 @@ private class FireworksSimulation(private val rnd: Random) {
             spawn(
                 cx, cy, dx * speed, dy * speed, l,
                 drag = if (style == BurstStyle.WILLOW) 2.6f else 2.1f,
-                rad = if (style == BurstStyle.WILLOW) 0.85f else 1.05f,
+                rad = (if (style == BurstStyle.WILLOW) 0.85f else 1.05f) * (if (single != null) 0.7f else 1f),
                 cr = if (style == BurstStyle.WILLOW) 1f else pr,
                 cg = if (style == BurstStyle.WILLOW) 0.8f else pg,
                 cb = if (style == BurstStyle.WILLOW) 0.45f else pb,

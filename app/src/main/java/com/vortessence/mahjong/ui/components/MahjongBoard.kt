@@ -55,7 +55,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -67,12 +66,13 @@ import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
-import com.vortessence.mahjong.ui.theme.GoldHighlight
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -272,7 +272,8 @@ private fun BoardContent(
         depthY = currentShiftY
     )
 
-    // Matching tiles smash animations
+    // Matching tiles smash animations, each ending in a small firework burst where they meet
+    val matchBursts = remember { MatchBursts() }
     var activeSmashes by remember { mutableStateOf<List<SmashAnimationItem>>(emptyList()) }
     var prevMoveCount by remember { mutableIntStateOf(gameState.moveHistory.size) }
 
@@ -296,9 +297,21 @@ private fun BoardContent(
                     onTileMatch()
                 }
                 launch {
+                    // Burst the moment the raised pair's edges touch, where they meet
+                    val transform = currentTransform
+                    delay((SMASH_MILLIS * smashContactFraction(t1, t2, transform)).toLong().milliseconds)
+                    val lift = with(density) { 16.dp.toPx() }
+                    matchBursts.burst(
+                        x = (transform.tilePixelX(t1.x, t1.z) + transform.tilePixelX(t2.x, t2.z) + transform.tileWidth) / 2f,
+                        y = (transform.tilePixelY(t1.y, t1.z) + transform.tilePixelY(t2.y, t2.z) + transform.tileHeight) / 2f - lift,
+                        reach = transform.tileWidth * 1.6f,
+                        canvasHeight = canvasH,
+                    )
+                }
+                launch {
                     smashItem.animatable.animateTo(
                         targetValue = 1f,
-                        animationSpec = tween(durationMillis = 420, easing = LinearEasing)
+                        animationSpec = tween(durationMillis = SMASH_MILLIS, easing = LinearEasing)
                     )
                     activeSmashes = activeSmashes.filter { it.id != animId }
                 }
@@ -446,6 +459,8 @@ private fun BoardContent(
                 blendMode = BlendMode.Modulate,
             )
             drawContext.canvas.restore()
+            // Firework light is its own, so it goes on after the lamp's falloff
+            if (matchBursts.frame != 0L) matchBursts.draw(this)
             nativeCanvas.restore()
             drawContext.canvas.restore()
         }
@@ -492,6 +507,26 @@ private fun lampLightBrush(w: Float, h: Float): Brush {
 /** How strongly a tile's glossy face reflects the lamp, by its centre in flat table pixels. */
 private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float): Float =
     TableSurfaceRenderer.lampGlare((cx - w / 2f) / h, (h / 2f - cy) / h)
+
+private const val SMASH_MILLIS = 420
+
+/**
+ * The point in the smash (0..1 of [drawSmashAnimation]'s progress) when the two raised tiles,
+ * rushing together, first touch edge to edge. Never before the rush is half done, so even a pair
+ * that starts side by side visibly collides.
+ */
+private fun smashContactFraction(t1: BoardTile, t2: BoardTile, transform: BoardTransform): Float {
+    val dx = abs(transform.tilePixelX(t1.x, t1.z) - transform.tilePixelX(t2.x, t2.z))
+    val dy = abs(transform.tilePixelY(t1.y, t1.z) - transform.tilePixelY(t2.y, t2.z))
+    // The rectangles touch once both gaps are within a (raised, 1.18x) tile's width and height
+    val apart = minOf(
+        if (dx > 0f) 1.18f * transform.tileWidth / dx else 1f,
+        if (dy > 0f) 1.18f * transform.tileHeight / dy else 1f,
+    ).coerceIn(0f, 1f)
+    // The rush closes the gap by rushRaw squared
+    val rushRaw = sqrt(1f - apart).coerceAtLeast(0.5f)
+    return 0.25f + 0.45f * rushRaw
+}
 
 private fun DrawScope.drawSmashAnimation(
     smash: SmashAnimationItem,
@@ -585,29 +620,7 @@ private fun DrawScope.drawSmashAnimation(
         )
     }
 
-    // 2. Impact shockwave ring at collision midpoint
-    if (frame.impactFraction > 0f) {
-        val shockRadius = frame.impactFraction * transform.tileWidth * 1.3f
-        val shockAlpha = (1f - frame.impactFraction).coerceIn(0f, 1f)
-        val center = Offset(
-            midX + transform.tileWidth / 2f,
-            midY + liftY + transform.tileHeight / 2f
-        )
-        drawCircle(
-            color = GoldHighlight.copy(alpha = shockAlpha * 0.85f),
-            radius = shockRadius,
-            center = center,
-            style = Stroke(width = with(density) { 3.5.dp.toPx() } * shockAlpha)
-        )
-        drawCircle(
-            color = Color.White.copy(alpha = shockAlpha * 0.7f),
-            radius = shockRadius * 0.65f,
-            center = center,
-            style = Stroke(width = with(density) { 2.dp.toPx() } * shockAlpha)
-        )
-    }
-
-    // 3. Draw colliding raised tiles
+    // 2. Draw colliding raised tiles
     if (frame.alpha > 0.01f) {
         val sorted = listOf(t1 to (frame.x1 to frame.y1), t2 to (frame.x2 to frame.y2))
             .sortedWith(
