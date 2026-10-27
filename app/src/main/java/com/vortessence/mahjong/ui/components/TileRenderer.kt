@@ -86,6 +86,26 @@ object TileRenderer {
         )
     }
 
+    /**
+     * The soft contact shadow a raised tile casts onto the tiles it rests on, deepest at its foot,
+     * where little light reaches (a cheap ambient occlusion). Soft-edged and a little larger than
+     * the tile, so it shows on every side. The board draws a whole layer's contact shadows before
+     * that layer's tiles, so they fall only on the layer below, never on a neighbour of the same
+     * height.
+     */
+    fun drawContactShadow(scope: DrawScope, x: Float, y: Float, width: Float, height: Float) {
+        val blur = (width * 0.07f).roundToInt().coerceAtLeast(1)
+        if (contactBlur != blur) {
+            contactPaint.maskFilter = BlurMaskFilter(blur.toFloat(), BlurMaskFilter.Blur.NORMAL)
+            contactBlur = blur
+        }
+        contactPaint.color = Color.Black.copy(alpha = CONTACT_SHADOW_ALPHA).toArgb()
+        val left = x + width * BoardTransform.LAYER_SHIFT_FACTOR_X * 1.4f
+        val top = y + height * BoardTransform.LAYER_SHIFT_FACTOR_Y * 1.4f
+        val r = width * 0.085f * 1.5f
+        scope.drawContext.canvas.nativeCanvas.drawRoundRect(left, top, left + width, top + height, r, r, contactPaint)
+    }
+
     private fun drawTileBody(
         scope: DrawScope,
         boardTile: BoardTile,
@@ -125,23 +145,6 @@ object TileRenderer {
         // 1. Physically Grounded 3D Shadows
         // The resting shadow under the lamp, filled in a little where firelight reaches
         val shadowAlpha = (0.28f + (layerZ * 0.05f)).coerceAtMost(0.65f) * shadows.lampDarkness
-
-        // Contact shadow: a raised tile darkens the tiles it rests on, most of all right at its
-        // foot, where little light reaches (a cheap ambient occlusion). Soft-edged and a little
-        // larger than the tile, so it shows on every side, deepest below and to the right.
-        if (layerZ > 0) {
-            val blur = (width * 0.08f).roundToInt().coerceAtLeast(1)
-            if (contactBlur != blur) {
-                contactPaint.maskFilter = BlurMaskFilter(blur.toFloat(), BlurMaskFilter.Blur.NORMAL)
-                contactBlur = blur
-            }
-            contactPaint.color = Color.Black.copy(alpha = CONTACT_SHADOW_ALPHA).toArgb()
-            val left = x + depthX * 1.4f
-            val top = y + depthY * 1.4f
-            scope.drawContext.canvas.nativeCanvas.drawRoundRect(
-                left, top, left + width, top + height, cornerR * 1.5f, cornerR * 1.5f, contactPaint,
-            )
-        }
 
         // Firelight's shadow: long and soft-edged (the fire is broad). Blurred copies drawn out
         // along its length overlap most near the tile, so it fades as it reaches away.
@@ -756,7 +759,7 @@ object TileRenderer {
     private const val FIRE_SHADOW_STEPS = 5
     private const val WALL_SHADE_ALPHA = 0.6f
     private val fireShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private const val CONTACT_SHADOW_ALPHA = 0.55f
+    private const val CONTACT_SHADOW_ALPHA = 0.45f
     private val contactPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var contactBlur = -1
     private var fireShadowBlur = -1

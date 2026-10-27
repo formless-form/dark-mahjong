@@ -442,7 +442,23 @@ private fun BoardContent(
                 Rect(-canvasW * 0.25f, -canvasH * 0.25f, canvasW * 1.25f, canvasH * 1.25f),
                 Paint(),
             )
+            var layerShaded = 0
             for (tile in sortedTiles) {
+                // On reaching each raised layer, first lay all its contact shadows on the layer
+                // below; its own tiles then cover any that reach a neighbour of the same height
+                if (tile.z > layerShaded) {
+                    layerShaded = tile.z
+                    for (above in sortedTiles) {
+                        if (above.z != tile.z) continue
+                        TileRenderer.drawContactShadow(
+                            this,
+                            currentTransform.tilePixelX(above.x, above.z),
+                            currentTransform.tilePixelY(above.y, above.z),
+                            currentTransform.tileWidth,
+                            currentTransform.tileHeight,
+                        )
+                    }
+                }
                 val px = currentTransform.tilePixelX(tile.x, tile.z)
                 val py = currentTransform.tilePixelY(tile.y, tile.z)
                 val isSelected = tile.id == gameState.selectedTileId
