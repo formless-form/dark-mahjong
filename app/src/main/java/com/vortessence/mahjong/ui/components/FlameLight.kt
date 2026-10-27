@@ -31,7 +31,6 @@ class FlameLight(
         s.setFloatUniform("flame", u, v, power, reach)
         s.setFloatUniform("flameColour", r, g, b)
         s.setFloatUniform("lampLevel", lamp)
-        s.setFloatUniform("flameRest", steadyU, steadyV)
     }
 
     companion object {

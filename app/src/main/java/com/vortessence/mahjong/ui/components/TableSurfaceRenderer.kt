@@ -102,18 +102,21 @@ object TableSurfaceRenderer {
  * replacing it: the lamp overhead keeps every tile face readable, wherever the fire's light
  * falls short. All of it comes from [FlameLight], fresh each frame.
  *
- * The board's ambient occlusion and the fire's long shadows come from a light map worked out
- * each time the tiles change ([BoardShadowMap]): one lookup per pixel, shifted a little as the
- * flames move so the shadows sway. Both shaders declare res (the flat table's size in pixels)
- * before this.
+ * With long shadows on, the fire's light is traced per pixel from each point towards the flames
+ * through the board's height map ([BoardShadowMap]). The fire burns low beside the table, so its
+ * light skims the board and a stack throws a shadow several tiles long. The table's ambient
+ * occlusion is a cheap lookup in the same map. Both shaders declare res (the flat table's size in
+ * pixels) before this.
  */
 private const val FLAME_AGSL = """
 uniform float4 flame;       // u, v, power, reach (squared distance at which it halves)
 uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
-uniform shader lightMap;    // the board's shading (BoardShadowMap), in its own pixels
-uniform float4 shade;       // fire shadows on (1) or off, map pixels per table pixel, ambient occlusion strength, sway
-uniform float2 flameRest;   // where the fire burns on average, which its shadows were traced from
+uniform shader shadeMap;    // the board's height map and the table's occlusion (BoardShadowMap)
+uniform float4 shade;       // fire shadows on (1) or off, map pixels per table pixel, one layer's height, the tallest stack's
+uniform float aoStrength;   // how deep the table's ambient occlusion goes (0 with no map)
+const float FIRE_HEIGHT = 0.075;  // how high the flames burn above the table, in table heights
+const int SHADOW_STEPS = 40;
 // Brings an over-bright colour back within range whole, keeping its hue. Clamping each channel
 // on its own would clip red first, so a bright orange flare would drift towards yellow-green.
 float3 keepHue(float3 c) {
@@ -123,19 +126,39 @@ float3 flameLight(float2 q) {
     float2 d = q - flame.xy;
     return flame.z / (1.0 + dot(d, d) / flame.w) * flameColour;
 }
-// The board's light map at q (in table heights): red is ambient occlusion, green the fire's light
+// The board's shade map at q (in table heights)
 half4 shading(float2 q) {
-    return lightMap.eval(float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y) * shade.y);
+    return shadeMap.eval(float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y) * shade.y);
 }
-// Ambient occlusion: lower where taller tiles hem q in
+// How tall the board stands at q (0 on the bare table), in table heights
+float boardHeight(float2 q) {
+    return shading(q).r * (255.0 / 31.0) * shade.z;
+}
+// The table's ambient occlusion: lower where the tiles hem it in
 float ambient(float2 q) {
-    return 1.0 - shade.z * shading(q).r;
+    return 1.0 - aoStrength * shading(q).g;
 }
-// How much of the fire reaches q: 1 in its light, 0 in full shadow. The shadows were traced from
-// the fire's resting place; as the flames move, they shift the other way.
-float fireShadow(float2 q) {
-    if (shade.x < 0.5 || flame.z <= 0.0) return 1.0;
-    return shading(q - (flame.xy - flameRest) * shade.w).g;
+// How much of the fire reaches q, standing h0 above the table: 1 in its light, 0 in full shadow.
+// Marches from q towards the flames as far as the ray stays below the tallest stack, and takes
+// the deepest occlusion along the way, softened as the ray reaches away (the fire is broad).
+float fireShadow(float2 q, float h0) {
+    if (shade.x < 0.5 || flame.z <= 0.0 || h0 >= shade.w) return 1.0;
+    float2 toFire = flame.xy - q;
+    float dist = length(toFire);
+    float rise = (FIRE_HEIGHT - h0) / dist;
+    float reach = min(dist, (shade.w - h0) / max(rise, 1e-4));
+    float2 dir = toFire / dist;
+    // A different start for each pixel, so the steps don't show as bands
+    float jitter = fract(52.9829189 * fract(dot(q * res.y, float2(0.06711056, 0.00583715))));
+    float occluded = 0.0;
+    for (int i = 0; i < SHADOW_STEPS; i++) {
+        float s = reach * (float(i) + jitter) / float(SHADOW_STEPS) + 0.6 * shade.z;
+        // Less a little, so a tile's own softened edge never shades it
+        float above = boardHeight(q + dir * s) - (h0 + s * rise) - 0.35 * shade.z;
+        float soft = 0.8 * shade.z + 0.12 * s;
+        occluded = max(occluded, clamp(above / soft, 0.0, 1.0));
+    }
+    return 1.0 - occluded;
 }
 """
 
@@ -148,10 +171,10 @@ half4 main(float2 p) {
     // read), plus the flame; times the room's exposure
     float2 l = (q - float2(0.0, 0.06)) / 0.95;
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
-    float fire = fireShadow(q);
+    float fire = fireShadow(q, boardHeight(q));
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
     float3 c = (lampLevel * lamp * (1.0 - 0.4 * (1.0 - fire)) * float3(1.0, 0.95, 0.88) + flameLight(q) * fire)
-        * ambient(q) * 0.81;
+        * 0.81;
     return half4(half3(keepHue(c)), 1.0);
 }
 """
@@ -362,7 +385,7 @@ half4 main(float2 p) {
     // into darkness
     float2 lq = (q - float2(0.0, 0.06)) * float2(1.0, 0.85);
     float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
-    float fire = fireShadow(q);
+    float fire = fireShadow(q, 0.0);
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
     float3 c = albedo * (lampLevel * pool * (1.0 - 0.4 * (1.0 - fire)) * float3(1.0, 0.93, 0.84) + flameLight(q) * fire)
         * ambient(q);
