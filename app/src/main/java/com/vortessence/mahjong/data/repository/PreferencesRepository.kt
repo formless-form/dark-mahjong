@@ -62,9 +62,9 @@ class PreferencesRepository(private val context: Context) {
 
         GameSettings(
             soundEnabled = prefs[Keys.SOUND_ENABLED] ?: true,
-            soundVolume = prefs[Keys.SOUND_VOLUME] ?: 1.0f,
+            soundVolume = prefs[Keys.SOUND_VOLUME] ?: 0.7f,
             musicEnabled = prefs[Keys.MUSIC_ENABLED] ?: true,
-            musicVolume = prefs[Keys.MUSIC_VOLUME] ?: 0.4f,
+            musicVolume = prefs[Keys.MUSIC_VOLUME] ?: 0.6f,
             autoZoomEnabled = prefs[Keys.AUTO_ZOOM] ?: true,
             highlightFreeTiles = prefs[Keys.HIGHLIGHT_FREE_TILES] ?: false,
             animationsEnabled = prefs[Keys.ANIMATIONS] ?: true,

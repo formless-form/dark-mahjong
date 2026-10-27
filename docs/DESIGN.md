@@ -75,6 +75,9 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 
 - **Camera:** about 20° away from overhead (`TableCamera`). The board is laid out flat and projected to the screen through one homography. The tabletop shader uses the exact inverse, so tiles and table always agree, and taps are mapped back through it. Tile thickness shows mostly on the front edge, and upper layers shift up the table to match.
 - **Lamp:** one warm lamp hangs over the middle of the table and the room falls away into darkness. The overall exposure (×0.9, set 2026-10-26) is shared by the table shader and the tiles' light. Tiles are modulated by the same radial falloff, full under the lamp but never too dark to read. Their glossy faces brighten towards the top, catch a fine bevel highlight, and near the lamp's mirror point show a soft reflection of it.
+- **Lamp brightness:** a Settings slider, from about a third of the original lamp to a quarter brighter. The default (the middle) is 5% dimmer than the original (set 2026-10-27).
+- **Fireplace (optional, off by default):** a hearth out of view to the left of the table (`FlameLight`). It is broad and redder (about 1700 K) and added to the lamp, which is turned down a little beside it, so every tile face stays readable. Its brightness wanders by up to a third, in random surges, licks of flame and the odd flare. It burns yellower as it brightens, and its light shifts a little as the flames move. A Fire intensity slider runs it from embers to a blaze. **Planned:** a soft crackling loop while it burns (CC0, like every other sound).
+- **Shadows cast from each light:** a point-light model. The lamp's shadows lean slightly away from it. The fire's are long and soft-edged, falling across the lower tiles, stretching and fading with the flames. Each shadow is as dark as its light's share of the light reaching that tile. The lamp's hold still, changing only with the sliders.
 - **Used, glazed tiles:** every tile looks like a real tile from a well-played set, varying from tile to tile but stable for each one (`TileWear`, chosen from the tile id).
   - **Wear:** handled grime worked into the edges and corners, hairline scratches that catch the light, the odd tiny ding, a faint fingerprint haze. There are 8 generated textures × 4 orientations.
   - **Ageing and placement:** ivory from crisp to warmly yellowed, and a fraction-off-square placement.
@@ -93,6 +96,8 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 ### Winning: fireworks and a warm message
 
 Clearing a board sets off a fireworks light show **seen from directly above**. There are no rockets, since their climb is straight towards the viewer. Each shell bursts as a disc of sparks, densest at its rim, that expands, slows, shrinks and twinkles out. Bursts overlap densely, about 30 over 4 seconds, in widely varied colours: any hue, plus gold and silver. Styles are peony, ring, chrysanthemum (colour-shifting), willow (slow gold) and crackle. It respects the animations toggle. Alongside it, a **warm congratulations message** is drawn from a large hand-written pool through a no-repeat shuffle that persists across sessions; some messages are context-aware (first win of the day, tutorial, late night, morning). Then big **Next** / **Replay** / **Menu** buttons.
+
+Every match ends in a small version of the same thing: as the raised pair's edges touch, a single shell (no willows, half the sparks, about half as long) bursts where they meet, timed with the stardust in the match sound. It respects the animations toggle.
 
 ### Tile sets
 

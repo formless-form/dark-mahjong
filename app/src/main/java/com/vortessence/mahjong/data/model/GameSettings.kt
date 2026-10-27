@@ -12,9 +12,9 @@ typealias AppTheme = TableSurface
 
 data class GameSettings(
     val soundEnabled: Boolean = true,
-    val soundVolume: Float = 1.0f,
+    val soundVolume: Float = 0.7f,
     val musicEnabled: Boolean = true,
-    val musicVolume: Float = 0.4f,
+    val musicVolume: Float = 0.6f,
     val autoZoomEnabled: Boolean = true,
     val highlightFreeTiles: Boolean = false,
     val animationsEnabled: Boolean = true,

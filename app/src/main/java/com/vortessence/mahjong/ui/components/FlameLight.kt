@@ -40,14 +40,14 @@ class FlameLight(
         private fun lampOnly(lamp: Float) = FlameLight(0f, 0f, 0f, 1f, 0f, 0f, 0f, lamp = lamp)
 
         /**
-         * The light at [seconds] for the player's settings, each 0..1 with its natural strength
-         * in the middle. [lampBrightness] runs the lamp from about a third of that to a third
-         * brighter again; [fireIntensity] runs a lit fire from embers (a quarter) to a roaring
+         * The light at [seconds] for the player's settings, each 0..1 with its default in the
+         * middle. [lampBrightness] runs the lamp from about a third of its original strength
+         * to a quarter brighter than it, 5% dimmer than it by default; [fireIntensity] runs a lit fire from embers (a quarter) to a roaring
          * blaze (one and three quarters). Beside a fire the lamp is turned down a little.
          */
         fun at(seconds: Float, lampBrightness: Float, fireplaceLit: Boolean, fireIntensity: Float): FlameLight {
             val x = lampBrightness.coerceIn(0f, 1f)
-            val lamp = if (x < 0.5f) 0.35f + 1.3f * x else 1f + 0.6f * (x - 0.5f)
+            val lamp = if (x < 0.5f) 0.35f + 1.2f * x else 0.95f + 0.6f * (x - 0.5f)
             if (!fireplaceLit) return lampOnly(lamp)
             return fireplace(seconds, 0.25f + 1.5f * fireIntensity.coerceIn(0f, 1f), lamp * 0.65f)
         }

@@ -26,7 +26,7 @@ class LightingPreview {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun shoot(surface: TableSurface, fireplace: Boolean, lamp: Float = 0.5f, name: String? = null) {
+    private fun shoot(surface: TableSurface, fireplace: Boolean, lamp: Float = 0.5f, fire: Float = 0.5f, name: String? = null) {
         TileWear.prepareNow()
         // Firelight animates for ever, so the clock is stepped by hand rather than run to idle
         compose.mainClock.autoAdvance = false
@@ -35,7 +35,7 @@ class LightingPreview {
                 GameScreen(
                     gameState = MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(18)),
                     levelIndex = 18,
-                    settings = GameSettings(tableSurface = surface, fireplaceLit = fireplace, lampBrightness = lamp),
+                    settings = GameSettings(tableSurface = surface, fireplaceLit = fireplace, lampBrightness = lamp, fireIntensity = fire),
                     winMessage = null,
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
                     onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
@@ -55,4 +55,5 @@ class LightingPreview {
     @Test fun walnutDimLamp() = shoot(TableSurface.WALNUT, false, lamp = 0f, name = "lamp-dim")
     @Test fun walnutBrightLamp() = shoot(TableSurface.WALNUT, false, lamp = 1f, name = "lamp-bright")
     @Test fun walnutDimLampFire() = shoot(TableSurface.WALNUT, true, lamp = 0f, name = "fireplace-dim-lamp")
+    @Test fun walnutBlaze() = shoot(TableSurface.WALNUT, true, lamp = 1f, fire = 1f, name = "blaze")
 }

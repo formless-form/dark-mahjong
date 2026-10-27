@@ -96,6 +96,11 @@ private const val FLAME_AGSL = """
 uniform float4 flame;       // u, v, power, reach (squared distance at which it halves)
 uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
+// Brings an over-bright colour back within range whole, keeping its hue. Clamping each channel
+// on its own would clip red first, so a bright orange flare would drift towards yellow-green.
+float3 keepHue(float3 c) {
+    return c / max(1.0, max(c.r, max(c.g, c.b)));
+}
 float3 flameLight(float2 q) {
     float2 d = q - flame.xy;
     return flame.z / (1.0 + dot(d, d) / flame.w) * flameColour;
@@ -112,7 +117,7 @@ half4 main(float2 p) {
     float2 l = (q - float2(0.0, 0.06)) / 0.95;
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
     float3 c = (lampLevel * lamp * float3(1.0, 0.95, 0.88) + flameLight(q)) * 0.81;
-    return half4(half3(clamp(c, 0.0, 1.0)), 1.0);
+    return half4(half3(keepHue(c)), 1.0);
 }
 """
 
@@ -334,7 +339,7 @@ half4 main(float2 p) {
     float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
     c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e)));
     // Overall exposure: the room is dark ("Dark Mahjong"); shared with the tiles' lamp light
-    c *= 0.9;
+    c = keepHue(c * 0.9);
 
     float ign = fract(52.9829189 * fract(dot(floor(sp), float2(0.06711056, 0.00583715))));
     c += (ign - 0.5) / 255.0;
