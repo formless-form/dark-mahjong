@@ -38,10 +38,12 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -66,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.TableLighting
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -332,7 +335,12 @@ private fun BoardContent(
     // Flat table layout -> screen through the tilted camera, and back again for taps
     val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
     val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
-    val tileLight = remember(canvasW, canvasH) { lampLightBrush(canvasW, canvasH) }
+    val lampLight = remember(canvasW, canvasH) { lampLightBrush(canvasW, canvasH) }
+    // A candle flickers, so its light is redrawn every frame; the lamp's never changes
+    val candles = settings.lighting == TableLighting.CANDLES
+    val candleSeconds by produceState(0f, candles) {
+        if (candles) while (true) withFrameNanos { value = it / 1e9f }
+    }
     // Pinch-to-zoom: a camera zoom over the whole scene (table, tiles and lamp light alike), with
     // screen = scene * zoom + pan. Panning stops at the scene's edges, so the table always fills
     // the view.
@@ -394,6 +402,7 @@ private fun BoardContent(
             drawContext.canvas.translate(pan.x, pan.y)
             drawContext.canvas.scale(zoom, zoom)
 
+            val flicker = if (candles) TableSurfaceRenderer.candleFlicker(candleSeconds) else 1f
             TableSurfaceRenderer.drawTableSurface(
                 scope = this,
                 surface = settings.tableSurface,
@@ -402,6 +411,8 @@ private fun BoardContent(
                 context = context,
                 zoom = zoom,
                 pan = pan,
+                lighting = settings.lighting,
+                flicker = flicker,
             )
 
             val sortedTiles = gameState.tiles
@@ -436,7 +447,7 @@ private fun BoardContent(
                     isTutorialHighlight = tile.id in highlightedTileIds,
                     highlightFreeTiles = settings.highlightFreeTiles,
                     showCornerIndex = settings.showCornerIndex,
-                    glare = tileGlare(px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, canvasW, canvasH),
+                    glare = tileGlare(px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, canvasW, canvasH, candles, flicker),
                 )
             }
 
@@ -450,10 +461,10 @@ private fun BoardContent(
                 )
             }
 
-            // Lamp light: multiplies everything drawn on the table (alpha untouched), full and
+            // Lamp or candlelight: multiplies everything drawn on the table (alpha untouched), full and
             // warm under the lamp, falling off towards the dark edges
             drawRect(
-                brush = tileLight,
+                brush = if (candles) TableSurfaceRenderer.candleTileLight(canvasW, canvasH, flicker) else lampLight,
                 topLeft = Offset(-canvasW * 0.25f, -canvasH * 0.25f),
                 size = Size(canvasW * 1.5f, canvasH * 1.5f),
                 blendMode = BlendMode.Modulate,
@@ -505,8 +516,11 @@ private fun lampLightBrush(w: Float, h: Float): Brush {
 }
 
 /** How strongly a tile's glossy face reflects the lamp, by its centre in flat table pixels. */
-private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float): Float =
-    TableSurfaceRenderer.lampGlare((cx - w / 2f) / h, (h / 2f - cy) / h)
+private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, candles: Boolean, flicker: Float): Float {
+    val u = (cx - w / 2f) / h
+    val v = (h / 2f - cy) / h
+    return if (candles) TableSurfaceRenderer.candleGlare(u, v, flicker) else TableSurfaceRenderer.lampGlare(u, v)
+}
 
 private const val SMASH_MILLIS = 420
 

@@ -5,7 +5,10 @@ import android.graphics.RuntimeShader
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import com.vortessence.mahjong.data.model.TableLighting
 import com.vortessence.mahjong.data.model.TableSurface
+import kotlin.math.exp
+import kotlin.math.sin
 
 /**
  * Draws the tabletop as one full-screen AGSL shader: procedural green felt, walnut, or Thai straw
@@ -15,6 +18,7 @@ import com.vortessence.mahjong.data.model.TableSurface
 object TableSurfaceRenderer {
 
     private var shader: RuntimeShader? = null
+    private var candleShader: RuntimeShader? = null
 
     /**
      * Draws the table over [width] x [height]. When the player has zoomed in, the caller draws
@@ -30,6 +34,8 @@ object TableSurfaceRenderer {
         context: Context? = null,
         zoom: Float = 1f,
         pan: Offset = Offset.Zero,
+        lighting: TableLighting = TableLighting.LAMP,
+        flicker: Float = 1f,
     ) {
         val s = shader ?: RuntimeShader(TABLE_AGSL).also { shader = it }
         s.setFloatUniform("res", width, height)
@@ -38,7 +44,38 @@ object TableSurfaceRenderer {
         s.setFloatUniform("camDist", TableCamera.DISTANCE)
         s.setFloatUniform("zoom", zoom)
         s.setFloatUniform("pan", pan.x, pan.y)
+        s.setFloatUniform("lighting", lighting.ordinal.toFloat())
+        s.setFloatUniform("flicker", flicker)
         scope.drawRect(ShaderBrush(s))
+    }
+
+    /**
+     * Candlelight for the tiles in flat table pixels (as [MahjongBoard]'s lamp brush): drawn with
+     * BlendMode.Modulate over everything on the table, matching the table's own candle pools.
+     */
+    fun candleTileLight(width: Float, height: Float, flicker: Float): ShaderBrush {
+        val s = candleShader ?: RuntimeShader(CANDLE_TILE_AGSL).also { candleShader = it }
+        s.setFloatUniform("res", width, height)
+        s.setFloatUniform("flicker", flicker)
+        return ShaderBrush(s)
+    }
+
+    /**
+     * The candle's brightness at [seconds], about 1: a slow sway with a quicker shiver, each only a
+     * few percent, so the light breathes rather than strobes.
+     */
+    fun candleFlicker(seconds: Float): Float {
+        val sway = 0.5f * sin(seconds * 1.7f) + 0.5f * sin(seconds * 2.9f)
+        val shiver = sin(seconds * 11.3f) * sin(seconds * 17.9f)
+        return 1f + 0.035f * sway + 0.025f * shiver
+    }
+
+    /** Strength of the lamp's and candles' glossy reflection at plane point (u, v), for tile glare. */
+    fun candleGlare(u: Float, v: Float, flicker: Float): Float {
+        val mu = (u - CANDLE_U) * 3.4f
+        val mv = (v - CANDLE_V + 0.05f) * 2.2f
+        // The dimmed lamp's own reflection, plus a fainter one of the flame
+        return 0.75f * lampGlare(u, v) + 0.5f * flicker * exp(-(mu * mu + mv * mv) * 4f)
     }
 
     /** Lamp brightness at plane point (u, v), matching the shader: used to light the tiles. */
@@ -61,7 +98,41 @@ object TableSurfaceRenderer {
     private const val LAMP_FALLOFF = 2.6f
     // A glossy surface reflects the lamp a little beyond it, as seen from a tilted camera
     private const val GLARE_OFFSET_V = 0.2f
+
+    // A candle stands on the table just out of view, past the top-left of the board; the
+    // shaders below place it at the same point
+    private const val CANDLE_U = -0.30f
+    private const val CANDLE_V = 0.56f
 }
+
+/**
+ * Candlelight at plane point q (in table heights, v up), shared by both shaders: one low flame
+ * just out of view to the top left, a soft inverse-square pool scaled by its flicker, in flame
+ * colour (about 1900 K). It is added to a dimmed lamp rather than replacing it: the lamp
+ * overhead keeps every tile face readable, wherever the candle's light falls short.
+ */
+private const val CANDLE_AGSL = """
+const float CANDLE_LAMP = 0.75; // the lamp's strength when the candles are lit
+const float2 CANDLE = float2(-0.30, 0.56);
+float3 candles(float2 q, float flicker) {
+    float2 d = q - CANDLE;
+    return flicker * 0.7 / (1.0 + dot(d, d) / 0.09) * float3(1.0, 0.62, 0.30);
+}
+"""
+
+private const val CANDLE_TILE_AGSL = """
+uniform float2 res;
+uniform float flicker;
+$CANDLE_AGSL
+half4 main(float2 p) {
+    float2 q = float2((p.x - 0.5 * res.x) / res.y, (0.5 * res.y - p.y) / res.y);
+    // The lamp brush's own falloff (lampLightBrush), dimmed, plus the candles; times the room's exposure
+    float2 l = (q - float2(0.0, 0.06)) / 0.95;
+    float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
+    float3 c = (CANDLE_LAMP * lamp * float3(1.0, 0.95, 0.88) + candles(q, flicker)) * 0.81;
+    return half4(half3(clamp(c, 0.0, 1.0)), 1.0);
+}
+"""
 
 private const val TABLE_AGSL = """
 uniform float2 res;
@@ -70,6 +141,9 @@ uniform float tilt;
 uniform float camDist;
 uniform float zoom;     // the player's pinch zoom, drawn under the matching canvas transform
 uniform float2 pan;     // screen position = p * zoom + pan
+uniform float lighting; // 0 lamp, 1 candles (TableLighting order)
+uniform float flicker;  // the candle's brightness this frame, about 1
+$CANDLE_AGSL
 
 const float PI = 3.14159265;
 
@@ -271,6 +345,14 @@ half4 main(float2 p) {
     // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle
     float2 m = (q - float2(0.0, 0.26)) * float2(3.4, 1.3);
     float glare = exp(-dot(m, m) * 5.0);
+    if (lighting > 0.5) {
+        // Or the lamp turned down, with a candle standing on the table, reflected just in front
+        // of its flame
+        c = albedo * (CANDLE_LAMP * pool * float3(1.0, 0.93, 0.84) + candles(q, flicker));
+        float2 mc = (q - CANDLE + float2(0.0, 0.05)) * float2(3.4, 2.2);
+        c += gloss * 0.6 * flicker * exp(-dot(mc, mc) * 4.0) * float3(0.26, 0.15, 0.06);
+        glare *= CANDLE_LAMP;
+    }
     float grain = mode > 0.5 && mode < 1.5 ? 0.75 + 0.5 * vnoise(q * float2(60.0, 6.0)) : 1.0;
     c += gloss * glare * grain * float3(0.24, 0.215, 0.18);
     // Screen-edge vignette deepens the dark corners

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Texture
 import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.WbIncandescent
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
@@ -41,6 +42,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
+import com.vortessence.mahjong.data.model.TableLighting
 import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.ui.components.CheckSwitch
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
@@ -125,7 +127,16 @@ fun SettingsScreen(
             SegmentedGroup(
                 listOf(
                     { shapes ->
-                        TableSurfaceRow(shapes, settings.tableSurface) { onSettingsChanged(settings.copy(tableSurface = it)) }
+                        ChoiceRow(
+                            shapes, Icons.Rounded.Texture, "Table surface", "What the tiles are played on",
+                            TableSurface.entries, { it.displayName }, settings.tableSurface,
+                        ) { onSettingsChanged(settings.copy(tableSurface = it)) }
+                    },
+                    { shapes ->
+                        ChoiceRow(
+                            shapes, Icons.Rounded.WbIncandescent, "Lighting", "A lamp overhead, or with a candle beside the board",
+                            TableLighting.entries, { it.displayName }, settings.lighting,
+                        ) { onSettingsChanged(settings.copy(lighting = it)) }
                     },
                     { shapes ->
                         ToggleRow(
@@ -222,36 +233,44 @@ private fun SliderRow(shapes: ListItemShapes, title: String, value: Float, onVal
     }
 }
 
-// The table choice: a connected button group, the chosen surface filled in and fully rounded
+// A choice of a few: a connected button group, the chosen one filled in and fully rounded
 @Composable
-private fun TableSurfaceRow(shapes: ListItemShapes, selected: TableSurface, onSelect: (TableSurface) -> Unit) {
+private fun <T> ChoiceRow(
+    shapes: ListItemShapes,
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    choices: List<T>,
+    label: (T) -> String,
+    selected: T,
+    onSelect: (T) -> Unit,
+) {
     Surface(shape = shapes.shape, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                LeadingIcon(Icons.Rounded.Texture)
+                LeadingIcon(icon)
                 Spacer(Modifier.width(16.dp))
                 Column {
-                    Text("Table surface", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                     Text(
-                        "What the tiles are played on",
+                        subtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
             Spacer(Modifier.height(16.dp))
-            val surfaces = TableSurface.entries
             Row(
                 horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                surfaces.forEachIndexed { index, surface ->
+                choices.forEachIndexed { index, choice ->
                     ToggleButton(
-                        checked = surface == selected,
-                        onCheckedChange = { onSelect(surface) },
+                        checked = choice == selected,
+                        onCheckedChange = { onSelect(choice) },
                         shapes = when (index) {
                             0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                            surfaces.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            choices.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                             else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                         },
                         colors = ToggleButtonDefaults.colors(
@@ -262,7 +281,7 @@ private fun TableSurfaceRow(shapes: ListItemShapes, selected: TableSurface, onSe
                             .weight(1f)
                             .semantics { role = Role.RadioButton },
                     ) {
-                        Text(surface.displayName, maxLines = 1)
+                        Text(label(choice), maxLines = 1)
                     }
                 }
             }
