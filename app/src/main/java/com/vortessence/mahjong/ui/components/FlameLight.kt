@@ -31,9 +31,14 @@ class FlameLight(
         s.setFloatUniform("flame", u, v, power, reach)
         s.setFloatUniform("flameColour", r, g, b)
         s.setFloatUniform("lampLevel", lamp)
+        s.setFloatUniform("flameRest", steadyU, steadyV)
     }
 
     companion object {
+        /** Where the fireplace's fire burns on average, in table heights (as the shaders' q). */
+        const val FIRE_U = -0.50f
+        const val FIRE_V = 0.10f
+
         /** The lamp alone, at its natural strength. */
         val NONE = lampOnly(1f)
 
@@ -67,8 +72,8 @@ class FlameLight(
             val flicker = (1f + 0.20f * surge + 0.11f * lick + 0.05f * flutter + 0.3f * flare).coerceIn(0.55f, 1.6f)
             val heat = (flicker - 1f) * 0.5f // brighter burns yellower, lulls glow redder
             return FlameLight(
-                u = -0.50f + 0.025f * noise(t * 1.3f, 101f),
-                v = 0.10f + 0.035f * noise(t * 1.1f, 131f),
+                u = FIRE_U + 0.025f * noise(t * 1.3f, 101f),
+                v = FIRE_V + 0.035f * noise(t * 1.1f, 131f),
                 power = strength * flicker,
                 reach = 0.14f,
                 r = 1f,
@@ -76,8 +81,8 @@ class FlameLight(
                 b = (0.17f + 0.10f * heat).coerceIn(0.08f, 0.35f),
                 lamp = lamp,
                 height = 0.28f,
-                steadyU = -0.50f,
-                steadyV = 0.10f,
+                steadyU = FIRE_U,
+                steadyV = FIRE_V,
                 steadyPower = strength,
             )
         }

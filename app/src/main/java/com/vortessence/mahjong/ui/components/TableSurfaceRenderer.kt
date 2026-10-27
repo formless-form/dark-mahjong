@@ -33,6 +33,8 @@ object TableSurfaceRenderer {
         zoom: Float = 1f,
         pan: Offset = Offset.Zero,
         flame: FlameLight = FlameLight.NONE,
+        shadowMap: BoardShadowMap? = null,
+        fireShadows: Boolean = false,
     ) {
         val s = shader ?: RuntimeShader(TABLE_AGSL).also { shader = it }
         s.setFloatUniform("res", width, height)
@@ -42,6 +44,7 @@ object TableSurfaceRenderer {
         s.setFloatUniform("zoom", zoom)
         s.setFloatUniform("pan", pan.x, pan.y)
         flame.setUniforms(s)
+        shadowMap?.setUniforms(s, fireShadows) ?: BoardShadowMap.setNone(s)
         scope.drawRect(ShaderBrush(s))
     }
 
@@ -49,10 +52,17 @@ object TableSurfaceRenderer {
      * The lamp and firelight for the tiles in flat table pixels: drawn with BlendMode.Modulate
      * over everything on the table, matching the table's own light.
      */
-    fun tileLight(width: Float, height: Float, flame: FlameLight): ShaderBrush {
+    fun tileLight(
+        width: Float,
+        height: Float,
+        flame: FlameLight,
+        shadowMap: BoardShadowMap? = null,
+        fireShadows: Boolean = false,
+    ): ShaderBrush {
         val s = flameShader ?: RuntimeShader(FLAME_TILE_AGSL).also { flameShader = it }
         s.setFloatUniform("res", width, height)
         flame.setUniforms(s)
+        shadowMap?.setUniforms(s, fireShadows) ?: BoardShadowMap.setNone(s)
         return ShaderBrush(s)
     }
 
@@ -91,11 +101,19 @@ object TableSurfaceRenderer {
  * out of view, a soft inverse-square pool. It is added to the lamp turned down rather than
  * replacing it: the lamp overhead keeps every tile face readable, wherever the fire's light
  * falls short. All of it comes from [FlameLight], fresh each frame.
+ *
+ * The board's ambient occlusion and the fire's long shadows come from a light map worked out
+ * each time the tiles change ([BoardShadowMap]): one lookup per pixel, shifted a little as the
+ * flames move so the shadows sway. Both shaders declare res (the flat table's size in pixels)
+ * before this.
  */
 private const val FLAME_AGSL = """
 uniform float4 flame;       // u, v, power, reach (squared distance at which it halves)
 uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
+uniform shader lightMap;    // the board's shading (BoardShadowMap), in its own pixels
+uniform float4 shade;       // fire shadows on (1) or off, map pixels per table pixel, ambient occlusion strength, sway
+uniform float2 flameRest;   // where the fire burns on average, which its shadows were traced from
 // Brings an over-bright colour back within range whole, keeping its hue. Clamping each channel
 // on its own would clip red first, so a bright orange flare would drift towards yellow-green.
 float3 keepHue(float3 c) {
@@ -104,6 +122,20 @@ float3 keepHue(float3 c) {
 float3 flameLight(float2 q) {
     float2 d = q - flame.xy;
     return flame.z / (1.0 + dot(d, d) / flame.w) * flameColour;
+}
+// The board's light map at q (in table heights): red is ambient occlusion, green the fire's light
+half4 shading(float2 q) {
+    return lightMap.eval(float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y) * shade.y);
+}
+// Ambient occlusion: lower where taller tiles hem q in
+float ambient(float2 q) {
+    return 1.0 - shade.z * shading(q).r;
+}
+// How much of the fire reaches q: 1 in its light, 0 in full shadow. The shadows were traced from
+// the fire's resting place; as the flames move, they shift the other way.
+float fireShadow(float2 q) {
+    if (shade.x < 0.5 || flame.z <= 0.0) return 1.0;
+    return shading(q - (flame.xy - flameRest) * shade.w).g;
 }
 """
 
@@ -116,7 +148,10 @@ half4 main(float2 p) {
     // read), plus the flame; times the room's exposure
     float2 l = (q - float2(0.0, 0.06)) / 0.95;
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
-    float3 c = (lampLevel * lamp * float3(1.0, 0.95, 0.88) + flameLight(q)) * 0.81;
+    float fire = fireShadow(q);
+    // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
+    float3 c = (lampLevel * lamp * (1.0 - 0.4 * (1.0 - fire)) * float3(1.0, 0.95, 0.88) + flameLight(q) * fire)
+        * ambient(q) * 0.81;
     return half4(half3(keepHue(c)), 1.0);
 }
 """
@@ -327,7 +362,10 @@ half4 main(float2 p) {
     // into darkness
     float2 lq = (q - float2(0.0, 0.06)) * float2(1.0, 0.85);
     float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
-    float3 c = albedo * (lampLevel * pool * float3(1.0, 0.93, 0.84) + flameLight(q));
+    float fire = fireShadow(q);
+    // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
+    float3 c = albedo * (lampLevel * pool * (1.0 - 0.4 * (1.0 - fire)) * float3(1.0, 0.93, 0.84) + flameLight(q) * fire)
+        * ambient(q);
     // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
     // and the fire just in front of its flames
     float2 m = (q - float2(0.0, 0.26)) * float2(3.4, 1.3);

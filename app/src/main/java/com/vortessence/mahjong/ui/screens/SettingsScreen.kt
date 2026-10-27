@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Highlight
 import androidx.compose.material.icons.rounded.MusicNote
@@ -143,11 +144,20 @@ fun SettingsScreen(
                         ) { onSettingsChanged(settings.copy(fireplaceLit = it)) }
                     },
                 ) + if (settings.fireplaceLit) {
-                    listOf<@Composable (ListItemShapes) -> Unit> { shapes ->
-                        SliderRow(shapes, "Fire intensity", settings.fireIntensity) {
-                            onSettingsChanged(settings.copy(fireIntensity = it))
-                        }
-                    }
+                    listOf<@Composable (ListItemShapes) -> Unit>(
+                        { shapes ->
+                            SliderRow(shapes, "Fire intensity", settings.fireIntensity) {
+                                onSettingsChanged(settings.copy(fireIntensity = it))
+                            }
+                        },
+                        { shapes ->
+                            ToggleRow(
+                                shapes, Icons.Rounded.Contrast, "Long fire shadows",
+                                "Traced on the GPU every frame, so they use more battery",
+                                settings.fireShadows,
+                            ) { onSettingsChanged(settings.copy(fireShadows = it)) }
+                        },
+                    )
                 } else {
                     emptyList()
                 } + listOf<@Composable (ListItemShapes) -> Unit>(

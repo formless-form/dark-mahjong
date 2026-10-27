@@ -26,6 +26,8 @@ data class GameSettings(
     // A fire in a hearth beside the table, lit or not, and how brightly it burns (as the lamp)
     val fireplaceLit: Boolean = false,
     val fireIntensity: Float = 0.5f,
+    // Long fire shadows traced on the GPU every frame, rather than short painted ones
+    val fireShadows: Boolean = true,
 ) {
     val theme: TableSurface get() = tableSurface
 }

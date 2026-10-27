@@ -206,6 +206,20 @@ object TileRenderer {
                 )
             }
         }
+        // C) Contact shade: the side walls darken towards their foot, where little light reaches
+        // into the narrow gap against the table or the next tile (ambient occlusion). One
+        // gradient under the face, so only the walls show it.
+        scope.drawRoundRect(
+            brush = Brush.verticalGradient(
+                0f to Color.Transparent,
+                1f to Color.Black.copy(alpha = WALL_SHADE_ALPHA),
+                startY = y + height - depthY * 0.2f,
+                endY = y + height + depthY,
+            ),
+            topLeft = Offset(x + depthX, y + depthY),
+            size = Size(width, height),
+            cornerRadius = corner,
+        )
         if (highlightColor != null) {
             scope.drawRoundRect(
                 color = highlightColor.copy(alpha = tintAlpha),
@@ -723,6 +737,7 @@ object TileRenderer {
     private val EngraveShadow = Color(0x5A3A2A18)
 
     private const val FIRE_SHADOW_STEPS = 5
+    private const val WALL_SHADE_ALPHA = 0.55f
     private val fireShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var fireShadowBlur = -1
     private val EngraveLight = Color(0x99FFFDF6)
