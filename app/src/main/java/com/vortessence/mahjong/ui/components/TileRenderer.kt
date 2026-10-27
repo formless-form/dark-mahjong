@@ -126,6 +126,23 @@ object TileRenderer {
         // The resting shadow under the lamp, filled in a little where firelight reaches
         val shadowAlpha = (0.28f + (layerZ * 0.05f)).coerceAtMost(0.65f) * shadows.lampDarkness
 
+        // Contact shadow: a raised tile darkens the tiles it rests on, most of all right at its
+        // foot, where little light reaches (a cheap ambient occlusion). Soft-edged and a little
+        // larger than the tile, so it shows on every side, deepest below and to the right.
+        if (layerZ > 0) {
+            val blur = (width * 0.08f).roundToInt().coerceAtLeast(1)
+            if (contactBlur != blur) {
+                contactPaint.maskFilter = BlurMaskFilter(blur.toFloat(), BlurMaskFilter.Blur.NORMAL)
+                contactBlur = blur
+            }
+            contactPaint.color = Color.Black.copy(alpha = CONTACT_SHADOW_ALPHA).toArgb()
+            val left = x + depthX * 1.4f
+            val top = y + depthY * 1.4f
+            scope.drawContext.canvas.nativeCanvas.drawRoundRect(
+                left, top, left + width, top + height, cornerR * 1.5f, cornerR * 1.5f, contactPaint,
+            )
+        }
+
         // Firelight's shadow: long and soft-edged (the fire is broad). Blurred copies drawn out
         // along its length overlap most near the tile, so it fades as it reaches away.
         if (shadows.fireAlpha > 0.005f) {
@@ -739,6 +756,9 @@ object TileRenderer {
     private const val FIRE_SHADOW_STEPS = 5
     private const val WALL_SHADE_ALPHA = 0.65f
     private val fireShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private const val CONTACT_SHADOW_ALPHA = 0.55f
+    private val contactPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var contactBlur = -1
     private var fireShadowBlur = -1
     private val EngraveLight = Color(0x99FFFDF6)
 

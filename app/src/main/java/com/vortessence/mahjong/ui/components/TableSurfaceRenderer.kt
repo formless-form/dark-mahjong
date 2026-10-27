@@ -134,6 +134,12 @@ half4 shading(float2 q) {
 float boardHeight(float2 q) {
     return shading(q).r * (255.0 / 31.0) * shade.z;
 }
+// The height of the surface at q itself: its own map cell, unblended, so a lower tile's edge
+// next to a taller one isn't lifted into the light by its neighbour's height
+float surfaceHeight(float2 q) {
+    float2 m = float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y) * shade.y;
+    return shadeMap.eval(floor(m) + 0.5).r * (255.0 / 31.0) * shade.z;
+}
 // The table's ambient occlusion: lower where the tiles hem it in
 float ambient(float2 q) {
     return 1.0 - aoStrength * shading(q).g;
@@ -171,7 +177,7 @@ half4 main(float2 p) {
     // read), plus the flame; times the room's exposure
     float2 l = (q - float2(0.0, 0.06)) / 0.95;
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
-    float fire = fireShadow(q, boardHeight(q));
+    float fire = fireShadow(q, surfaceHeight(q));
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
     float3 c = (lampLevel * lamp * (1.0 - 0.6 * (1.0 - fire)) * float3(1.0, 0.95, 0.88) + flameLight(q) * fire)
         * 0.81;

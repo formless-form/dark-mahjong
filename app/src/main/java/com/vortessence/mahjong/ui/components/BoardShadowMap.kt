@@ -10,8 +10,8 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * The board's shading, worked out once each time the tiles change: a map at a quarter of the
- * flat table's resolution (see FLAME_AGSL).
+ * The board's shading, worked out once each time the tiles change: a map at half the flat
+ * table's resolution (see FLAME_AGSL).
  *
  * - **Red, the height map:** how tall the stack stands at each point, in layers (31 per layer, up
  *   to 8). Each tile fills its face and the side walls drawn below and to the right of it, at the
@@ -40,7 +40,7 @@ class BoardShadowMap private constructor(
     }
 
     companion object {
-        private const val SCALE = 0.25f
+        private const val SCALE = 0.5f
         private const val PER_LAYER = 31
         private const val AMBIENT_OCCLUSION = 0.9f
 
