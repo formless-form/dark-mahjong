@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.GameSettings
@@ -116,6 +117,9 @@ fun MahjongBoard(
     highlightedTileIds: Set<Int> = emptySet(),
     onTileClick: (Int) -> Unit,
     onTileMatch: () -> Unit = {},
+    // How much of the bottom of the board's area lies under something drawn over it (the game
+    // toolbar): the table carries on underneath, but the tiles are fitted above it
+    bottomOverlap: Dp = 0.dp,
 ) {
     val density = LocalDensity.current
     val paddingPx = with(density) { 16.dp.toPx() }
@@ -162,7 +166,9 @@ fun MahjongBoard(
             .onSizeChanged { boardSize = it }
     ) {
         val canvasW = boardSize.width.toFloat()
-        val canvasH = boardSize.height.toFloat()
+        // The table is laid out, lit and seen in perspective in the area above the overlap, and
+        // simply continues below it
+        val canvasH = (boardSize.height - with(density) { bottomOverlap.toPx() }).coerceAtLeast(1f)
 
         if ((canvasW > 0f) && (canvasH > 0f) && gameState.tiles.isNotEmpty()) {
             key(gameState.constellation.id) {
@@ -176,7 +182,8 @@ fun MahjongBoard(
                     canvasH = canvasH,
                     paddingPx = paddingPx,
                     density = density,
-                    blockedFlashId = blockedFlashId
+                    blockedFlashId = blockedFlashId,
+                    bottomOverlap = bottomOverlap,
                 )
             }
         }
@@ -194,7 +201,8 @@ private fun BoardContent(
     canvasH: Float,
     paddingPx: Float,
     density: Density,
-    blockedFlashId: Int?
+    blockedFlashId: Int?,
+    bottomOverlap: Dp,
 ) {
     val context = LocalContext.current
 
@@ -340,21 +348,20 @@ private fun BoardContent(
     val flameSeconds by produceState(0f, firelit) {
         if (firelit) while (true) withFrameNanos { value = it / 1e9f }
     }
-    // The board's ambient occlusion and the fire's long shadows, worked out only when the tiles or
-    // the board's layout change. The first is made at once; later ones off the main thread, after
-    // the board has settled (so a zoom animation doesn't start one every frame), with the old map
-    // shown meanwhile.
+    // The board's ambient occlusion and the fire's long shadows, worked out only when tiles are
+    // removed (or the screen changes size): the first at once, later ones off the main thread,
+    // with the old map shown meanwhile. When the board scales or moves, the map is placed under
+    // it as it is now, so the shading keeps up every frame without being rebuilt.
     val tracedShadows = firelit && settings.fireShadows
-    val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, currentTransform, canvasW, canvasH) {
-        if (value == null) {
-            value = BoardShadowMap.build(gameState.tiles, currentTransform, canvasW, canvasH)
+    val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, canvasW, canvasH) {
+        val layout = currentTransform
+        value = if (value == null) {
+            BoardShadowMap.build(gameState.tiles, layout, canvasW, canvasH)
         } else {
-            delay(80.milliseconds)
-            value = withContext(Dispatchers.Default) {
-                BoardShadowMap.build(gameState.tiles, currentTransform, canvasW, canvasH)
-            }
+            withContext(Dispatchers.Default) { BoardShadowMap.build(gameState.tiles, layout, canvasW, canvasH) }
         }
     }
+    val placedShadows = shadowMap?.placed(currentTransform, canvasH)
     // Pinch-to-zoom: a camera zoom over the whole scene (table, tiles and lamp light alike), with
     // screen = scene * zoom + pan. Panning stops at the scene's edges, so the table always fills
     // the view.
@@ -426,7 +433,7 @@ private fun BoardContent(
                 zoom = zoom,
                 pan = pan,
                 flame = flame,
-                shadowMap = shadowMap,
+                shadowMap = placedShadows,
                 fireShadows = tracedShadows,
             )
 
@@ -499,7 +506,7 @@ private fun BoardContent(
             // Lamp and firelight: multiplies everything drawn on the table (alpha untouched), full and
             // warm under the lamp, falling off towards the dark edges
             drawRect(
-                brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame, shadowMap, tracedShadows),
+                brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame, placedShadows, tracedShadows),
                 topLeft = Offset(-canvasW * 0.25f, -canvasH * 0.25f),
                 size = Size(canvasW * 1.5f, canvasH * 1.5f),
                 blendMode = BlendMode.Modulate,
@@ -518,7 +525,7 @@ private fun BoardContent(
             exit = fadeOut() + scaleOut(targetScale = 0.6f),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp),
+                .padding(end = 16.dp, bottom = 16.dp + bottomOverlap),
         ) {
             FilledTonalIconButton(
                 onClick = zoomOut,

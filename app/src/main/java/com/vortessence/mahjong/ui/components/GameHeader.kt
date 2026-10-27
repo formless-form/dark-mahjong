@@ -44,7 +44,7 @@ fun GameHeader(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 12.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+            .padding(start = 12.dp, end = 20.dp, top = 8.dp, bottom = 5.5.dp),
     ) {
         BackButton(onClick = onBackClick)
         Spacer(Modifier.size(12.dp))

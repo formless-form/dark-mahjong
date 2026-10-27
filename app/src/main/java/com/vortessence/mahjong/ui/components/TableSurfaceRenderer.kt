@@ -33,7 +33,7 @@ object TableSurfaceRenderer {
         zoom: Float = 1f,
         pan: Offset = Offset.Zero,
         flame: FlameLight = FlameLight.NONE,
-        shadowMap: BoardShadowMap? = null,
+        shadowMap: BoardShadowMap.Placed? = null,
         fireShadows: Boolean = false,
     ) {
         val s = shader ?: RuntimeShader(TABLE_AGSL).also { shader = it }
@@ -56,7 +56,7 @@ object TableSurfaceRenderer {
         width: Float,
         height: Float,
         flame: FlameLight,
-        shadowMap: BoardShadowMap? = null,
+        shadowMap: BoardShadowMap.Placed? = null,
         fireShadows: Boolean = false,
     ): ShaderBrush {
         val s = flameShader ?: RuntimeShader(FLAME_TILE_AGSL).also { flameShader = it }
@@ -114,9 +114,10 @@ uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
 uniform shader heightMap;   // the board's height map, at the flat table's resolution (BoardShadowMap)
 uniform shader aoMap;       // the table's ambient occlusion in green, at a coarser resolution
-uniform float4 shade;       // fire shadows on (1) or off, occlusion map pixels per table pixel, one layer's height, the tallest stack's
+uniform float4 mapXform;    // table pixels now to map pixels: scale x, y, then offset x, y (the board may have moved)
+uniform float4 shade;       // fire shadows on (1) or off, occlusion map pixels per map pixel, one layer's height, the tallest stack's
 uniform float aoStrength;   // how deep the table's ambient occlusion goes (0 with no map)
-const float FIRE_HEIGHT = 0.075;  // how high the flames burn above the table, in table heights
+uniform float flameHeight;  // how high the flames stand above the table this frame, in table heights
 const int SHADOW_STEPS = 40;
 // Brings an over-bright colour back within range whole, keeping its hue. Clamping each channel
 // on its own would clip red first, so a bright orange flare would drift towards yellow-green.
@@ -127,9 +128,9 @@ float3 flameLight(float2 q) {
     float2 d = q - flame.xy;
     return flame.z / (1.0 + dot(d, d) / flame.w) * flameColour;
 }
-// Flat table pixels at q (in table heights)
+// The height map's pixel under q (in table heights), wherever the board has moved since it was made
 float2 tablePixel(float2 q) {
-    return float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y);
+    return float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y) * mapXform.xy + mapXform.zw;
 }
 // How tall the board stands at q (0 on the bare table), in table heights
 float boardHeight(float2 q) {
@@ -151,7 +152,7 @@ float fireShadow(float2 q, float h0) {
     if (shade.x < 0.5 || flame.z <= 0.0 || h0 >= shade.w) return 1.0;
     float2 toFire = flame.xy - q;
     float dist = length(toFire);
-    float rise = (FIRE_HEIGHT - h0) / dist;
+    float rise = (flameHeight - h0) / dist;
     float reach = min(dist, (shade.w - h0) / max(rise, 1e-4));
     float2 dir = toFire / dist;
     // A different start for each pixel, so the steps don't show as bands

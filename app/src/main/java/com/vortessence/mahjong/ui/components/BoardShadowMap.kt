@@ -25,29 +25,47 @@ import kotlin.math.sin
  *   reach away (the fire is broad) and sway with the flames.
  * - **Ambient occlusion on the table:** how hemmed in each point of the table is by the tiles
  *   around it, which darkens the table at the board's edge and in the gaps. A cheap, soft stand-in
- *   at half resolution, used by the table only (the tiles' own walls and contact shadows darken
+ *   at a quarter resolution, used by the table only (the tiles' own walls and contact shadows darken
  *   their foot instead), so no tile picks up a rim from it.
  *
- * Building one takes some tens of milliseconds, so the board makes it off the main thread.
+ * Both are made for the board as it was laid out when they were built, and only rebuilt when
+ * tiles are removed. When the board grows or moves (its automatic scaling), that is only a
+ * scale and a shift, so [placed] tells the shaders how to find the map from the board as it is
+ * now, and the shading keeps up every frame. Building one takes some tens of milliseconds, so
+ * the board makes it off the main thread.
  */
 class BoardShadowMap private constructor(
     private val heights: BitmapShader,
     private val occlusion: BitmapShader,
-    // One layer's height and the tallest stack's, in table heights (as the shaders' q)
-    private val layer: Float,
-    private val tallest: Float,
+    // The board's layout when the map was made
+    private val built: BoardTransform,
+    // The number of layers in the tallest stack
+    private val layers: Int,
 ) {
 
-    /** [fireShadows]: trace the fire's long shadows as well as the table's ambient occlusion. */
-    fun setUniforms(s: RuntimeShader, fireShadows: Boolean) {
-        s.setInputShader("heightMap", heights)
-        s.setInputShader("aoMap", occlusion)
-        s.setFloatUniform("shade", if (fireShadows) 1f else 0f, AO_SCALE, layer, tallest)
-        s.setFloatUniform("aoStrength", AMBIENT_OCCLUSION)
+    /** The map, placed under the board as it is laid out [now], on a table [tableHeight] tall. */
+    fun placed(now: BoardTransform, tableHeight: Float) = Placed(now, tableHeight)
+
+    inner class Placed(now: BoardTransform, tableHeight: Float) {
+        // Table pixels now to map pixels: the map scaled and shifted with the board
+        private val scale = built.unitX / now.unitX
+        private val offsetX = built.startX - now.startX * scale
+        private val offsetY = built.startY - now.startY * scale
+        // One layer's height in table heights (as the shaders' q), at the board's size now
+        private val layer = now.tileWidth * TILE_HEIGHT / tableHeight
+
+        /** [fireShadows]: trace the fire's long shadows as well as the table's ambient occlusion. */
+        fun setUniforms(s: RuntimeShader, fireShadows: Boolean) {
+            s.setInputShader("heightMap", heights)
+            s.setInputShader("aoMap", occlusion)
+            s.setFloatUniform("mapXform", scale, scale, offsetX, offsetY)
+            s.setFloatUniform("shade", if (fireShadows) 1f else 0f, AO_SCALE, layer, layers * layer)
+            s.setFloatUniform("aoStrength", AMBIENT_OCCLUSION)
+        }
     }
 
     companion object {
-        private const val AO_SCALE = 0.5f
+        private const val AO_SCALE = 0.25f
         private const val PER_LAYER = 31
         private const val AMBIENT_OCCLUSION = 0.8f
 
@@ -62,6 +80,7 @@ class BoardShadowMap private constructor(
         fun setNone(s: RuntimeShader) {
             s.setInputShader("heightMap", none)
             s.setInputShader("aoMap", none)
+            s.setFloatUniform("mapXform", 1f, 1f, 0f, 0f)
             s.setFloatUniform("shade", 0f, AO_SCALE, 1f, 1f)
             s.setFloatUniform("aoStrength", 0f)
         }
@@ -70,12 +89,11 @@ class BoardShadowMap private constructor(
             if (w <= 0f || h <= 0f) return null
             val standing = tiles.filter { !it.isRemoved }.sortedBy { it.z }
             val layer = transform.tileWidth * TILE_HEIGHT / h
-            val tallest = ((standing.maxOfOrNull { it.z } ?: 0) + 1) * layer
             return BoardShadowMap(
                 heightMap(standing, transform, w, h),
                 occlusionMap(standing, transform, w, h, layer),
-                layer,
-                tallest,
+                transform,
+                (standing.maxOfOrNull { it.z } ?: 0) + 1,
             )
         }
 
@@ -112,7 +130,7 @@ class BoardShadowMap private constructor(
         }
 
         /**
-         * The table's ambient occlusion at half resolution: two rings of neighbours around each
+         * The table's ambient occlusion at a quarter resolution: two rings of neighbours around each
          * point, each darkening by how steeply it rises above the table.
          */
         private fun occlusionMap(

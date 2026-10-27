@@ -2,6 +2,12 @@ package com.vortessence.mahjong.ui.screens
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,7 +78,6 @@ fun GameScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .then(if (blur > 0.dp) Modifier.blur(blur) else Modifier)
-            .navigationBarsPadding()
     ) {
         GameHeader(
             gameState = gameState,
@@ -80,31 +85,42 @@ fun GameScreen(
             onBackClick = onBack,
         )
 
+        // The table runs on to the bottom of the screen, under the toolbar (or tutorial card) and
+        // the navigation bar; the tiles are fitted above them
         Box(modifier = Modifier.weight(1f)) {
+            val density = LocalDensity.current
+            var overlay by remember { mutableIntStateOf(0) }
             MahjongBoard(
                 gameState = gameState,
                 settings = settings,
                 highlightedTileIds = tutorialHighlights,
                 onTileClick = onTileClick,
                 onTileMatch = onTileMatch,
+                bottomOverlap = with(density) { overlay.toDp() },
                 modifier = Modifier.fillMaxSize()
             )
-        }
-
-        if (tutorialStep != null) {
-            TutorialCard(
-                step = tutorialStep,
-                settings = settings,
-                onContinue = onTutorialContinue,
-                onSettingsChanged = onSettingsChanged
-            )
-        } else {
-            GameToolbar(
-                gameState = gameState,
-                onHintClick = onHint,
-                onUndoClick = onUndo,
-                onRestartClick = onRestart,
-            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .onSizeChanged { overlay = it.height }
+                    .navigationBarsPadding()
+            ) {
+                if (tutorialStep != null) {
+                    TutorialCard(
+                        step = tutorialStep,
+                        settings = settings,
+                        onContinue = onTutorialContinue,
+                        onSettingsChanged = onSettingsChanged
+                    )
+                } else {
+                    GameToolbar(
+                        gameState = gameState,
+                        onHintClick = onHint,
+                        onUndoClick = onUndo,
+                        onRestartClick = onRestart,
+                    )
+                }
+            }
         }
     }
 

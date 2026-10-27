@@ -26,11 +26,15 @@ class FlameLight(
     val steadyU: Float = u,
     val steadyV: Float = v,
     val steadyPower: Float = power,
+    // How high the flames stand above the table this frame, in table heights: the long shadows
+    // are traced from here, so they stretch and shrink as the flames leap and drop
+    val flameHeight: Float = 0.075f,
 ) {
     fun setUniforms(s: RuntimeShader) {
         s.setFloatUniform("flame", u, v, power, reach)
         s.setFloatUniform("flameColour", r, g, b)
         s.setFloatUniform("lampLevel", lamp)
+        s.setFloatUniform("flameHeight", flameHeight)
     }
 
     companion object {
@@ -60,7 +64,10 @@ class FlameLight(
          * A fire in a hearth off to the left of the table: a broad, redder source (about 1700 K)
          * that never settles. Its brightness wanders by up to about a third, in random surges
          * and lulls with quick licks of flame on top, and now and then a log catches and it flares.
-         * As the flames move, so does the light, a little; brighter flames burn yellower.
+         * As the flames move, so does the light: a slow drift, and on top of it the quick, erratic
+         * jumps of real flames (several a second), in both place and height. A flare lifts the
+         * flames, so the shadows they cast twitch, stretch and shrink rather than sway. Brighter
+         * flames burn yellower.
          */
         private fun fireplace(t: Float, strength: Float, lamp: Float): FlameLight {
             val surge = noise(t * 0.9f, 0f)
@@ -71,8 +78,8 @@ class FlameLight(
             val flicker = (1f + 0.20f * surge + 0.11f * lick + 0.05f * flutter + 0.3f * flare).coerceIn(0.55f, 1.6f)
             val heat = (flicker - 1f) * 0.5f // brighter burns yellower, lulls glow redder
             return FlameLight(
-                u = FIRE_U + 0.025f * noise(t * 1.3f, 101f),
-                v = FIRE_V + 0.035f * noise(t * 1.1f, 131f),
+                u = FIRE_U + 0.02f * noise(t * 1.3f, 101f) + 0.012f * noise(t * 6.3f, 211f) + 0.006f * noise(t * 14.1f, 223f),
+                v = FIRE_V + 0.025f * noise(t * 1.1f, 131f) + 0.015f * noise(t * 5.7f, 227f) + 0.007f * noise(t * 13.3f, 229f),
                 power = strength * flicker,
                 reach = 0.14f,
                 r = 1f,
@@ -83,6 +90,7 @@ class FlameLight(
                 steadyU = FIRE_U,
                 steadyV = FIRE_V,
                 steadyPower = strength,
+                flameHeight = 0.075f * (1f + 0.12f * lick + 0.08f * noise(t * 9.1f, 233f) + 0.15f * flare),
             )
         }
 
