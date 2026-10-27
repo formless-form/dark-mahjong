@@ -44,6 +44,7 @@ class PreferencesRepository(private val context: Context) {
         val LAMP_BRIGHTNESS = floatPreferencesKey("lamp_brightness")
         val FIREPLACE = booleanPreferencesKey("fireplace")
         val FIRE_SHADOWS = booleanPreferencesKey("fire_shadows")
+        val FIRE_VOLUME = floatPreferencesKey("fire_volume")
         val FIRE_INTENSITY = floatPreferencesKey("fire_intensity")
         val LAST_WIN_DAY = longPreferencesKey("last_win_epoch_day")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
@@ -75,6 +76,7 @@ class PreferencesRepository(private val context: Context) {
             lampBrightness = prefs[Keys.LAMP_BRIGHTNESS] ?: 0.5f,
             fireplaceLit = prefs[Keys.FIREPLACE] ?: false,
             fireShadows = prefs[Keys.FIRE_SHADOWS] ?: true,
+            fireVolume = prefs[Keys.FIRE_VOLUME] ?: 0.3f,
             fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: 0.5f,
         )
     }
@@ -102,6 +104,7 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.LAMP_BRIGHTNESS] = settings.lampBrightness
             prefs[Keys.FIREPLACE] = settings.fireplaceLit
             prefs[Keys.FIRE_SHADOWS] = settings.fireShadows
+            prefs[Keys.FIRE_VOLUME] = settings.fireVolume
             prefs[Keys.FIRE_INTENSITY] = settings.fireIntensity
         }
     }

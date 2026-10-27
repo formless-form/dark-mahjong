@@ -151,6 +151,11 @@ fun SettingsScreen(
                             }
                         },
                         { shapes ->
+                            SliderRow(shapes, "Fire sound", settings.fireVolume) {
+                                onSettingsChanged(settings.copy(fireVolume = it))
+                            }
+                        },
+                        { shapes ->
                             ToggleRow(
                                 shapes, Icons.Rounded.Contrast, "Long fire shadows",
                                 "Traced on the GPU every frame, so they use more battery",

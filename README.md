@@ -79,6 +79,6 @@ The original project's code was largely written with AI tools (see the [upstream
 - **Name seal:** 全字庫說文解字 seal-script font, CNS11643, Ministry of Digital Affairs, Taiwan ([cns11643.gov.tw](https://www.cns11643.gov.tw)), Open Government Data License 1.0 (subset to four characters).
 - **Fonts:** [Cinzel](https://fonts.google.com/specimen/Cinzel) by Natanael Gama and [Google Sans Flex](https://fonts.google.com/specimen/Google+Sans+Flex) by the Google Sans Flex Project Authors, both SIL OFL 1.1.
 - **Background music:** from the original project, AI-generated with Suno and dedicated to the public domain (CC0).
-- **Sound effects:** tile taps from [Kenney](https://kenney.nl/assets/impact-sounds) (CC0); the match sound was made for Dark Mahjong (CC0); the win melody is a dizi phrase by [CarlosCarty](https://freesound.org/people/CarlosCarty/sounds/339357/) (CC0).
+- **Sound effects:** tile taps from [Kenney](https://kenney.nl/assets/impact-sounds) (CC0); the match sound was made for Dark Mahjong (CC0); the win melody is a dizi phrase by [CarlosCarty](https://freesound.org/people/CarlosCarty/sounds/339357/) (CC0); the fireplace is a recording by [Christopher C. Courter](https://freesound.org/people/courter/sounds/447818/) (CC0).
 
 Full details are in [NOTICE.md](NOTICE.md).

@@ -51,6 +51,12 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 * **Source:** [Impact Sounds](https://kenney.nl/assets/impact-sounds) by **Kenney** (www.kenney.nl)
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/); see `sounds/kenney/License.txt`
 
+### Fireplace
+
+* **File:** `app/src/main/res/raw/fireplace.ogg`, built by `tools/make-fire-sound.py` (mono, the first 200 seconds with their ends crossfaded into a seamless loop, softened, levelled, Opus 80 kbps) from `sounds/freesound/447818__courter__crackeling-fireplace.mp3`
+* **Source:** [Crackeling Fireplace](https://freesound.org/people/courter/sounds/447818/) by **Christopher C. Courter** (courter), Freesound
+* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+
 ### Win sound
 
 * **File:** `app/src/main/res/raw/win_dizi.ogg`, one phrase cut and faded by `tools/make-win-sound.py` from `sounds/freesound/339357__carloscarty__dizi-flute-02.mp3`

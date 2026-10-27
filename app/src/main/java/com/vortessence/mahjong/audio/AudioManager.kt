@@ -18,8 +18,11 @@ import kotlin.random.Random
 class AudioManager(private val context: Context) {
 
     private val musicPlayer = BackgroundMusicPlayer(context.applicationContext)
+    private val fireplace = FireplaceSound(context.applicationContext)
     private var currentSettings: GameSettings? = null
     private var isInForeground = false
+    // On the game screen, where the fireplace burns beside the table
+    private var atTable = false
     private var matchStreak = 0
     private var lastMatchTimeMs = 0L
 
@@ -83,7 +86,27 @@ class AudioManager(private val context: Context) {
             // When music is disabled, stop playback so re-enabling starts with a random song
             musicPlayer.stop()
         }
+        if (isInForeground) fireplace.play(fireLevel(settings))
     }
+
+    /** The game screen opened ([atTable]) or closed: the fireplace is only heard there. */
+    fun setAtTable(atTable: Boolean) {
+        this.atTable = atTable
+        val settings = currentSettings ?: return
+        if (isInForeground) fireplace.play(fireLevel(settings))
+    }
+
+    /**
+     * The fireplace's crackle: ambience, never a distraction. Its own volume setting runs up to
+     * just under half the recording's level, a little louder as the fire burns brighter. Silent
+     * when the fire is out, and away from the game screen.
+     */
+    private fun fireLevel(settings: GameSettings): Float =
+        if (settings.fireplaceLit && atTable) {
+            settings.fireVolume * 0.45f * (0.8f + 0.4f * settings.fireIntensity)
+        } else {
+            0f
+        }
 
     fun onResume() {
         isInForeground = true
@@ -92,16 +115,20 @@ class AudioManager(private val context: Context) {
         if (settings.musicEnabled && (settings.musicVolume > 0f)) {
             musicPlayer.resume()
         }
+        fireplace.play(fireLevel(settings))
+        fireplace.resume()
     }
 
     fun onPause() {
         isInForeground = false
         musicPlayer.pause()
+        fireplace.pause()
     }
 
     fun release() {
         releaseWinPlayer()
         musicPlayer.release()
+        fireplace.stop()
         try {
             soundPool.release()
         } catch (_: Exception) {

@@ -111,6 +111,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 audioManager.updateSettings(s)
             }
         }
+        // The fireplace is only heard at the table
+        viewModelScope.launch {
+            currentScreen.collect { screen -> audioManager.setAtTable(screen is Screen.Game) }
+        }
         // Collect progress
         viewModelScope.launch {
             prefsRepo.progressFlow.collect { p ->
