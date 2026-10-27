@@ -754,7 +754,7 @@ object TileRenderer {
     private val EngraveShadow = Color(0x5A3A2A18)
 
     private const val FIRE_SHADOW_STEPS = 5
-    private const val WALL_SHADE_ALPHA = 0.65f
+    private const val WALL_SHADE_ALPHA = 0.6f
     private val fireShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private const val CONTACT_SHADOW_ALPHA = 0.55f
     private val contactPaint = Paint(Paint.ANTI_ALIAS_FLAG)
