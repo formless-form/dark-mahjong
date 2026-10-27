@@ -1,0 +1,5 @@
+New in 1.1:
+• A small firework bursts as each matched pair meets
+• Lighting settings: lamp brightness, and an optional fireplace with flickering firelight and an intensity slider
+• Tiles cast shadows from each light, shifting with the flames
+• Gentler default volumes
