@@ -112,8 +112,9 @@ private const val FLAME_AGSL = """
 uniform float4 flame;       // u, v, power, reach (squared distance at which it halves)
 uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
-uniform shader shadeMap;    // the board's height map and the table's occlusion (BoardShadowMap)
-uniform float4 shade;       // fire shadows on (1) or off, map pixels per table pixel, one layer's height, the tallest stack's
+uniform shader heightMap;   // the board's height map, at the flat table's resolution (BoardShadowMap)
+uniform shader aoMap;       // the table's ambient occlusion in green, at a coarser resolution
+uniform float4 shade;       // fire shadows on (1) or off, occlusion map pixels per table pixel, one layer's height, the tallest stack's
 uniform float aoStrength;   // how deep the table's ambient occlusion goes (0 with no map)
 const float FIRE_HEIGHT = 0.075;  // how high the flames burn above the table, in table heights
 const int SHADOW_STEPS = 40;
@@ -126,23 +127,22 @@ float3 flameLight(float2 q) {
     float2 d = q - flame.xy;
     return flame.z / (1.0 + dot(d, d) / flame.w) * flameColour;
 }
-// The board's shade map at q (in table heights)
-half4 shading(float2 q) {
-    return shadeMap.eval(float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y) * shade.y);
+// Flat table pixels at q (in table heights)
+float2 tablePixel(float2 q) {
+    return float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y);
 }
 // How tall the board stands at q (0 on the bare table), in table heights
 float boardHeight(float2 q) {
-    return shading(q).r * (255.0 / 31.0) * shade.z;
+    return heightMap.eval(tablePixel(q)).a * (255.0 / 31.0) * shade.z;
 }
-// The height of the surface at q itself: its own map cell, unblended, so a lower tile's edge
-// next to a taller one isn't lifted into the light by its neighbour's height
+// The height of the surface at q itself: its own pixel, unblended, so a lower tile's edge next to
+// a taller one isn't lifted into the light by its neighbour's height
 float surfaceHeight(float2 q) {
-    float2 m = float2(q.x * res.y + 0.5 * res.x, 0.5 * res.y - q.y * res.y) * shade.y;
-    return shadeMap.eval(floor(m) + 0.5).r * (255.0 / 31.0) * shade.z;
+    return heightMap.eval(floor(tablePixel(q)) + 0.5).a * (255.0 / 31.0) * shade.z;
 }
 // The table's ambient occlusion: lower where the tiles hem it in
 float ambient(float2 q) {
-    return 1.0 - aoStrength * shading(q).g;
+    return 1.0 - aoStrength * aoMap.eval(tablePixel(q) * shade.y).g;
 }
 // How much of the fire reaches q, standing h0 above the table: 1 in its light, 0 in full shadow.
 // Marches from q towards the flames as far as the ray stays below the tallest stack, and takes
