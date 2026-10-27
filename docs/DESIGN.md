@@ -189,14 +189,15 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M2 | Portrait refocus; fireworks seen from above; tilted camera; walnut / green mat / Thai straw (photo) tabletops; shiny lamp-lit tiles in the dark; drifting title fog; JVM screenshot tests ✅ 2026-10-26 |
 | M3 | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar, Sans Flex title menu; the name seal as launcher icon; pinch-to-zoom with one-tap zoom-out; 29 layouts ported from ffalt/mah ✅ 2026-10-26 |
 | M4 | Sound design: every sound open source, so the app can go on Google Play. Match: a tile clack recorded for the game, sped up 1.4×, over synthesised stardust (pentatonic chimes over a glitter fizz), four takes plus random ±3 % speed (`tools/make-match-sounds.py`). Taps: Kenney light wood impacts, two takes at two pitches (`tools/make-tap-sounds.py`). Win: a dizi phrase by CarlosCarty (Freesound) with the music dipping under it (`tools/make-win-sound.py`). All CC0; T-STUDIO sounds removed ✅ 2026-10-26 |
-| M5 | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar |
-| M6 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
-| M7 | Difficulty tool, 300-level table, journey map |
-| M8 | Today's Puzzle + calendar, Quick Game |
-| M9 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
-| M10 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
+| M5 | Light and atmosphere: Google Play closed test (1.0.0 live, 1.1.0 in review); a firework burst where each matched pair meets; lamp brightness slider; optional fireplace (flickering, shifting firelight with an intensity slider and a soft crackling loop on its own volume, heard on the game screen only); shadows cast from each light, the fire's traced per pixel through a full-resolution height map of the board, long, soft, following each tile's curved edges and jittering with the flames; contact shadows and darkened side walls between tiles, ambient occlusion on the table; the table running on under the toolbar; music capped quieter ✅ 2026-10-27 |
+| M6 | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar |
+| M7 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
+| M8 | Difficulty tool, 300-level table, journey map |
+| M9 | Today's Puzzle + calendar, Quick Game |
+| M10 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
+| M11 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
 
-Each finished milestone is tagged in git (`milestone-01` to `milestone-04`). **Next:** a Google Play release (upload key, App Bundle, privacy policy, store listing, closed test).
+Each finished milestone is tagged in git (`milestone-01` to `milestone-05`). **Next:** M6, and 12 testers through the 14-day closed test before applying for production on Google Play.
 
 ## Remaining decisions
 
