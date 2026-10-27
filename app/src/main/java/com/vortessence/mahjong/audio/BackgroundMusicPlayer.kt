@@ -25,11 +25,17 @@ class BackgroundMusicPlayer(private val context: Context) {
     private var isPaused = false
     private val lock = Any()
 
+    // The music's volume setting runs up to this much of the tracks' own level: they are mastered
+    // loud, and at full level they drowned out the game
+    private val maxLevel = 0.44f
+
+    private fun level() = currentVolume * maxLevel * duckFactor
+
     fun setVolume(volume: Float) {
         synchronized(lock) {
             currentVolume = volume.coerceIn(0f, 1f)
             try {
-                mediaPlayer?.setVolume(currentVolume * duckFactor, currentVolume * duckFactor)
+                mediaPlayer?.setVolume(level(), level())
             } catch (_: Exception) {
                 // Ignore if media player is not in a valid state
             }
@@ -41,7 +47,7 @@ class BackgroundMusicPlayer(private val context: Context) {
         synchronized(lock) {
             duckFactor = factor.coerceIn(0f, 1f)
             try {
-                mediaPlayer?.setVolume(currentVolume * duckFactor, currentVolume * duckFactor)
+                mediaPlayer?.setVolume(level(), level())
             } catch (_: Exception) {
                 // Ignore if media player is not in a valid state
             }
@@ -82,7 +88,7 @@ class BackgroundMusicPlayer(private val context: Context) {
                 ?: MediaPlayer.create(context, resId)
                 ?: return
 
-            player.setVolume(currentVolume * duckFactor, currentVolume * duckFactor)
+            player.setVolume(level(), level())
             player.setOnCompletionListener {
                 playNextTrack()
             }
