@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.repository.ConstellationRepository
@@ -118,12 +119,15 @@ private fun ToolbarAction(
 ) {
     val content = MaterialTheme.colorScheme.onSurface
     val alpha = if (enabled) 1f else 0.38f
+    // 20 px shorter than Material's 60 dp, 10 px off the top and bottom, so the bar sits slimmer;
+    // the bar's rounded ends follow its height
+    val height = 60.dp - with(LocalDensity.current) { 20.toDp() }
     Surface(
         onClick = onClick,
         enabled = enabled,
         shape = MaterialTheme.shapes.extraLarge,
         color = Color.Transparent,
-        modifier = Modifier.widthIn(min = 88.dp).height(60.dp),
+        modifier = Modifier.widthIn(min = 88.dp).height(height),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
