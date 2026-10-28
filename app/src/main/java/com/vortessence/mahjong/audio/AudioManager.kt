@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.SoundPool
+import android.media.audiofx.LoudnessEnhancer
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -196,6 +197,7 @@ class AudioManager(private val context: Context) {
     // tools/make-win-sound.py). Too long for the SoundPool, so it has its own player, and the music
     // eases down beneath it and back after.
     private var winPlayer: MediaPlayer? = null
+    private var winBoost: LoudnessEnhancer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun playWinPhrase(volume: Float) {
@@ -211,6 +213,14 @@ class AudioManager(private val context: Context) {
         ) ?: return
         val level = volume.coerceIn(0f, 1f)
         player.setVolume(level, level)
+        // The recording already peaks at full scale, so it is boosted as it plays, with Android's
+        // loudness enhancer keeping the peaks from distorting
+        winBoost = runCatching {
+            LoudnessEnhancer(player.audioSessionId).apply {
+                setTargetGain(WIN_BOOST_MILLIBELS)
+                enabled = true
+            }
+        }.getOrNull()
         player.setOnCompletionListener {
             if (winPlayer === it) releaseWinPlayer()
         }
@@ -222,6 +232,8 @@ class AudioManager(private val context: Context) {
     private fun releaseWinPlayer() {
         val player = winPlayer ?: return
         winPlayer = null
+        runCatching { winBoost?.release() }
+        winBoost = null
         try {
             player.release()
         } catch (_: Exception) {
@@ -276,5 +288,8 @@ class AudioManager(private val context: Context) {
 
         // Token for the music-ramp steps, so a new ramp can cancel one in progress
         private val MUSIC_RAMP = Any()
+
+        // How much the win fireworks are boosted as they play (500 mB = 5 dB)
+        const val WIN_BOOST_MILLIBELS = 500
     }
 }
