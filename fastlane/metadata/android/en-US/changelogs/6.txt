@@ -1,1 +1,6 @@
-Initial store release.
+New in 1.2:
+• Lighting that comes alive: long, soft shadows from the fireplace that flicker and shift with the flames, and gentle shading between the tiles
+• A soft crackling fire to go with it, on its own volume slider
+• Clearing a board now sounds like real fireworks
+• The table runs right to the bottom of the screen, with a slimmer toolbar
+• The version number on the title screen
