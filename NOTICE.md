@@ -57,10 +57,10 @@ As a special exception to the GNU General Public License version 3.0, the copyri
 * **Source:** [Crackeling Fireplace](https://freesound.org/people/courter/sounds/447818/) by **Christopher C. Courter** (courter), Freesound
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
-### Win sound
+### Win fireworks
 
-* **File:** `app/src/main/res/raw/win_dizi.ogg`, one phrase cut and faded by `tools/make-win-sound.py` from `sounds/freesound/339357__carloscarty__dizi-flute-02.mp3`
-* **Source:** [DIZI FLUTE 02](https://freesound.org/people/CarlosCarty/sounds/339357/) by **CarlosCarty**, via Freesound
+* **File:** `app/src/main/res/raw/win_fireworks.ogg`, the first 5.5 seconds mixed to mono, levelled and faded by `tools/make-win-sound.py` from `sounds/freesound/769030__greysound__fireworks-annapolis-royal-ns-excerpt.flac` (the recording's first 10 seconds)
+* **Source:** [Fireworks - Annapolis Royal, NS](https://freesound.org/people/greysound/sounds/769030/) by **greysound**, Freesound
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
 ### Background Music

@@ -95,7 +95,7 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 
 ### Winning: fireworks and a warm message
 
-Clearing a board sets off a fireworks light show **seen from directly above**. There are no rockets, since their climb is straight towards the viewer. Each shell bursts as a disc of sparks, densest at its rim, that expands, slows, shrinks and twinkles out. Bursts overlap densely, about 30 over 4 seconds, in widely varied colours: any hue, plus gold and silver. Styles are peony, ring, chrysanthemum (colour-shifting), willow (slow gold) and crackle. It respects the animations toggle. Alongside it, a **warm congratulations message** is drawn from a large hand-written pool through a no-repeat shuffle that persists across sessions; some messages are context-aware (first win of the day, tutorial, late night, morning). Then big **Next** / **Replay** / **Menu** buttons.
+Clearing a board sets off a fireworks light show **seen from directly above**. There are no rockets, since their climb is straight towards the viewer. Each shell bursts as a disc of sparks, densest at its rim, that expands, slows, shrinks and twinkles out. Bursts overlap densely, about 30 over 4 seconds, in widely varied colours: any hue, plus gold and silver. Styles are peony, ring, chrysanthemum (colour-shifting), willow (slow gold) and crackle. It respects the animations toggle. **It sounds like the real thing:** 5.5 seconds of a small-town show recorded by greysound (Freesound 769030, CC0), mono Opus (`tools/make-win-sound.py`), with the music easing down beneath it. Alongside it, a **warm congratulations message** is drawn from a large hand-written pool through a no-repeat shuffle that persists across sessions; some messages are context-aware (first win of the day, tutorial, late night, morning). Then big **Next** / **Replay** / **Menu** buttons.
 
 Every match ends in a small version of the same thing: as the raised pair's edges touch, a single shell (no willows, half the sparks, about half as long) bursts where they meet, timed with the stardust in the match sound. It respects the animations toggle.
 
@@ -170,7 +170,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 - Code: GPLv3 with upstream's app-store exception; keep `NOTICE.md` and add Dark Mahjong's changes.
 - Tiles: samoheen, CC0. Music: upstream's Suno tracks, CC0. Fonts: Google Sans Flex and Cinzel, OFL (upstream's Tomorrow is no longer bundled).
 - Layouts from ffalt/mah: MIT; add its copyright notice.
-- Sounds: all open source since 2026-10-26 (M4): the match sound made for the game and Kenney's wood taps, both CC0, plus a dizi phrase from Freesound (CC0) for the win and the synthesised blocked sound in code. The T-STUDIO pack is gone.
+- Sounds: all open source since 2026-10-26 (M4): the match sound made for the game and Kenney's wood taps, both CC0, a real fireworks show for the win (a dizi phrase until 2026-10-28), the fireplace recording, and the synthesised blocked sound in code. The T-STUDIO pack is gone.
 - Backgrounds: our own shader code, so nothing to license.
 
 ## Testing

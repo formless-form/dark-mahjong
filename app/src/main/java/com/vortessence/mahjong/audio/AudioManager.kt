@@ -192,8 +192,9 @@ class AudioManager(private val context: Context) {
         vibrate { HapticPatterns.win(it) }
     }
 
-    // The win phrase: a bamboo flute (dizi) melody (9 s, built by tools/make-win-sound.py). Too long for the
-    // SoundPool, so it has its own player, and the music eases down beneath it and back after.
+    // The win sound: a real fireworks show, as long as the light show (5.5 s, built by
+    // tools/make-win-sound.py). Too long for the SoundPool, so it has its own player, and the music
+    // eases down beneath it and back after.
     private var winPlayer: MediaPlayer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -201,10 +202,10 @@ class AudioManager(private val context: Context) {
         releaseWinPlayer()
         val player = MediaPlayer.create(
             context.applicationContext,
-            R.raw.win_dizi,
+            R.raw.win_fireworks,
             AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_GAME)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build(),
             android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
         ) ?: return
@@ -214,7 +215,7 @@ class AudioManager(private val context: Context) {
             if (winPlayer === it) releaseWinPlayer()
         }
         winPlayer = player
-        rampMusic(to = 0.3f)
+        rampMusic(to = 0.4f)
         player.start()
     }
 
