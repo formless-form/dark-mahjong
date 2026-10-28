@@ -43,6 +43,7 @@ import com.vortessence.mahjong.data.model.ContinueInfo
 import com.vortessence.mahjong.ui.components.NameSeal
 import com.vortessence.mahjong.ui.components.rememberFilmGrain
 import com.vortessence.mahjong.ui.theme.Cinzel
+import androidx.compose.ui.platform.LocalContext
 import com.vortessence.mahjong.ui.theme.MahjongTheme
 import com.vortessence.mahjong.ui.theme.SansText
 import com.vortessence.mahjong.ui.theme.SansTitle
@@ -133,20 +134,41 @@ fun MainMenuScreen(
         // of the screen, its lowest letters 5 px above the bottom edge (the line box adds about
         // 1 px below them)
         val bottomGap = with(LocalDensity.current) { 4.toDp() }
-        Text(
-            text = PHOTO_CREDIT,
-            // Its own style, not the theme's 24 sp line height, so the box hugs the letters
-            style = TextStyle(
-                fontFamily = FontFamily.SansSerif,
-                fontSize = 6.5.sp,
-                letterSpacing = 0.02.em,
-                color = TitleText.copy(alpha = 0.45f),
-            ),
+        val context = LocalContext.current
+        val version = remember {
+            runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.displayCutout)
                 .padding(bottom = bottomGap),
-        )
+        ) {
+            // The app's version, 40 px above the credit, in Google Sans Flex
+            if (version != null) {
+                Text(
+                    text = "Version $version",
+                    style = TextStyle(
+                        fontFamily = SansText,
+                        fontSize = 14.sp,
+                        letterSpacing = 0.02.em,
+                        color = TitleText.copy(alpha = 0.55f),
+                    ),
+                )
+                Spacer(Modifier.height(with(LocalDensity.current) { 40.toDp() }))
+            }
+            Text(
+                text = PHOTO_CREDIT,
+                // Its own style, not the theme's 24 sp line height, so the box hugs the letters
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 6.5.sp,
+                    letterSpacing = 0.02.em,
+                    color = TitleText.copy(alpha = 0.45f),
+                ),
+            )
+        }
     }
 }
 
