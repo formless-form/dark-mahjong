@@ -1,6 +1,2 @@
 New in 1.3:
 • Rebuilt drawing: tiles hidden under others are skipped, each tile is drawn from images made once, the table's texture is kept, and fire shadows are traced once per pixel. Even Quad runs at a steady 60 fps, far easier on the battery
-• The selected tile glows gold
-• A warmer lamp at a gentle slant; finer walnut and straw, so tiles look larger
-• Match fireworks burst where the tiles meet, and never go missing
-• Long fire shadows always on; corner index gone
