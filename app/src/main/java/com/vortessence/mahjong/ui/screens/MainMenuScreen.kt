@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.vortessence.mahjong.R
 import com.vortessence.mahjong.data.model.ContinueInfo
 import com.vortessence.mahjong.ui.components.NameSeal
-import com.vortessence.mahjong.ui.components.rememberFilmGrain
+import com.vortessence.mahjong.ui.components.TitleBackdrop
 import com.vortessence.mahjong.ui.theme.Cinzel
 import androidx.compose.ui.platform.LocalContext
 import com.vortessence.mahjong.ui.theme.MahjongTheme
@@ -52,8 +52,8 @@ private val TitleText = Color(0xFFE6DFD1)
 private val TitleTextBright = Color(0xFFFFF7E8)
 private val Shade = Color(0xFF080C0B)
 
-// The background photo is CC0, so no credit is required; this one is a courtesy (also in NOTICE.md)
-private const val PHOTO_CREDIT = "Photo: Huangdan2060 · CC0 · Wikimedia Commons"
+// The background photo is CC0, so it needs no credit on screen; it is credited in NOTICE.md and
+// the README
 
 /**
  * Title screen (portrait): a misty mountain photograph. The name seal and title sit in the open
@@ -70,17 +70,9 @@ fun MainMenuScreen(
     onSettings: () -> Unit,
     onMenuClick: () -> Unit = {},
 ) {
-    val grain = rememberFilmGrain()
     Box(modifier = Modifier.fillMaxSize().background(Shade)) {
-        // Crop scales uniformly to fill, so the photo is never stretched; film grain on top
-        Image(
-            painter = painterResource(R.drawable.title_mountains),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { renderEffect = grain },
-        )
+        // Scaled uniformly to fill, so the photo is never stretched; film grain in the same pass
+        TitleBackdrop(R.drawable.title_mountains, Modifier.fillMaxSize())
         // Darken the bright sky behind the title, and deepen the forest behind the menu
         Box(
             Modifier
@@ -109,7 +101,7 @@ fun MainMenuScreen(
                 text = "DARK MAHJONG",
                 style = when (menuStyle) {
                     TitleMenuStyle.SERIF -> titleStyle(TitleText, size = 19.sp)
-                    TitleMenuStyle.SANS -> titleStyle(TitleText, size = 21.sp).copy(fontWeight = FontWeight.Bold, letterSpacing = 0.28.em)
+                    TitleMenuStyle.SANS -> titleStyle(TitleText, size = 22.sp).copy(fontWeight = FontWeight.Bold, letterSpacing = TITLE_SPACING.em)
                 },
             )
         }
@@ -145,7 +137,8 @@ fun MainMenuScreen(
                 .windowInsetsPadding(WindowInsets.displayCutout)
                 .padding(bottom = bottomGap),
         ) {
-            // The app's version, 40 px above the credit, in Google Sans Flex
+            // The app's version, in Google Sans Flex, where it sat above the photo credit (since
+            // removed): the credit's line and 40 px above the screen's foot
             if (version != null) {
                 Text(
                     text = "Version $version",
@@ -153,21 +146,11 @@ fun MainMenuScreen(
                         fontFamily = SansText,
                         fontSize = 14.sp,
                         letterSpacing = 0.02.em,
-                        color = TitleText.copy(alpha = 0.55f),
+                        color = TitleText.copy(alpha = 0.4f),
                     ),
                 )
-                Spacer(Modifier.height(with(LocalDensity.current) { 40.toDp() }))
+                Spacer(Modifier.height(with(LocalDensity.current) { 40.toDp() + 7.6.sp.toDp() }))
             }
-            Text(
-                text = PHOTO_CREDIT,
-                // Its own style, not the theme's 24 sp line height, so the box hugs the letters
-                style = TextStyle(
-                    fontFamily = FontFamily.SansSerif,
-                    fontSize = 6.5.sp,
-                    letterSpacing = 0.02.em,
-                    color = TitleText.copy(alpha = 0.45f),
-                ),
-            )
         }
     }
 }
@@ -177,6 +160,9 @@ fun MainMenuScreen(
  * Cinzel title (the default since 2026-10-26), or in the title's Cinzel capitals (the original).
  */
 enum class TitleMenuStyle { SERIF, SANS }
+
+// The title's letter spacing in ems: 0.12, chosen 2026-10-29 (it was 0.28)
+private const val TITLE_SPACING = 0.12f
 
 private fun titleStyle(color: Color, size: TextUnit = 17.sp) = TextStyle(
     fontFamily = Cinzel,

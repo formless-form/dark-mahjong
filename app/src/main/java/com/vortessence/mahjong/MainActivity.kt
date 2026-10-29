@@ -61,8 +61,8 @@ class MainActivity : ComponentActivity() {
     //   --es perfLayout Quad --ez perfFire true [--es perfSurface WALNUT]
     private fun openPerfScene(intent: Intent?) {
         if (!BuildConfig.PERF_HOOKS) return
+        PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         val layout = intent?.getStringExtra("perfLayout") ?: return
-        PerfSwitches.off = intent.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         PerfSwitches.fireFps = intent.getIntExtra("perfFireFps", 0)
         val surface = intent.getStringExtra("perfSurface")?.let { name -> TableSurface.entries.firstOrNull { it.name == name } }
         viewModel.startPerfScene(layout, intent.getBooleanExtra("perfFire", false), surface, intent.getBooleanExtra("perfAutoplay", false))

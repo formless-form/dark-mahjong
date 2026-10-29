@@ -39,7 +39,6 @@ import com.vortessence.mahjong.ui.components.tileset.*
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TileSuit
-import com.vortessence.mahjong.ui.theme.GoldAccent
 import com.vortessence.mahjong.ui.theme.GoldHighlight
 import com.vortessence.mahjong.ui.theme.TileBevelHighlight
 import com.vortessence.mahjong.ui.theme.TileIvoryBottom
@@ -155,8 +154,9 @@ object TileRenderer {
         // 0. Highlight / Tint Color Logic
         val isImportantHighlight = isSelected || isHinted || isBlockedHighlight || isTutorialHighlight
         val freeTint = highlightFreeTiles && boardTile.isFree
+        // The selected tile is drawn plain, then marked in polished gold (drawGoldSelection)
         val highlightColor = when {
-            isSelected -> GoldAccent
+            isSelected -> null
             isHinted -> GoldHighlight
             isBlockedHighlight -> Color(0xFFDC2626)
             isTutorialHighlight -> TutorialHighlight
@@ -167,6 +167,7 @@ object TileRenderer {
 
         // 1. Physically Grounded 3D Shadows
         drawRestingShadows(scope, boardTile.z, x, y, width, height, shadows)
+        if (isSelected) drawGoldGlow(scope, x, y, width, height)
 
         // Most tiles are stamped from the atlas; a highlighted one (at most a few) is drawn whole
         if (!isImportantHighlight && !PerfSwitches.isOff("atlas")) {
@@ -177,6 +178,7 @@ object TileRenderer {
         // 2. Solid 3D Body Extrusion (Backing -> Sides -> Face)
         drawWalls(scope, x, y, width, height, highlightColor, tintAlpha)
         drawFace(scope, x, y, width, height, highlightColor, tintAlpha, freeTint && !isSelected)
+        if (isSelected) drawGoldFace(scope, x, y, width, height)
 
         val tile = boardTile.tile
         // 6. Detailed Classic Mahjong Artwork
@@ -193,7 +195,68 @@ object TileRenderer {
         // shows in sharp reflections of the lamp (streaked by tiny ripples in the glaze, strongest
         // near the lamp's mirror point, with a hotspot there), scratch flares and edge glints
         if (!PerfSwitches.isOff("glaze")) drawGlaze(scope, look, face.topLeft, face.size, width, glare, GlazePart.ALL)
+        if (isSelected) drawGoldRim(scope, x, y, width, height)
     }
+
+    /*
+     * The selected tile, in polished gold (chosen 2026-10-29 over a flat amber tint): a warm
+     * golden glow behind it, its face washed with gold, and a gold rim with a fine glint.
+     */
+
+    // Polished gold: bright highlights and deep shadows in turn across the tile, as a curved
+    // metal edge catches the lamp
+    private fun goldMetal(x: Float, y: Float, w: Float, h: Float) = Brush.linearGradient(
+        0f to Color(0xFFFFF3C4),
+        0.2f to Color(0xFFF2C14E),
+        0.42f to Color(0xFFB8860B),
+        0.6f to Color(0xFFF7D774),
+        0.82f to Color(0xFF9C6F12),
+        1f to Color(0xFFE9C46A),
+        start = Offset(x, y),
+        end = Offset(x + w, y + h),
+    )
+
+    private fun drawGoldRim(scope: DrawScope, x: Float, y: Float, w: Float, h: Float) {
+        val r = w * 0.085f
+        val stroke = w * 0.05f
+        scope.drawRoundRect(
+            brush = goldMetal(x, y, w, h),
+            topLeft = Offset(x + stroke / 2f, y + stroke / 2f),
+            size = Size(w - stroke, h - stroke),
+            cornerRadius = CornerRadius(r - stroke / 2f),
+            style = Stroke(width = stroke),
+        )
+        // A fine glint along its inner edge
+        scope.drawRoundRect(
+            color = Color(0xFFFFF6D0).copy(alpha = 0.7f),
+            topLeft = Offset(x + stroke, y + stroke),
+            size = Size(w - 2f * stroke, h - 2f * stroke),
+            cornerRadius = CornerRadius(r - stroke),
+            style = Stroke(width = w * 0.008f),
+        )
+    }
+
+    private fun drawGoldGlow(scope: DrawScope, x: Float, y: Float, w: Float, h: Float) {
+        val grow = w * 0.07f
+        goldGlowPaint.maskFilter = BlurMaskFilter(w * 0.12f, BlurMaskFilter.Blur.NORMAL)
+        goldGlowPaint.color = android.graphics.Color.argb(230, 0xF5, 0xB8, 0x2E)
+        scope.drawContext.canvas.nativeCanvas.drawRoundRect(x - grow, y - grow, x + w + grow, y + h * 1.13f + grow, w * 0.15f, w * 0.15f, goldGlowPaint)
+    }
+
+
+    private fun drawGoldFace(scope: DrawScope, x: Float, y: Float, w: Float, h: Float, alpha: Float = 0.30f) {
+        val face = faceRect(x, y, w, h)
+        scope.drawRoundRect(
+            brush = goldMetal(x, y, w, h),
+            topLeft = face.topLeft,
+            size = face.size,
+            cornerRadius = CornerRadius(w * 0.077f),
+            alpha = alpha,
+        )
+    }
+
+
+    private val goldGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     /** The shadows under a tile: its resting shadow, cast from the lamp, and on the table a soft base. */
     private fun drawRestingShadows(scope: DrawScope, layerZ: Int, x: Float, y: Float, width: Float, height: Float, shadows: TileShadows) {
