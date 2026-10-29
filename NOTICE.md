@@ -7,7 +7,7 @@
 
 This repository uses a multi-license model to clearly separate source code permissions from media asset rights and third-party attributions.
 
-* **Source Code:** Licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE) with an [App Store Exception](#1-source-code-license).
+* **Source Code:** Licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE) with an [App Store Exception](#1-source-code-license), and an [additional term](#additional-term-names-and-logos-gplv3-section-7e) withholding the Dark Mahjong names and logos.
 * **Graphics:** Dedicated to the [Public Domain (CC0 1.0)](#2-graphics-assets).
 * **Sound Effects:** Dedicated to the [Public Domain (CC0 1.0)](#3-audio-assets).
 * **Background Music:** [AI-generated](#background-music) with Suno, dedicated to the Public Domain (CC0 1.0).
@@ -18,12 +18,21 @@ This repository uses a multi-license model to clearly separate source code permi
 ## 1. Source Code License
 
 Copyright (C) 2026 PcmciaKai
+Dark Mahjong's changes: Copyright (C) 2026 Grevillea Labs
 
 The source code is licensed under the GNU General Public License, version 3. The full license text is available in the [LICENSE](LICENSE) file.
 
 ### App Store Exception (Additional Permission under GPLv3 Section 7)
 
 As a special exception to the GNU General Public License version 3.0, the copyright holders of this software grant permission to distribute compiled binaries of this program (and derivative works built from it) on the Apple App Store or other digital distribution channels that apply Terms of Service or DRM constraints. All source code modifications must still be made available under the terms of the GNU General Public License v3.0.
+
+### Additional term: names and logos (GPLv3 Section 7(e))
+
+For the material Dark Mahjong adds, this licence does not grant any right to use the names **"Dark Mahjong"** and **"暗夜麻將"**, the name seal, the launcher icon, or the name **"Grevillea Labs"**, under trademark law or otherwise. A modified version that you distribute must go by a different name and icon, and must not suggest that it is Dark Mahjong or comes from its makers. Saying truthfully that your work is based on Dark Mahjong is fine. (The original project's own name is PcmciaKai's and is not covered here.)
+
+### A request
+
+Dark Mahjong is made to be free of ads and tracking, with nothing to buy, offline and open source, and it will stay so. We ask anyone who builds on it to keep it the same: no ads, no in-app purchases, no tracking, and not sold for profit. This is a request rather than a licence term (GPLv3 permits commercial use), and we trust it will be honoured in the spirit the game is given.
 
 ---
 

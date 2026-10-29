@@ -41,6 +41,8 @@ class BoardShadowMap private constructor(
     private val built: BoardTransform,
     // The number of layers in the tallest stack
     private val layers: Int,
+    /** The tiles it was made from. */
+    val tiles: List<BoardTile>,
 ) {
 
     /** The map, placed under the board as it is laid out [now], on a table [tableHeight] tall. */
@@ -94,6 +96,7 @@ class BoardShadowMap private constructor(
                 occlusionMap(standing, transform, w, h, layer),
                 transform,
                 (standing.maxOfOrNull { it.z } ?: 0) + 1,
+                tiles,
             )
         }
 

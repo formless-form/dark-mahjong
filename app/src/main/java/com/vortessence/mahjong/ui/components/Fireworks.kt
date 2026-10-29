@@ -22,6 +22,8 @@ import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+import kotlinx.coroutines.channels.Channel
+import androidx.compose.ui.graphics.nativeCanvas
 
 /**
  * A fireworks light show seen from directly above. There are no rockets (their climb is straight
@@ -67,54 +69,76 @@ internal fun fireworksSnapshot(seed: Long, seconds: Float): (DrawScope) -> Unit 
 }
 
 /**
- * Single shells burst over the table when a pair is matched, one per match. Each sim lives until
- * its sparks die; several can overlap when the player matches quickly.
+ * Single shells burst over the table when a pair is matched, one per match: small and cheap, so
+ * play never waits on them. A few shells are made once and reused, so a match allocates nothing;
+ * several can overlap when the player matches quickly (the oldest gives way if all are busy).
  */
 internal class MatchBursts {
-    private val live = mutableListOf<FireworksSimulation>()
+    private val pool = Array(POOL) { FireworksSimulation(Random(it + 1L), SingleBurst(), cap = MATCH_SPARKS) }
+    private val wake = Channel<Unit>(Channel.CONFLATED)
 
     /** Bumped every frame while a burst is alive, so a Canvas that draws these redraws. */
     var frame by mutableLongStateOf(0L)
         private set
 
+    /** No burst is alive. */
+    val idle: Boolean get() = pool.all { it.finished }
+
     /**
      * Bursts at ([x], [y]) on a canvas [canvasHeight] tall, with sparks reaching about [reach]
-     * pixels out. Suspends until every burst it is running has died away.
+     * pixels out. [run] animates it.
      */
-    suspend fun burst(x: Float, y: Float, reach: Float, canvasHeight: Float, seed: Long = System.nanoTime()) {
+    fun burst(x: Float, y: Float, reach: Float, canvasHeight: Float, seed: Long = System.nanoTime()) {
         if (canvasHeight <= 0f) return
+        val sim = pool.firstOrNull { it.finished } ?: pool.minBy { it.startedAt }
         // A spark's speed times its drag-limited travel: 0.40 / 2.1 of the shell size
-        val single = SingleBurst(x / canvasHeight, y / canvasHeight, size = reach / canvasHeight / 0.19f)
-        live += FireworksSimulation(Random(seed), single)
-        if (live.size > 1) return // the first caller's loop already runs every frame
-        var last = -1L
-        while (live.isNotEmpty()) {
-            withFrameNanos { now ->
-                val dt = if (last < 0) 0f else ((now - last) / 1e9f).coerceAtMost(1f / 20f)
-                last = now
-                live.forEach { it.step(dt) }
-                live.removeAll { it.finished }
-                frame = now
+        sim.restart(Random(seed), x / canvasHeight, y / canvasHeight, size = reach / canvasHeight / 0.19f, startedAt = seed)
+        wake.trySend(Unit)
+    }
+
+    /** Animates bursts as they come, for as long as the board is shown. */
+    suspend fun run() {
+        while (true) {
+            wake.receive()
+            var last = -1L
+            while (!idle) {
+                withFrameNanos { now ->
+                    val dt = if (last < 0) 0f else ((now - last) / 1e9f).coerceAtMost(1f / 20f)
+                    last = now
+                    for (sim in pool) if (!sim.finished) sim.step(dt)
+                    frame = now
+                }
             }
+            frame = System.nanoTime()
         }
     }
 
-    fun draw(scope: DrawScope) {
-        live.forEach { it.draw(scope) }
+    /**
+     * Draws the live bursts on a canvas [canvasHeight] tall: the same height they were placed on,
+     * which may be less than the scope's (the table runs on under the toolbar).
+     */
+    fun draw(scope: DrawScope, canvasHeight: Float) {
+        for (sim in pool) if (!sim.finished) sim.draw(scope, canvasHeight)
+    }
+
+    private companion object {
+        const val POOL = 3
+        // Enough sparks to read as a shell at a tile's size, and no more
+        const val MATCH_SPARKS = 40
     }
 }
 
 /** A lone shell: where it bursts (in canvas heights) and how big it is. */
-private class SingleBurst(val x: Float, val y: Float, val size: Float)
+private class SingleBurst(var x: Float = 0f, var y: Float = 0f, var size: Float = 1f)
 
 private enum class BurstStyle { PEONY, RING, CHRYSANTHEMUM, WILLOW, CRACKLE, MULTI }
 
 /**
- * Particle state in flat arrays (no allocation per frame). Positions are in units of the canvas
- * height, so bursts look the same on any screen; x runs 0..aspect.
+ * Particle state in flat arrays (no allocation per frame), [cap] sparks at most. Positions are in
+ * units of the canvas height, so bursts look the same on any screen; x runs 0..aspect. A lone
+ * shell ([single]) can be [restart]ed, reusing its arrays.
  */
-private class FireworksSimulation(private val rnd: Random, private val single: SingleBurst? = null) {
-    private val cap = 4200
+private class FireworksSimulation(private var rnd: Random, private val single: SingleBurst? = null, private val cap: Int = 4200) {
     private val x = FloatArray(cap)
     private val y = FloatArray(cap)
     private val vx = FloatArray(cap)
@@ -135,7 +159,7 @@ private class FireworksSimulation(private val rnd: Random, private val single: S
     private val alive = BooleanArray(cap)
     private var freeHint = 0
 
-    private val flashCount = 40
+    private val flashCount = if (single != null) 1 else 40
     private val flashX = FloatArray(flashCount)
     private val flashY = FloatArray(flashCount)
     private val flashLife = FloatArray(flashCount)
@@ -158,8 +182,24 @@ private class FireworksSimulation(private val rnd: Random, private val single: S
         for (i in 0 until 7) add(3.35f + i * 0.07f + rnd.nextFloat() * 0.05f)
     }.sorted().toFloatArray()
     private var nextBurst = 0
-    var finished = false
+    var finished = single != null
         private set
+    var startedAt = 0L
+        private set
+
+    /** Starts a lone shell afresh at ([x], [y]) (canvas heights), [size] its shell size. */
+    fun restart(random: Random, x: Float, y: Float, size: Float, startedAt: Long) {
+        val s = single ?: return
+        rnd = random
+        s.x = x; s.y = y; s.size = size
+        this.startedAt = startedAt
+        java.util.Arrays.fill(alive, false)
+        java.util.Arrays.fill(flashLife, 0f)
+        freeHint = 0
+        time = 0f
+        nextBurst = 0
+        finished = false
+    }
 
     fun step(dt: Float) {
         time += dt
@@ -209,7 +249,7 @@ private class FireworksSimulation(private val rnd: Random, private val single: S
             BurstStyle.CHRYSANTHEMUM -> 170
             BurstStyle.CRACKLE -> 110
             else -> 150
-        } / (if (single != null) 2 else 1)
+        }.let { if (single != null) (it * cap / 150).coerceAtMost(cap) else it }
         for (k in 0 until count) {
             // Uniform direction on a sphere, seen from above: (x, y) of the unit vector.
             // Projected, this fills a disc that is densest towards its rim.
@@ -303,11 +343,13 @@ private class FireworksSimulation(private val rnd: Random, private val single: S
         crackle[i] = crackles
     }
 
-    fun draw(scope: DrawScope) = with(scope) {
-        aspect = size.width / size.height
-        val h = size.height
+    /** Draws the sparks, positions being in units of [height] (by default the scope's). */
+    fun draw(scope: DrawScope, height: Float = scope.size.height) = with(scope) {
+        aspect = size.width / height
+        val h = height
         val unit = h / 420f
 
+        val canvas = drawContext.canvas.nativeCanvas
         for (f in 0 until flashCount) {
             if (flashLife[f] <= 0f) continue
             val a = flashLife[f] / 0.4f
@@ -343,19 +385,50 @@ private class FireworksSimulation(private val rnd: Random, private val single: S
             val cr = (r[i] + (r2[i] - r[i]) * mix) * (1f - hotWhite) + hotWhite
             val cg = (g[i] + (g2[i] - g[i]) * mix) * (1f - hotWhite) + hotWhite
             val cb = (b[i] + (b2[i] - b[i]) * mix) * (1f - hotWhite) + hotWhite
-            val c = Color(cr.coerceIn(0f, 1f), cg.coerceIn(0f, 1f), cb.coerceIn(0f, 1f))
             val px = x[i] * h
             val py = y[i] * h
             // Sparks shrink as they fall away from the viewer
             val rr = radius[i] * unit * (0.45f + 0.55f * t)
-            drawLine(
-                color = c.copy(alpha = alpha * 0.5f),
-                start = Offset(px - vx[i] * h * 0.05f, py - vy[i] * h * 0.05f),
-                end = Offset(px, py),
-                strokeWidth = rr * 1.1f, cap = StrokeCap.Round, blendMode = BlendMode.Plus,
+            // One stamp of the glow image: a bright core in a faint halo, tinted to the spark
+            sparkPaint.color = android.graphics.Color.argb(
+                alpha.coerceIn(0f, 1f), cr.coerceIn(0f, 1f), cg.coerceIn(0f, 1f), cb.coerceIn(0f, 1f),
             )
-            drawCircle(c.copy(alpha = alpha * 0.16f), radius = rr * 3.6f, center = Offset(px, py), blendMode = BlendMode.Plus)
-            drawCircle(c.copy(alpha = alpha), radius = rr, center = Offset(px, py), blendMode = BlendMode.Plus)
+            val reach = rr * SparkSprite.REACH
+            sparkRect.set(px - reach, py - reach, px + reach, py + reach)
+            canvas.drawBitmap(SparkSprite.bitmap, null, sparkRect, sparkPaint)
+        }
+    }
+
+    private val sparkRect = android.graphics.RectF()
+    private val sparkPaint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+        xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.ADD)
+    }
+}
+
+/**
+ * A spark's glow, made once: a bright core, [REACH] times smaller than the image, in a faint halo
+ * that fades out at its edge. An alpha-only image, so each stamp is tinted by its paint's colour.
+ */
+private object SparkSprite {
+    const val REACH = 3.6f
+    private const val SIZE = 64
+
+    val bitmap: android.graphics.Bitmap by lazy {
+        val pixels = ByteArray(SIZE * SIZE)
+        val c = SIZE / 2f
+        val core = 1f / REACH
+        for (j in 0 until SIZE) for (i in 0 until SIZE) {
+            val dx = (i + 0.5f - c) / c
+            val dy = (j + 0.5f - c) / c
+            val d = sqrt(dx * dx + dy * dy)
+            // The core's edge spans about a pixel of the image, so it stays crisp when small
+            val inCore = ((core - d) * c + 0.5f).coerceIn(0f, 1f)
+            val halo = 0.16f * (1f - ((d - 0.7f) / 0.3f).coerceIn(0f, 1f))
+            val a = inCore + halo * (1f - inCore)
+            pixels[j * SIZE + i] = (a * 255f + 0.5f).toInt().coerceIn(0, 255).toByte()
+        }
+        android.graphics.Bitmap.createBitmap(SIZE, SIZE, android.graphics.Bitmap.Config.ALPHA_8).apply {
+            copyPixelsFromBuffer(java.nio.ByteBuffer.wrap(pixels))
         }
     }
 }

@@ -71,11 +71,6 @@ fun TutorialCard(
                         checked = settings.highlightFreeTiles,
                         onCheckedChange = { onSettingsChanged(settings.copy(highlightFreeTiles = it)) }
                     )
-                    SettingToggle(
-                        title = "Corner index",
-                        checked = settings.showCornerIndex,
-                        onCheckedChange = { onSettingsChanged(settings.copy(showCornerIndex = it)) }
-                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

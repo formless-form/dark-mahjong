@@ -14,7 +14,7 @@ SERIAL="${1:-100.116.67.56:5555}"
 OUT=app/build/outputs/apk/release
 
 systemd-run --user --collect --wait --pipe -p MemoryMax=6G -p MemorySwapMax=1G \
-    --working-directory="$PWD" --unit=mahjong-build "$PWD/gradlew" assembleRelease --no-daemon --console=plain -q
+    --working-directory="$PWD" --unit=mahjong-build "$PWD/gradlew" assembleRelease -PperfHooks=true --no-daemon --console=plain -q
 
 "$APKSIGNER" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey \
     --ks-pass pass:android --key-pass pass:android \

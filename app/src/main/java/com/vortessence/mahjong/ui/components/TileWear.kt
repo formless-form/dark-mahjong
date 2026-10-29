@@ -20,6 +20,7 @@ import kotlin.random.Random
  */
 object TileWear {
     const val VARIANTS = 8
+    const val LOOKS = VARIANTS * 4
     const val WIDTH = 180
     const val HEIGHT = 240
 
@@ -53,20 +54,35 @@ object TileWear {
         overlays = Array(VARIANTS) { made[it].first }
     }
 
-    fun overlay(id: Int): ImageBitmap? = overlays?.get(mix(id) % VARIANTS)
+    /** The textures are made. */
+    val ready: Boolean get() = overlays != null
+
+    /**
+     * Which of the [LOOKS] looks a tile has: a texture (look % VARIANTS) and its orientation
+     * (look / VARIANTS). Everything about a tile's worn face follows from it, so tiles can be drawn
+     * from a few shared images.
+     */
+    fun look(id: Int): Int = mix(id) % LOOKS
+
+    fun overlay(look: Int): ImageBitmap? = overlays?.get(look % VARIANTS)
 
     /**
      * The glaze's specular streaks for this tile: the lamp's reflection broken up by the same
      * ripples and scratches as its wear. Always drawn upright (the reflection belongs to the
      * lamp, not to the tile), mirrored left-right when the wear is.
      */
-    fun sheen(id: Int): ImageBitmap? = sheens?.get(mix(id) % VARIANTS)
+    fun sheen(look: Int): ImageBitmap? = sheens?.get(look % VARIANTS)
 
     /** 0 as generated, 1 mirrored, 2 flipped, 3 turned half round: 32 looks from 8 textures. */
-    fun orientation(id: Int): Int = (mix(id) / VARIANTS) % 4
+    fun orientation(look: Int): Int = look / VARIANTS
 
-    /** How yellowed this tile's ivory is, as the alpha of a warm tint (0 = crisp, ~0.13 = aged). */
-    fun ageing(id: Int): Float = (mix(id * 31 + 7) % 1000) / 1000f * 0.13f
+    /**
+     * How yellowed the ivory is, as the alpha of a warm tint (0 = crisp, ~0.13 = aged). The same for
+     * every tile: a set ages together, and tiles of differing tone side by side read as a
+     * difference in light or height.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun ageing(id: Int): Float = 0.065f
 
     /** Small placement imperfection: offset as fractions of the tile width, rotation in degrees. */
     fun jitter(id: Int): Triple<Float, Float, Float> {
@@ -77,14 +93,8 @@ object TileWear {
         return Triple(a * 0.016f, b * 0.016f, c * 1.1f)
     }
 
-    /** The face's slight unevenness: crown offset (fractions of the face) and a 0..1 wobble. */
-    fun surface(id: Int): Triple<Float, Float, Float> {
-        val h = mix(id * 53 + 11)
-        val a = (h % 1000) / 1000f - 0.5f
-        val b = ((h / 1000) % 1000) / 1000f - 0.5f
-        val c = ((h / 1000000) % 1000) / 1000f
-        return Triple(a * 0.16f, b * 0.12f, c)
-    }
+    /** How much the glaze's surface wobbles (0..1), which bends the lamp's reflection in it. */
+    fun wobble(look: Int): Float = (mix(look * 53 + 11) % 1000) / 1000f
 
     private fun mix(id: Int): Int {
         var h = id * -0x61c88647 + 0x165667b1
@@ -267,11 +277,42 @@ object TileWear {
                     b.toInt().coerceIn(0, 255)
             }
         }
+        evenOut(px)
         return Pair(
             Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888).asImageBitmap(),
             Bitmap.createBitmap(sx, w, h, Bitmap.Config.ARGB_8888).asImageBitmap(),
         )
     }
+
+    /**
+     * Every variant dulls a face by the same amount on average, so all tiles look equally used:
+     * the darkening parts (grime, dings, thin glaze) are scaled to [GRIME], the bright ones
+     * (scratches, haze) left as they are.
+     */
+    private fun evenOut(px: IntArray) {
+        var dark = 0.0
+        var bright = 0.0
+        for (p in px) {
+            val change = (p ushr 24) / 255.0 * (luminance(p) - FACE)
+            if (change < 0.0) dark += change else bright += change
+        }
+        if (dark >= 0.0) return
+        val k = ((GRIME * px.size - bright) / dark).coerceIn(0.5, 2.0)
+        for (i in px.indices) {
+            val p = px[i]
+            if (luminance(p) >= FACE) continue
+            val alpha = ((p ushr 24) * k).toInt().coerceIn(0, 255)
+            px[i] = (alpha shl 24) or (p and 0xFFFFFF)
+        }
+    }
+
+    private fun luminance(p: Int): Double =
+        (0.299 * ((p shr 16) and 255) + 0.587 * ((p shr 8) and 255) + 0.114 * (p and 255)) / 255.0
+
+    // The face's ivory, roughly, and how much each variant's wear dulls it on average (the mean
+    // of the eight as first made)
+    private const val FACE = 0.8
+    private const val GRIME = -0.026
 
     private fun smoothstep(e0: Float, e1: Float, x: Float): Float {
         val t = ((x - e0) / (e1 - e0)).coerceIn(0f, 1f)

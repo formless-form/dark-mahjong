@@ -10,8 +10,10 @@ import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
+import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.data.repository.PreferencesRepository
+import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TileTapResult
 import com.vortessence.mahjong.engine.TutorialScript
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
 sealed class Screen {
@@ -171,11 +174,42 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _currentScreen.value = Screen.Game
     }
 
-    private fun initGame(constellation: Constellation) {
+    /**
+     * Test builds only (BuildConfig.PERF_HOOKS): the same deal of [layoutName] every time, with the
+     * fireplace lit or not on [surface], so frame timings before and after a change compare alike.
+     */
+    fun startPerfScene(layoutName: String, fireplace: Boolean, surface: TableSurface?, autoplay: Boolean = false) {
+        val constellation = ConstellationRepository.constellations.firstOrNull { it.name.equals(layoutName, ignoreCase = true) } ?: return
+        updateSettings(_settings.value.copy(fireplaceLit = fireplace, tableSurface = surface ?: _settings.value.tableSurface))
+        _currentLevelIndex.value = null
+        initGame(constellation, Random(7))
+        _currentScreen.value = Screen.Game
+        perfAutoplay?.cancel()
+        // Matches a free pair every two seconds, so match animations can be timed alike
+        if (autoplay) perfAutoplay = viewModelScope.launch {
+            delay(3000.milliseconds)
+            while (true) {
+                val state = _gameState.value ?: break
+                val (a, b) = MahjongGameEngine.findAvailablePairs(state.tiles).firstOrNull() ?: break
+                onTileTapped(a)
+                delay(250.milliseconds)
+                onTileTapped(b)
+                delay(1750.milliseconds)
+            }
+        }
+    }
+
+    private var perfAutoplay: Job? = null
+
+    private fun initGame(constellation: Constellation, random: Random? = null) {
         // A pending win reveal from the previous game must not overwrite the new one
         winRevealJob?.cancel()
         winRevealJob = null
-        val state = MahjongGameEngine.startNewGame(constellation)
+        val fresh = MahjongGameEngine.startNewGame(constellation)
+        val state = if (random == null) fresh else {
+            val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(constellation, random))
+            fresh.copy(tiles = tiles, availablePairsCount = MahjongGameEngine.findAvailablePairs(tiles).size)
+        }
         _winMessage.value = null
         _gameState.value = state
         _tutorialStepIndex.value = if (TutorialScript.isTutorial(state)) 0 else null

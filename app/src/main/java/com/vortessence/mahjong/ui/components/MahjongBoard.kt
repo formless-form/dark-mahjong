@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -78,19 +79,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
-
-/**
- * Painter's Algorithm order for tiles:
- * 1. Layer Z ascending (bottom layer first, apex layer last)
- * 2. X + Y ascending: a tile's depth edge extends right and down, so any tile overlapping it from
- *    the east or south must be drawn later. Tiles are 2x2 grid units, so such a neighbor always has
- *    a strictly larger X + Y, even on half-offset rows/columns where plain X-then-Y ordering fails.
- * 3. X ascending as a tie-breaker for diagonal neighbors that only touch at a corner
- */
-private val TileDrawOrder: Comparator<BoardTile> =
-    compareBy<BoardTile> { it.z }
-        .thenBy { it.x + it.y }
-        .thenBy { it.x }
 
 private class SmashAnimationItem(
     val id: String,
@@ -205,6 +193,7 @@ private fun BoardContent(
     bottomOverlap: Dp,
 ) {
     val context = LocalContext.current
+    val graphicsLayer = rememberGraphicsLayer()
 
     // Base transform: unzoomed full layout bounds
     val baseTransform = remember(gameState.tiles.size, canvasW, canvasH, paddingPx) {
@@ -288,6 +277,10 @@ private fun BoardContent(
     var activeSmashes by remember { mutableStateOf<List<SmashAnimationItem>>(emptyList()) }
     var prevMoveCount by remember { mutableIntStateOf(gameState.moveHistory.size) }
 
+    // The smash, the match sound and the burst are launched in the board's own scope, not the
+    // effect's: the next match restarts the effect, and must not cut short the one before
+    val animationScope = rememberCoroutineScope()
+    LaunchedEffect(matchBursts) { matchBursts.run() }
     LaunchedEffect(gameState.moveHistory.size, settings.animationsEnabled) {
         val currentCount = gameState.moveHistory.size
         if (currentCount > prevMoveCount && settings.animationsEnabled) {
@@ -303,11 +296,11 @@ private fun BoardContent(
                     animatable = Animatable(0f)
                 )
                 activeSmashes += smashItem
-                launch {
+                animationScope.launch {
                     delay(280.milliseconds)
                     onTileMatch()
                 }
-                launch {
+                animationScope.launch {
                     // Burst the moment the raised pair's edges touch, where they meet
                     val transform = currentTransform
                     delay((SMASH_MILLIS * smashContactFraction(t1, t2, transform)).toLong().milliseconds)
@@ -319,7 +312,7 @@ private fun BoardContent(
                         canvasHeight = canvasH,
                     )
                 }
-                launch {
+                animationScope.launch {
                     smashItem.animatable.animateTo(
                         targetValue = 1f,
                         animationSpec = tween(durationMillis = SMASH_MILLIS, easing = LinearEasing)
@@ -343,16 +336,26 @@ private fun BoardContent(
     // Flat table layout -> screen through the tilted camera, and back again for taps
     val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
     val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
-    // Firelight flickers, so it is redrawn every frame; the lamp alone never changes
+    // Firelight flickers, so the board is redrawn for it, 20 times a second (chosen by eye against
+    // 30: the flicker looks the same); the lamp alone never changes
     val firelit = settings.fireplaceLit
     val flameSeconds by produceState(0f, firelit) {
-        if (firelit) while (true) withFrameNanos { value = it / 1e9f }
+        if (firelit) {
+            var last = Long.MIN_VALUE / 2
+            val interval = PerfSwitches.fireFps.takeIf { it > 0 }?.let { 1_000_000_000L / it - 2_000_000L } ?: FIRE_FRAME_NANOS
+            while (true) withFrameNanos { now ->
+                if (now - last >= interval) {
+                    last = now
+                    value = now / 1e9f
+                }
+            }
+        }
     }
     // The board's ambient occlusion and the fire's long shadows, worked out only when tiles are
     // removed (or the screen changes size): the first at once, later ones off the main thread,
     // with the old map shown meanwhile. When the board scales or moves, the map is placed under
     // it as it is now, so the shading keeps up every frame without being rebuilt.
-    val tracedShadows = firelit && settings.fireShadows
+    val tracedShadows = firelit
     val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, canvasW, canvasH) {
         val layout = currentTransform
         value = if (value == null) {
@@ -362,6 +365,15 @@ private fun BoardContent(
         }
     }
     val placedShadows = shadowMap?.placed(currentTransform, canvasH)
+    // The map is of the tiles as drawn (not still being remade after a match or an undo), so
+    // the shaders may skip what lies under the tiles
+    val shadowsFresh = (shadowMap?.tiles === gameState.tiles) && !PerfSwitches.isOff("cullunder")
+    val tableAlbedo = remember(graphicsLayer) { TableSurfaceRenderer.AlbedoCache(graphicsLayer) }
+    // Only what the player can see is drawn: tiles wholly covered by others are left out
+    val visibleTiles = remember(gameState.tiles) {
+        if (PerfSwitches.isOff("cull")) gameState.tiles.filter { !it.isRemoved }.sortedWith(TileDrawOrder)
+        else TileCulling.visibleInDrawOrder(gameState.tiles)
+    }
     // Pinch-to-zoom: a camera zoom over the whole scene (table, tiles and lamp light alike), with
     // screen = scene * zoom + pan. Panning stops at the scene's edges, so the table always fills
     // the view.
@@ -419,27 +431,31 @@ private fun BoardContent(
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            // The table's colour never flickers: drawn once, in screen pixels, and kept until the
+            // zoom, pan, size or surface changes
+            if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableAlbedo(
+                this, tableAlbedo, settings.tableSurface, canvasW, canvasH, context, zoom, pan,
+            )
             drawContext.canvas.save()
             drawContext.canvas.translate(pan.x, pan.y)
             drawContext.canvas.scale(zoom, zoom)
 
             val flame = FlameLight.at(flameSeconds, settings.lampBrightness, settings.fireplaceLit, settings.fireIntensity)
-            TableSurfaceRenderer.drawTableSurface(
+            if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableLight(
                 scope = this,
                 surface = settings.tableSurface,
                 width = canvasW,
                 height = canvasH,
-                context = context,
                 zoom = zoom,
                 pan = pan,
                 flame = flame,
                 shadowMap = placedShadows,
                 fireShadows = tracedShadows,
+                cullUnder = shadowsFresh,
             )
+            TileRenderer.TileAtlas.screenScale = zoom * TableCamera.nearEdgeScale()
 
-            val sortedTiles = gameState.tiles
-                .filter { !it.isRemoved }
-                .sortedWith(TileDrawOrder)
+            val sortedTiles = visibleTiles
 
             val nativeCanvas = drawContext.canvas.nativeCanvas
             nativeCanvas.save()
@@ -450,7 +466,7 @@ private fun BoardContent(
                 Paint(),
             )
             var layerShaded = 0
-            for (tile in sortedTiles) {
+            if (!PerfSwitches.isOff("tiles")) for (tile in sortedTiles) {
                 // On reaching each raised layer, first lay all its contact shadows on the layer
                 // below; its own tiles then cover any that reach a neighbour of the same height
                 if (tile.z > layerShaded) {
@@ -484,11 +500,10 @@ private fun BoardContent(
                     isBlockedHighlight = isBlockedFlash,
                     isTutorialHighlight = tile.id in highlightedTileIds,
                     highlightFreeTiles = settings.highlightFreeTiles,
-                    showCornerIndex = settings.showCornerIndex,
                     glare = tileGlare(px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, canvasW, canvasH, flame),
                     shadows = tileShadows(
                         px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, tile.z,
-                        currentTransform.tileWidth, canvasW, canvasH, flame, paintFire = !tracedShadows,
+                        currentTransform.tileWidth, canvasW, canvasH, flame,
                     ),
                 )
             }
@@ -499,23 +514,33 @@ private fun BoardContent(
                     smash = smash,
                     transform = currentTransform,
                     density = density,
-                    showCornerIndex = settings.showCornerIndex
                 )
             }
 
             // Lamp and firelight: multiplies everything drawn on the table (alpha untouched), full and
             // warm under the lamp, falling off towards the dark edges
-            drawRect(
-                brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame, placedShadows, tracedShadows),
+            if (!PerfSwitches.isOff("tilelight")) drawRect(
+                brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame, placedShadows, tracedShadows, fresh = shadowsFresh),
                 topLeft = Offset(-canvasW * 0.25f, -canvasH * 0.25f),
                 size = Size(canvasW * 1.5f, canvasH * 1.5f),
                 blendMode = BlendMode.Modulate,
             )
             drawContext.canvas.restore()
-            // Firework light is its own, so it goes on after the lamp's falloff
-            if (matchBursts.frame != 0L) matchBursts.draw(this)
             nativeCanvas.restore()
             drawContext.canvas.restore()
+        }
+
+        // Match bursts on a layer of their own, so a burst redraws only itself, never the board.
+        // Firework light is its own, so it goes on after the lamp's falloff
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            if (matchBursts.frame == 0L || matchBursts.idle) return@Canvas
+            val nativeCanvas = drawContext.canvas.nativeCanvas
+            nativeCanvas.save()
+            nativeCanvas.translate(pan.x, pan.y)
+            nativeCanvas.scale(zoom, zoom)
+            nativeCanvas.concat(planeMatrix)
+            matchBursts.draw(this, canvasH)
+            nativeCanvas.restore()
         }
 
         // Once zoomed in, one tap at the edge of the screen goes back to the whole board
@@ -543,20 +568,18 @@ private fun BoardContent(
 }
 
 /**
- * Shadows cast away from each light, as a point light casts them: a tile's top, standing zh
+ * The lamp's shadow, cast away from it as a point light casts it: a tile's top, standing zh
  * above whatever it rests on, throws its shadow (centre - light) * zh / (lightHeight - zh). A
  * raised tile's shadow mostly lands on the tiles beneath it, one tile's height down, so every
- * tile casts as one tile tall. The lamp hangs high, so its shadows only lean a little outwards;
- * firelight is low, so its shadows reach far, and they stretch, shrink and fade as the flames move.
+ * tile casts as one tile tall. The lamp hangs high and to one side, so its shadows lean away from
+ * it, a little more for tiles further from it.
  *
- * Each shadow is as dark as its light's share of all the light reaching the tile: a shadow keeps
- * out one light and the other still fills it. Near the hearth the fire's shadows are deep and the
- * lamp's soften; across the table, the other way round. The fire's shadows follow every flicker;
- * the lamp's hold still, weighed against the fire as it burns on average, so they change only
- * with the two sliders. With long fire shadows on ([BoardShadowMap]), the fire's are traced by the
- * shaders instead, and [paintFire] is false.
+ * It is as dark as the lamp's share of all the light reaching the tile: beside the hearth the
+ * fire fills it in. It holds still, weighed against the fire as it burns on average, so it
+ * changes only with the two sliders. The fire's own long shadows are traced by the shaders
+ * ([BoardShadowMap]).
  */
-private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h: Float, flame: FlameLight, paintFire: Boolean): TileShadows {
+private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h: Float, flame: FlameLight): TileShadows {
     // A tile stands about an eighth of its width tall; the light's height counts from the
     // surface the tile rests on
     val top = tileW * 0.12f
@@ -567,9 +590,8 @@ private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h:
         val len = s.getDistance()
         return if (len > cap) s * (cap / len) else s
     }
-    val lamp = cast(w / 2f, h / 2f - 0.06f * h, 1.4f * h, tileW * 0.25f)
-    if (flame.power <= 0f) return TileShadows(lamp, Offset.Zero, 0f)
-    val fire = cast(w / 2f + flame.u * h, h / 2f - flame.v * h, flame.height * h, tileW * 0.9f)
+    val lamp = cast(w / 2f + LAMP_U * h, h / 2f - LAMP_V * h, LAMP_HEIGHT * h, tileW * 0.35f)
+    if (flame.power <= 0f) return TileShadows(lamp)
     // The light reaching this tile from each, as the shaders light it (the fire by its brightness)
     val u = (cx - w / 2f) / h
     val v = (h / 2f - cy) / h
@@ -580,12 +602,9 @@ private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h:
         val fireHere = power / (1f + (du * du + dv * dv) / flame.reach) * 0.6f // the fire's brightness
         return fireHere / (fireHere + lampHere)
     }
-    val flickering = fireShare(flame.u, flame.v, flame.power)
     val steady = fireShare(flame.steadyU, flame.steadyV, flame.steadyPower)
     // The lamp's resting shadow is partly the tile's own contact shadow, which no light fills
-    // With traced shadows on, the shaders take the fire's light away themselves
-    val fireAlpha = if (paintFire) 0.6f * flickering else 0f
-    return TileShadows(lamp, fire, fireAlpha = fireAlpha, lampDarkness = 1f - 0.6f * steady)
+    return TileShadows(lamp, lampDarkness = 1f - 0.6f * steady)
 }
 
 /** How strongly a tile's glossy face reflects the lamp and the fire, by its centre in flat table pixels. */
@@ -596,6 +615,10 @@ private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLigh
 }
 
 private const val SMASH_MILLIS = 420
+
+// The firelight's frame interval: 20 a second, less a little so a 60 or 120 Hz screen's frames
+// land on it (every 3rd or 6th)
+private const val FIRE_FRAME_NANOS = 1_000_000_000L / 20 - 2_000_000L
 
 /**
  * The point in the smash (0..1 of [drawSmashAnimation]'s progress) when the two raised tiles,
@@ -618,8 +641,7 @@ private fun smashContactFraction(t1: BoardTile, t2: BoardTile, transform: BoardT
 private fun DrawScope.drawSmashAnimation(
     smash: SmashAnimationItem,
     transform: BoardTransform,
-    density: Density,
-    showCornerIndex: Boolean
+    density: Density
 ) {
     val p = smash.animatable.value
     val t1 = smash.tile1
@@ -723,8 +745,7 @@ private fun DrawScope.drawSmashAnimation(
                 posY = pos.second,
                 scale = frame.scale,
                 alpha = frame.alpha,
-                transform = transform,
-                showCornerIndex = showCornerIndex
+                transform = transform
             )
         }
     }
@@ -736,8 +757,7 @@ private fun DrawScope.drawSingleAnimatingTile(
     posY: Float,
     scale: Float,
     alpha: Float,
-    transform: BoardTransform,
-    showCornerIndex: Boolean
+    transform: BoardTransform
 ) {
     val pivot = Offset(posX + transform.tileWidth / 2f, posY + transform.tileHeight / 2f)
     if (alpha < 0.99f) {
@@ -758,8 +778,7 @@ private fun DrawScope.drawSingleAnimatingTile(
                     isSelected = true,
                     isHinted = false,
                     isBlockedHighlight = false,
-                    highlightFreeTiles = false,
-                    showCornerIndex = showCornerIndex
+                    highlightFreeTiles = false
                 )
             }
         } finally {
@@ -779,8 +798,7 @@ private fun DrawScope.drawSingleAnimatingTile(
                 isSelected = true,
                 isHinted = false,
                 isBlockedHighlight = false,
-                highlightFreeTiles = false,
-                showCornerIndex = showCornerIndex
+                highlightFreeTiles = false
             )
         }
     }

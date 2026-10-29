@@ -18,6 +18,15 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="The levels list, easy to hard"/>
 </p>
 
+## Ad-free, offline and open, for good
+
+Dark Mahjong has had a great deal of care put into it. It has no ads, no tracking and no accounts, there is nothing to buy, it never touches the network, and its source is open. It will stay that way.
+
+If you build on it, **please keep it that way too: no ads, no in-app purchases, no tracking, and not sold for profit.** That is a request, made in the spirit the game is given, rather than a licence term: the code is GPL v3, which does allow commercial use. What the licences do require of anyone who forks it:
+
+- **The source stays open.** Every modified version must be released under GPL v3, with its full source.
+- **The name and the seal stay ours.** "Dark Mahjong", 暗夜麻將, the name seal, the launcher icon and "Grevillea Labs" are not licensed for use in modified versions ([GPL v3 §7(e)](NOTICE.md#additional-term-names-and-logos-gplv3-section-7e)). A fork must go by its own name and icon.
+
 ## What's different from the original
 
 ### A darker ambience
@@ -28,7 +37,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 
 ### A different look
 - **Seen at an angle.** The table is viewed slightly away from overhead, in true perspective: far rows recede and each tile's front edge shows, without ever hiding a tile's face.
-- **Glossy, well-used tiles.** A thick clear glaze reflects the lamp in streaks, broken up by tiny ripples in the glaze. Every tile is a little different: hairline scratches, grime in patches, the odd ding, ivory from crisp to yellowed, sitting a fraction off-square. The artwork is engraved into the face.
+- **Glossy, well-used tiles.** A thick clear glaze reflects the lamp in streaks, broken up by tiny ripples in the glaze. Every tile is a little different: hairline scratches, grime in patches, the odd ding, sitting a fraction off-square, all from one evenly aged set. The artwork is engraved into the face.
 - **Three tabletops,** all rendered live in perspective: **Walnut** (lacquered boards), **Green Mat** (felt) and **Thai Straw** (a well-used woven sedge mat).
 - **Portrait-first,** because most layouts are taller than they are wide.
 - **54 layouts:** the original's 25, plus 29 boards from [Mah](https://github.com/ffalt/mah) (animals, plants, symbols, shapes and buildings), chosen to suit a phone held upright. Pinch to zoom in on any of them. Levels and the Layouts list both run from easy to hard.
@@ -71,7 +80,7 @@ The original project's code was largely written with AI tools (see the [upstream
 
 ## Licences and credits
 
-- **Code:** [GNU GPL v3](LICENSE), with the original's [App Store Exception](NOTICE.md#app-store-exception-additional-permission-under-gplv3-section-7). Original code © 2026 PcmciaKai.
+- **Code:** [GNU GPL v3](LICENSE), with the original's [App Store Exception](NOTICE.md#app-store-exception-additional-permission-under-gplv3-section-7) and an [additional term](NOTICE.md#additional-term-names-and-logos-gplv3-section-7e) keeping the Dark Mahjong name and logos. Original code © 2026 PcmciaKai; Dark Mahjong's changes © 2026 Grevillea Labs.
 - **Tile artwork:** [samoheen/mahjong-tiles](https://github.com/samoheen/mahjong-tiles), CC0.
 - **Layouts:** 29 boards from [Mah](https://github.com/ffalt/mah) by ffalt, MIT licence.
 - **Title photograph:** *Sanqing Mountain is surrounded by clouds and mists* by Huangdan2060, [CC0](https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg), Wikimedia Commons (cropped and graded).

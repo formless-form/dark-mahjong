@@ -20,6 +20,9 @@ android {
         versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Test builds for the phone (-PperfHooks=true, as tools/deploy-to-phone.sh builds them)
+        // can be told over adb to open a fixed scene for measuring; Play builds never can
+        buildConfigField("boolean", "PERF_HOOKS", (findProperty("perfHooks") == "true").toString())
     }
 
     buildTypes {
@@ -41,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     testOptions {
         unitTests {

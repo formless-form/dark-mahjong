@@ -3,25 +3,143 @@ package com.vortessence.mahjong.ui.components
 import android.content.Context
 import android.graphics.RuntimeShader
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.layer.CompositingStrategy
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.unit.IntSize
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.vortessence.mahjong.data.model.TableSurface
 import kotlin.math.exp
 
 /**
- * Draws the tabletop as one full-screen AGSL shader: procedural green felt, walnut, or Thai straw
- * mat (redrawn from measurements of a real woven sedge mat), seen through [TableCamera]'s tilted perspective and lit by a single warm lamp above the
- * middle of the table, with the room falling away into darkness around it.
+ * Draws the tabletop: procedural green felt, walnut, or Thai straw mat (redrawn from
+ * measurements of a real woven sedge mat), seen through [TableCamera]'s tilted perspective and lit
+ * by a single warm lamp above the middle of the table, with the room falling away into darkness
+ * around it. Its colour never changes, so it is drawn once and kept; only its light is worked out
+ * each frame.
  */
 object TableSurfaceRenderer {
 
-    private var shader: RuntimeShader? = null
-    private var flameShader: RuntimeShader? = null
+    // Unzoomed screen <-> table plane, as in the shaders: shared by all three table passes
+    private const val CAMERA_AGSL = """
+uniform float2 res;
+uniform float tilt;
+uniform float camDist;
+uniform float zoom;     // the player's pinch zoom
+uniform float2 pan;     // screen position = p * zoom + pan
+// The tabletop plane point (in table heights, v up) under unzoomed canvas point p, through the
+// tilted camera (inverse of TableCamera.planeToScreen); fp is about one screen pixel's size there
+float2 tablePoint(float2 p, out float fp) {
+    float2 s = float2((p.x - 0.5 * res.x) / res.y, -(p.y - 0.5 * res.y) / res.y);
+    float ct = cos(tilt);
+    float st = sin(tilt);
+    float v = s.y * camDist / (ct * camDist - s.y * st);
+    float z = camDist + v * st;
+    fp = (z / camDist) / res.y * (1.0 + 0.6 * st) / zoom;
+    return float2(s.x * z / camDist, v);
+}
+"""
 
     /**
-     * Draws the table over [width] x [height]. When the player has zoomed in, the caller draws
-     * this under the zoom transform and passes the same [zoom] and [pan], so fine detail is
-     * sharpened to match while the vignette and dither stay fixed to the screen.
+     * The tabletop's own colour, unlit: procedural felt, walnut or straw, in screen
+     * pixels (the zoom and pan are worked into it, so fine detail stays sharp when zoomed). It
+     * never flickers, so the board draws it into a cached layer, remade only when the zoom, pan,
+     * size or surface changes.
+     */
+    private const val ALBEDO_AGSL = """
+uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat (TableSurface order)
+const float WALNUT_SCALE = 1.2;
+const float STRAW_SCALE = 1.1;
+$CAMERA_AGSL
+$SURFACES_AGSL
+half4 main(float2 p) {
+    float fp;
+    float2 q = tablePoint((p - pan) / zoom, fp);
+    float3 albedo;
+    if (mode < 0.5) albedo = felt(q, fp);
+    // The walnut a little finer than life, narrower boards, so the tiles on it read larger
+    else if (mode < 1.5) albedo = walnut(q * WALNUT_SCALE, fp * WALNUT_SCALE);
+    // The straw mat a little finer too, for the same reason
+    else albedo = straw(q * STRAW_SCALE, fp * STRAW_SCALE);
+    return half4(half3(albedo), 1.0);
+}
+"""
+
+    /**
+     * The light on the table, multiplied over its colour every frame: the lamp's pool, the
+     * firelight and its traced shadows, the table's ambient occlusion, the screen's vignette and
+     * the room's exposure. Drawn under the zoom (p is the unzoomed canvas point). Where the table
+     * is hidden under tiles, nothing is worked out.
+     */
+    private const val TABLE_LIGHT_AGSL = """
+$CAMERA_AGSL
+$FLAME_AGSL
+half4 main(float2 p) {
+    float fp;
+    float2 q = tablePoint(p, fp);
+    if (underTiles(q)) return half4(0.0, 0.0, 0.0, 1.0);
+    float2 lq = (q - LAMP_AT) * float2(1.0, 0.85);
+    float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
+    float fire = fireShadow(q, 0.0);
+    // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
+    float3 c = (lampLevel * pool * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TABLE + flameLight(q) * fire)
+        * ambient(q);
+    // Screen-edge vignette deepens the dark corners; the real screen pixel, not the table's
+    float2 sp = p * zoom + pan;
+    float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
+    c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e)));
+    // Overall exposure: the room is dark ("Dark Mahjong"); shared with the tiles' lamp light
+    c = keepHue(c * 0.9);
+    // Dithered, against banding in the dark falloff (larger, as the table's colour scales it down)
+    float ign = fract(52.9829189 * fract(dot(floor(sp), float2(0.06711056, 0.00583715))));
+    c += (ign - 0.5) * (3.0 / 255.0);
+    return half4(half3(clamp(c, 0.0, 1.0)), 1.0);
+}
+"""
+
+    /** Glossy tables' reflections of the lamp and the fire, added over the lit table. */
+    private const val TABLE_GLOSS_AGSL = """
+uniform float gloss;
+uniform float grained;  // 1 for walnut: its grain breaks up the reflection
+$CAMERA_AGSL
+$FLAME_AGSL
+$SURFACES_AGSL
+half4 main(float2 p) {
+    float fp;
+    float2 q = tablePoint(p, fp);
+    if (underTiles(q)) return half4(0.0, 0.0, 0.0, 1.0);
+    // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
+    // and the fire just in front of its flames
+    float2 m = (q - LAMP_MIRROR) * float2(3.4, 1.3);
+    float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4, 2.2);
+    float grain = grained > 0.5 ? 0.75 + 0.5 * vnoise(q * 1.2 * float2(60.0, 6.0)) : 1.0;
+    float3 c = gloss * grain * (lampLevel * exp(-dot(m, m) * 5.0) * 0.24 * LAMP_ON_TABLE
+        + 0.85 * flame.z * exp(-dot(mc, mc) * 4.0) * flameColour * float3(0.26, 0.24, 0.2));
+    float2 sp = p * zoom + pan;
+    float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
+    c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e))) * 0.9;
+    // Opaque, as colour is clamped to its alpha: added over the opaque table, it stays opaque
+    return half4(half3(c), 1.0);
+}
+"""
+
+    /** The board's cached table colour: a layer and what it was drawn for. */
+    class AlbedoCache(val layer: GraphicsLayer) {
+        internal var key: Any? = null
+        internal var shader: RuntimeShader? = null
+    }
+
+    private var lightShader: RuntimeShader? = null
+    private var glossShader: RuntimeShader? = null
+    private var flameShader: RuntimeShader? = null
+    private var previewAlbedo: RuntimeShader? = null
+
+    /**
+     * Draws the whole table at once (previews): its colour, then its light. The board instead
+     * draws [drawTableAlbedo] and [drawTableLight] itself, the first cached.
      */
     @Suppress("UNUSED_PARAMETER")
     fun drawTableSurface(
@@ -36,21 +154,82 @@ object TableSurfaceRenderer {
         shadowMap: BoardShadowMap.Placed? = null,
         fireShadows: Boolean = false,
     ) {
-        val s = shader ?: RuntimeShader(TABLE_AGSL).also { shader = it }
-        s.setFloatUniform("res", width, height)
-        s.setFloatUniform("mode", surface.ordinal.toFloat())
-        s.setFloatUniform("tilt", Math.toRadians(TableCamera.TILT_DEGREES.toDouble()).toFloat())
-        s.setFloatUniform("camDist", TableCamera.DISTANCE)
-        s.setFloatUniform("zoom", zoom)
-        s.setFloatUniform("pan", pan.x, pan.y)
-        flame.setUniforms(s)
-        shadowMap?.setUniforms(s, fireShadows) ?: BoardShadowMap.setNone(s)
+        val s = previewAlbedo ?: RuntimeShader(ALBEDO_AGSL).also { previewAlbedo = it }
+        setAlbedoUniforms(s, surface, width, height, context, zoom, pan)
         scope.drawRect(ShaderBrush(s))
+        drawTableLight(scope, surface, width, height, zoom, pan, flame, shadowMap, fireShadows)
+    }
+
+    /**
+     * The table's colour in screen pixels, from [cache] if nothing it depends on has changed.
+     * Drawn before the zoom is applied.
+     */
+    fun drawTableAlbedo(
+        scope: DrawScope,
+        cache: AlbedoCache,
+        surface: TableSurface,
+        width: Float,
+        height: Float,
+        context: Context?,
+        zoom: Float,
+        pan: Offset,
+    ) {
+        val size = IntSize(scope.size.width.roundToInt(), scope.size.height.roundToInt())
+        val key = listOf(surface, width, height, zoom, pan, size)
+        if (cache.key != key) {
+            val s = cache.shader ?: RuntimeShader(ALBEDO_AGSL).also { cache.shader = it }
+            setAlbedoUniforms(s, surface, width, height, context, zoom, pan)
+            cache.layer.compositingStrategy = CompositingStrategy.Offscreen
+            with(scope) {
+                cache.layer.record(size) { drawRect(ShaderBrush(s)) }
+            }
+            cache.key = key
+        }
+        scope.drawLayer(cache.layer)
+    }
+
+    /**
+     * The light on the table, multiplied over its colour, and the reflections of a glossy
+     * surface added over that. Drawn under the zoom. [cullUnder]: [shadowMap] matches the tiles
+     * as drawn, so the table hidden under them can be skipped.
+     */
+    fun drawTableLight(
+        scope: DrawScope,
+        surface: TableSurface,
+        width: Float,
+        height: Float,
+        zoom: Float,
+        pan: Offset,
+        flame: FlameLight,
+        shadowMap: BoardShadowMap.Placed?,
+        fireShadows: Boolean,
+        cullUnder: Boolean = false,
+    ) {
+        val light = lightShader ?: RuntimeShader(TABLE_LIGHT_AGSL).also { lightShader = it }
+        setCameraUniforms(light, width, height, zoom, pan)
+        flame.setUniforms(light)
+        setShadowUniforms(light, shadowMap, fireShadows, cullUnder)
+        scope.drawRect(ShaderBrush(light), blendMode = BlendMode.Modulate)
+        val gloss = when (surface) {
+            TableSurface.WALNUT -> 1f
+            TableSurface.THAI_STRAW -> 0.1f
+            TableSurface.GREEN_MAT -> 0f
+        }
+        if (gloss > 0f) {
+            val g = glossShader ?: RuntimeShader(TABLE_GLOSS_AGSL).also { glossShader = it }
+            setCameraUniforms(g, width, height, zoom, pan)
+            flame.setUniforms(g)
+            setShadowUniforms(g, shadowMap, fireShadows, cullUnder)
+            g.setFloatUniform("gloss", gloss)
+            g.setFloatUniform("grained", if (surface == TableSurface.WALNUT) 1f else 0f)
+            scope.drawRect(ShaderBrush(g), blendMode = BlendMode.Plus)
+        }
     }
 
     /**
      * The lamp and firelight for the tiles in flat table pixels: drawn with BlendMode.Modulate
-     * over everything on the table, matching the table's own light.
+     * over everything on the table, matching the table's own light. [fresh]: [shadowMap] matches
+     * the tiles as drawn, so the fire's shadow is traced only where a tile stands.
      */
     fun tileLight(
         width: Float,
@@ -58,12 +237,31 @@ object TableSurfaceRenderer {
         flame: FlameLight,
         shadowMap: BoardShadowMap.Placed? = null,
         fireShadows: Boolean = false,
+        fresh: Boolean = false,
     ): ShaderBrush {
         val s = flameShader ?: RuntimeShader(FLAME_TILE_AGSL).also { flameShader = it }
         s.setFloatUniform("res", width, height)
         flame.setUniforms(s)
-        shadowMap?.setUniforms(s, fireShadows) ?: BoardShadowMap.setNone(s)
+        setShadowUniforms(s, shadowMap, fireShadows, fresh)
         return ShaderBrush(s)
+    }
+
+    private fun setShadowUniforms(s: RuntimeShader, shadowMap: BoardShadowMap.Placed?, fireShadows: Boolean, cull: Boolean) {
+        if (shadowMap != null) shadowMap.setUniforms(s, fireShadows) else BoardShadowMap.setNone(s)
+        s.setFloatUniform("cullUnder", if (cull && shadowMap != null) 1f else 0f)
+    }
+
+    private fun setCameraUniforms(s: RuntimeShader, width: Float, height: Float, zoom: Float, pan: Offset) {
+        s.setFloatUniform("res", width, height)
+        s.setFloatUniform("tilt", Math.toRadians(TableCamera.TILT_DEGREES.toDouble()).toFloat())
+        s.setFloatUniform("camDist", TableCamera.DISTANCE)
+        s.setFloatUniform("zoom", zoom)
+        s.setFloatUniform("pan", pan.x, pan.y)
+    }
+
+    private fun setAlbedoUniforms(s: RuntimeShader, surface: TableSurface, width: Float, height: Float, context: Context?, zoom: Float, pan: Offset) {
+        setCameraUniforms(s, width, height, zoom, pan)
+        s.setFloatUniform("mode", surface.ordinal.toFloat())
     }
 
     /** Strength of the lamp's and the flame's glossy reflection at plane point (u, v), for tile glare. */
@@ -83,18 +281,27 @@ object TableSurfaceRenderer {
 
     /** Strength of the lamp's glossy reflection at plane point (u, v), for tile glare. */
     fun lampGlare(u: Float, v: Float): Float {
-        val mu = (u - LAMP_U) * 3.0f
-        val mv = (v - (LAMP_V + GLARE_OFFSET_V)) * 1.6f
+        val mu = (u - LAMP_MIRROR_U) * 3.0f
+        val mv = (v - LAMP_MIRROR_V) * 1.6f
         return kotlin.math.exp(-(mu * mu + mv * mv) * 3.5f)
     }
 
-    // The lamp hangs over the middle of the table, slightly towards the far side
-    private const val LAMP_U = 0f
-    private const val LAMP_V = 0.06f
     private const val LAMP_FALLOFF = 2.6f
-    // A glossy surface reflects the lamp a little beyond it, as seen from a tilted camera
-    private const val GLARE_OFFSET_V = 0.2f
 }
+
+/**
+ * The lamp's place over the table, in table heights (u right, v up the table): to the right of
+ * the middle and up the table, so it lights the board at a slant rather than from straight above.
+ * Its height (in table heights) sets how far its shadows lean.
+ */
+internal const val LAMP_U = 0.14f
+internal const val LAMP_V = 0.16f
+internal const val LAMP_HEIGHT = 0.9f
+
+// A glossy surface reflects the lamp a little beyond it and nearer the middle, as seen from the
+// tilted camera
+private const val LAMP_MIRROR_U = LAMP_U * 0.6f
+private const val LAMP_MIRROR_V = LAMP_V + 0.2f
 
 /**
  * Firelight at plane point q (in table heights, v up), shared by both shaders: one warm source
@@ -109,6 +316,13 @@ object TableSurfaceRenderer {
  * pixels) before this.
  */
 private const val FLAME_AGSL = """
+// The lamp (TableSurfaceRenderer's LAMP_ constants): over the table a little to the right of
+// the board and up the table from it, so it lights the board at a slant; warm, about 2700 K
+const float2 LAMP_AT = float2($LAMP_U, $LAMP_V);
+// Where a glossy surface shows its reflection, as the tilted camera sees it
+const float2 LAMP_MIRROR = float2($LAMP_MIRROR_U, $LAMP_MIRROR_V);
+const float3 LAMP_ON_TABLE = float3(1.0, 0.86, 0.70);
+const float3 LAMP_ON_TILES = float3(1.0, 0.89, 0.76);
 uniform float4 flame;       // u, v, power, reach (squared distance at which it halves)
 uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
@@ -145,6 +359,15 @@ float surfaceHeight(float2 q) {
 float ambient(float2 q) {
     return 1.0 - aoStrength * aoMap.eval(tablePixel(q) * shade.y).g;
 }
+uniform float cullUnder;    // 1 when the height map matches the board as drawn: the table hidden under tiles is skipped
+// Wholly under a tile, a couple of map pixels in from every edge: the tiles drawn over it hide it
+bool underTiles(float2 q) {
+    if (cullUnder < 0.5) return false;
+    float2 t = tablePixel(q);
+    float lowest = min(min(heightMap.eval(t + float2(-2.0, -2.0)).a, heightMap.eval(t + float2(2.0, -2.0)).a),
+                       min(heightMap.eval(t + float2(-2.0, 2.0)).a, heightMap.eval(t + float2(2.0, 2.0)).a));
+    return lowest >= 30.5 / 255.0;
+}
 // How much of the fire reaches q, standing h0 above the table: 1 in its light, 0 in full shadow.
 // Marches from q towards the flames as far as the ray stays below the tallest stack, and takes
 // the deepest occlusion along the way, softened as the ray reaches away (the fire is broad).
@@ -176,25 +399,21 @@ half4 main(float2 p) {
     float2 q = float2((p.x - 0.5 * res.x) / res.y, (0.5 * res.y - p.y) / res.y);
     // The lamp's light on the tiles (softer than on the table, so no face is ever too dark to
     // read), plus the flame; times the room's exposure
-    float2 l = (q - float2(0.0, 0.06)) / 0.95;
+    float2 l = (q - LAMP_AT) / 0.95;
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
-    float fire = fireShadow(q, surfaceHeight(q));
+    // Traced only where a tile stands (when the height map is up to date): elsewhere on the
+    // layer there are only the tiles' shadows, black, which no light changes
+    float h0 = surfaceHeight(q);
+    float fire = (cullUnder > 0.5 && h0 <= 0.0) ? 1.0 : fireShadow(q, h0);
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
-    float3 c = (lampLevel * lamp * (1.0 - 0.5 * (1.0 - fire)) * float3(1.0, 0.95, 0.88) + flameLight(q) * fire)
+    float3 c = (lampLevel * lamp * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TILES + flameLight(q) * fire)
         * 0.81;
     return half4(half3(keepHue(c)), 1.0);
 }
 """
 
-private const val TABLE_AGSL = """
-uniform float2 res;
-uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat (TableSurface order)
-uniform float tilt;
-uniform float camDist;
-uniform float zoom;     // the player's pinch zoom, drawn under the matching canvas transform
-uniform float2 pan;     // screen position = p * zoom + pan
-$FLAME_AGSL
 
+private const val SURFACES_AGSL = """
 const float PI = 3.14159265;
 
 float hash21(float2 p) {
@@ -366,51 +585,5 @@ float3 straw(float2 q, float fp) {
         m = mix(m, float3(0.68, 0.62, 0.48), fibre * 0.7 * fine);
     }
     return m;
-}
-
-half4 main(float2 p) {
-    // Screen to tabletop plane through the tilted camera (inverse of TableCamera.planeToScreen)
-    float2 s = float2((p.x - 0.5 * res.x) / res.y, -(p.y - 0.5 * res.y) / res.y);
-    float ct = cos(tilt);
-    float st = sin(tilt);
-    float D = camDist;
-    float v = s.y * D / (ct * D - s.y * st);
-    float z = D + v * st;
-    float u = s.x * z / D;
-    float2 q = float2(u, v);
-    // Approximate size of one screen pixel on the table, for anti-aliasing fine detail
-    float fp = (z / D) / res.y * (1.0 + 0.6 * st) / zoom;
-    // The real screen pixel, for effects that belong to the screen rather than the table
-    float2 sp = p * zoom + pan;
-    float3 albedo;
-    float gloss;
-    if (mode < 0.5) { albedo = felt(q, fp); gloss = 0.0; }
-    else if (mode < 1.5) { albedo = walnut(q, fp); gloss = 1.0; }
-    else { albedo = straw(q, fp); gloss = 0.1; }
-
-    // One warm lamp over the table, and perhaps firelight from out of view; the room falls away
-    // into darkness
-    float2 lq = (q - float2(0.0, 0.06)) * float2(1.0, 0.85);
-    float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
-    float fire = fireShadow(q, 0.0);
-    // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
-    float3 c = albedo * (lampLevel * pool * (1.0 - 0.5 * (1.0 - fire)) * float3(1.0, 0.93, 0.84) + flameLight(q) * fire)
-        * ambient(q);
-    // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
-    // and the fire just in front of its flames
-    float2 m = (q - float2(0.0, 0.26)) * float2(3.4, 1.3);
-    float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4, 2.2);
-    float grain = mode > 0.5 && mode < 1.5 ? 0.75 + 0.5 * vnoise(q * float2(60.0, 6.0)) : 1.0;
-    c += gloss * grain * (lampLevel * exp(-dot(m, m) * 5.0) * float3(0.24, 0.215, 0.18)
-        + 0.85 * flame.z * exp(-dot(mc, mc) * 4.0) * flameColour * float3(0.26, 0.24, 0.2));
-    // Screen-edge vignette deepens the dark corners
-    float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
-    c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e)));
-    // Overall exposure: the room is dark ("Dark Mahjong"); shared with the tiles' lamp light
-    c = keepHue(c * 0.9);
-
-    float ign = fract(52.9829189 * fract(dot(floor(sp), float2(0.06711056, 0.00583715))));
-    c += (ign - 0.5) / 255.0;
-    return half4(half3(clamp(c, 0.0, 1.0)), 1.0);
 }
 """

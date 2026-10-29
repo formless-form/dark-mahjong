@@ -396,12 +396,6 @@ class MahjongEngineTest {
     }
 
     @Test
-    fun testCornerIndexOffByDefault() {
-        val defaultSettings = GameSettings()
-        assertFalse(defaultSettings.showCornerIndex)
-    }
-
-    @Test
     fun testCheckTileSupportAcrossAllConstellations() {
         val problems = mutableListOf<String>()
         for (constellation in ConstellationRepository.constellations) {

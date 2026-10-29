@@ -40,7 +40,6 @@ val SymbolDragonGreen = Color(0xFF0E7D3F)    // Majestic Green Dragon
 val SymbolDragonWhite = Color(0xFF164785)    // White Dragon azure dragon border
 val SymbolGold = Color(0xFFC67D10)           // Warm imperial amber gold
 val SymbolPlum = Color(0xFF9E1B32)           // Plum blossom ruby red
-val TileCornerIndexRed = Color(0xFFC81D25)   // Corner index red numeral & letter
 
 // UI Accent Colors
 val GoldAccent = Color(0xFFD97706)

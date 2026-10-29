@@ -13,12 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Highlight
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PrivacyTip
-import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Texture
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Fireplace
@@ -139,7 +137,7 @@ fun SettingsScreen(
                     },
                     { shapes ->
                         ToggleRow(
-                            shapes, Icons.Rounded.Fireplace, "Fireplace", "Firelight from a hearth beside the table",
+                            shapes, Icons.Rounded.Fireplace, "Fireplace", "Firelight from a hearth beside the table. More GPU-intensive",
                             settings.fireplaceLit,
                         ) { onSettingsChanged(settings.copy(fireplaceLit = it)) }
                     },
@@ -155,24 +153,10 @@ fun SettingsScreen(
                                 onSettingsChanged(settings.copy(fireVolume = it))
                             }
                         },
-                        { shapes ->
-                            ToggleRow(
-                                shapes, Icons.Rounded.Contrast, "Long fire shadows",
-                                "Traced on the GPU every frame, so they use more battery",
-                                settings.fireShadows,
-                            ) { onSettingsChanged(settings.copy(fireShadows = it)) }
-                        },
                     )
                 } else {
                     emptyList()
-                } + listOf<@Composable (ListItemShapes) -> Unit>(
-                    { shapes ->
-                        ToggleRow(
-                            shapes, Icons.Rounded.Tag, "Corner index", "Numbers and letters in each tile's corner",
-                            settings.showCornerIndex,
-                        ) { onSettingsChanged(settings.copy(showCornerIndex = it)) }
-                    },
-                ),
+                },
             )
 
             SectionHeader("About")

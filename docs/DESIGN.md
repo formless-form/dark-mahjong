@@ -6,7 +6,7 @@ Status: **draft v2 for Gareth's review** — nothing below is built yet. Open qu
 ## Goals
 
 1. **Looks really good** — polished, tactile, Vita-Mahjong-level care, but our own look: **dark and softly lit**, never glaring.
-2. **Smooth** — a locked **120 fps** on the Pixel 9 Pro's 120 Hz screen with a full 144-tile board; never below 60.
+2. **Smooth**: a steady **60 fps** with a full 144-tile board (the app asks for 60 Hz at most: plenty for a calm game, and easier on the battery; since 2026-10-29). The firelight redraws 20 times a second, chosen by eye against 30.
 3. **Easy on the eyes and hands** — extra-large tiles, high contrast, big text, big buttons.
 4. **Tasteful and minimalist** — Material 3 components on one dark token palette, one quiet accent, generous space, no badges, counters or clutter.
 5. **Single-player, offline, calm** — no scores, timers, stats, leaderboards, accounts, ads or network access.
@@ -74,13 +74,13 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
 ### The table: tilted camera, lamp light
 
 - **Camera:** about 20° away from overhead (`TableCamera`). The board is laid out flat and projected to the screen through one homography. The tabletop shader uses the exact inverse, so tiles and table always agree, and taps are mapped back through it. Tile thickness shows mostly on the front edge, and upper layers shift up the table to match.
-- **Lamp:** one warm lamp hangs over the middle of the table and the room falls away into darkness. The overall exposure (×0.9, set 2026-10-26) is shared by the table shader and the tiles' light. Tiles are modulated by the same radial falloff, full under the lamp but never too dark to read. Their glossy faces brighten towards the top, catch a fine bevel highlight, and near the lamp's mirror point show a soft reflection of it.
+- **Lamp:** one warm lamp (about 2700 K) hangs over the table, a little right of the board and up the table from it, so it lights the board at a slant and its shadows lean down and to the left (since 2026-10-29); the room falls away into darkness. The overall exposure (×0.9, set 2026-10-26) is shared by the table shader and the tiles' light. Tiles are modulated by the same radial falloff, full under the lamp but never too dark to read. Their glossy faces brighten towards the top, catch a fine bevel highlight, and near the lamp's mirror point show a soft reflection of it.
 - **Lamp brightness:** a Settings slider, from about a third of the original lamp to a quarter brighter. The default (the middle) is 5% dimmer than the original (set 2026-10-27).
 - **Fireplace (optional, off by default):** a hearth out of view to the left of the table (`FlameLight`). It is broad and redder (about 1700 K) and added to the lamp, which is turned down a little beside it, so every tile face stays readable. Its brightness wanders by up to a third, in random surges, licks of flame and the odd flare. It burns yellower as it brightens, and its light shifts a little as the flames move. A Fire intensity slider runs it from embers to a blaze. While it burns, a soft crackling loop plays (`FireplaceSound`, gapless; louder as the fire burns brighter): *Crackeling Fireplace* by Christopher C. Courter (Freesound 447818, CC0), a stone fireplace burning wet loblolly pine for a steady popping, 6:43 at 44.1 kHz, 256 kbps MP3 stereo, chosen 2026-10-27.
 - **Shadows cast from each light:** a point-light model. The lamp's shadows lean slightly away from it. The fire's are long and soft-edged, falling across the lower tiles, stretching and fading with the flames. Each shadow is as dark as its light's share of the light reaching that tile. The lamp's hold still, changing only with the sliders.
 - **Used, glazed tiles:** every tile looks like a real tile from a well-played set, varying from tile to tile but stable for each one (`TileWear`, chosen from the tile id).
   - **Wear:** handled grime worked into the edges and corners, hairline scratches that catch the light, the odd tiny ding, a faint fingerprint haze. There are 8 generated textures × 4 orientations.
-  - **Ageing and placement:** ivory from crisp to warmly yellowed, and a fraction-off-square placement.
+  - **Ageing and placement:** the ivory evenly and warmly aged across the whole set, and every wear texture dulling a face by the same amount, so no tile reads lighter or darker than its neighbours (tiles of differing tone looked like a difference in height or light; since 2026-10-29); a fraction-off-square placement.
   - **Thick clear glaze on a flat face:** drawn over the artwork as on a real tile. The base tone stays even, and the gloss shows in sharp features rather than shading: a fine crisp edge glint, the reflections below, and bevel glints.
   - **Reflections that reveal the surface:** streaky specular highlights where the lamp's reflection is broken up by ripples in the glaze, with scratches flaring brighter inside the reflection. A crisp lamp reflection with a wavering lower edge and a slight per-tile tilt, plus a sharp hotspot near the lamp.
   - **Flat, but not machine-perfect:** faces are flat (no dome shading, which read as pillowed). Imperfection comes from broad, faint ripples where the glaze pooled thicker or ran thinner, and from patchy grime rather than an even ring around the edge.
@@ -103,7 +103,7 @@ Every match ends in a small version of the same thing: as the raised pair's edge
 
 - **Classic Dark:** muted ivory faces, deepened glyphs. The default.
 - **High Contrast:** **(proposed)** dark slate faces with **bright, thick, colour-blind-safe glyphs** and a light rim on every tile. It's inverted, so contrast goes up without a bright white board.
-- **Large Index:** either set above plus big corner numbers/letters, building on upstream's corner-index option.
+- **Large Index:** either set above plus big corner numbers/letters. (Upstream's small corner-index option was removed on 2026-10-29.)
 
 ## Accessibility & controls
 
@@ -158,16 +158,23 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 - **Layouts:** upstream `Constellation`s plus ffalt/mah boards, kept in Mah's compact format in generated Kotlin (`MahLayouts.kt`) and decoded when first needed, so plain JVM tests can load them without Android assets.
 - **Removed:** `GameStats`, `StatsScreen`, the timer, best times, `SupportDialog`.
 
-## Performance plan
+## Performance
 
-- No allocations in the draw loop; tile geometry and draw order are precomputed per board, and only changed tiles are invalidated.
-- Tile atlas (above); shadows baked into the atlas; background rendered offscreen.
-- A Baseline Profile for fast cold start.
-- Measured on the Pixel 9 Pro with `adb shell dumpsys gfxinfo <pkg> framestats`. The target is no janky frames during a pinch-zoom across a full 144-tile board.
+Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit) with `adb shell dumpsys gfxinfo <pkg> framestats`. The render thread went from 81 ms a frame to 5 ms, the GPU from 26 to 15 ms, and matches run at 60 fps. Side-by-side renders match the unoptimised look.
+
+- **Only what the player can see is drawn** (`TileCulling`): a tile wholly covered by tiles drawn after it is left out, with its shadows, allowing for rounded corners and the slight off-square placement. Worked out only when tiles change.
+- **The tile atlas** (`TileRenderer.TileAtlas`): each tile is stamped from about five shared images (body, artwork with its engraving, each of the 32 looks' wear and fixed glaze, and each look's glare, stamped as strongly as the tile catches the light), made off the main thread at the size tiles are shown. Highlighted tiles are still drawn shape by shape.
+- **The tabletop's colour is drawn once** into a cached layer, remade only when the zoom, pan or surface changes; only its light is worked out each frame. Table pixels under the tiles skip it.
+- **The fire's long shadows are traced once per pixel**, on the table or on a tile, not both; long shadows are always on (the setting is gone: its painted fallback was twice as slow).
+- **Fireworks:** match bursts on their own layer (a burst never redraws the board), from a pool of three reused shells of 40 sparks; every spark is one stamp of a glow image.
+- **Contact shadows** are one pre-blurred stamp.
+- The fireplace is marked "More GPU-intensive" in Settings; budget phones can keep the lamp alone.
+- **Test builds** (`tools/deploy-to-phone.sh`, `-PperfHooks=true`) can be told over adb to open a fixed deal, switch drawing stages off, set the fire's rate or play matches by themselves, for measuring; Play builds never can.
+- Still to do: a Baseline Profile for fast cold start; perhaps a cheaper fire-shadow trace for weaker GPUs.
 
 ## Licences
 
-- Code: GPLv3 with upstream's app-store exception; keep `NOTICE.md` and add Dark Mahjong's changes.
+- Code: GPLv3 with upstream's app-store exception; keep `NOTICE.md` and add Dark Mahjong's changes. Since 2026-10-29 an additional GPLv3 §7(e) term withholds the names "Dark Mahjong" / 暗夜麻將, the name seal, the launcher icon and "Grevillea Labs" from modified versions, and the README asks forks to stay ad-free and not be sold (a request: GPLv3 allows commercial use).
 - Tiles: samoheen, CC0. Music: upstream's Suno tracks, CC0. Fonts: Google Sans Flex and Cinzel, OFL (upstream's Tomorrow is no longer bundled).
 - Layouts from ffalt/mah: MIT; add its copyright notice.
 - Sounds: all open source since 2026-10-26 (M4): the match sound made for the game and Kenney's wood taps, both CC0, a real fireworks show for the win (a dizi phrase until 2026-10-28), the fireplace recording, and the synthesised blocked sound in code. The T-STUDIO pack is gone.
@@ -190,7 +197,7 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 | M3 | Android 17 look: Material 3 Expressive components and motion, Google Sans Flex, predictive back, window blur, floating game toolbar, Sans Flex title menu; the name seal as launcher icon; pinch-to-zoom with one-tap zoom-out; 29 layouts ported from ffalt/mah ✅ 2026-10-26 |
 | M4 | Sound design: every sound open source, so the app can go on Google Play. Match: a tile clack recorded for the game, sped up 1.4×, over synthesised stardust (pentatonic chimes over a glitter fizz), four takes plus random ±3 % speed (`tools/make-match-sounds.py`). Taps: Kenney light wood impacts, two takes at two pitches (`tools/make-tap-sounds.py`). Win: a dizi phrase by CarlosCarty (Freesound) with the music dipping under it (`tools/make-win-sound.py`). All CC0; T-STUDIO sounds removed ✅ 2026-10-26 |
 | M5 | Light and atmosphere: Google Play closed test (1.0.0 live, 1.1.0 in review); a firework burst where each matched pair meets; lamp brightness slider; optional fireplace (flickering, shifting firelight with an intensity slider and a soft crackling loop on its own volume, heard on the game screen only); shadows cast from each light, the fire's traced per pixel through a full-resolution height map of the board, long, soft, following each tile's curved edges and jittering with the flames; contact shadows and darkened side walls between tiles, ambient occlusion on the table; the table running on under the toolbar; music capped quieter ✅ 2026-10-27 |
-| M6 | Board renderer: tile atlas, tile-size setting, Shuffle in the button bar |
+| M6 | Board renderer: tile atlas ✅ 2026-10-29 (with the performance work above); still to come: tile-size setting, Shuffle in the button bar |
 | M7 | Tile sets (Classic Dark, High Contrast, Large Index), text scale |
 | M8 | Difficulty tool, 300-level table, journey map |
 | M9 | Today's Puzzle + calendar, Quick Game |

@@ -19,7 +19,6 @@ data class GameSettings(
     val highlightFreeTiles: Boolean = false,
     val animationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
-    val showCornerIndex: Boolean = false,
     val tableSurface: TableSurface = TableSurface.GREEN_MAT,
     // The lamp over the table is always lit; how brightly, 0..1, the middle its natural strength
     val lampBrightness: Float = 0.5f,
@@ -28,8 +27,6 @@ data class GameSettings(
     val fireIntensity: Float = 0.5f,
     // The fire's crackle, on its own volume (subtle by default)
     val fireVolume: Float = 0.3f,
-    // Long fire shadows traced on the GPU every frame, rather than short painted ones
-    val fireShadows: Boolean = true,
 ) {
     val theme: TableSurface get() = tableSurface
 }
