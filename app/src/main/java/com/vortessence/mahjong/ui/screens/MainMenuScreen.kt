@@ -111,8 +111,8 @@ fun MainMenuScreen(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .windowInsetsPadding(WindowInsets.displayCutout)
-                // 20 px higher than the original 64 dp (2026-10-30)
-                .padding(start = 40.dp, end = 40.dp, bottom = 64.dp + with(LocalDensity.current) { 20.toDp() })
+                // 40 px higher than the original 64 dp (2026-10-30)
+                .padding(start = 40.dp, end = 40.dp, bottom = 64.dp + with(LocalDensity.current) { 40.toDp() })
                 .fillMaxWidth(),
         ) {
             if (continueInfo != null) {
