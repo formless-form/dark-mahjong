@@ -135,6 +135,7 @@ half4 main(float2 p) {
     private var lightShader: RuntimeShader? = null
     private var glossShader: RuntimeShader? = null
     private var flameShader: RuntimeShader? = null
+    private var raisedShader: RuntimeShader? = null
     private var previewAlbedo: RuntimeShader? = null
 
     /**
@@ -243,6 +244,20 @@ half4 main(float2 p) {
         s.setFloatUniform("res", width, height)
         flame.setUniforms(s)
         setShadowUniforms(s, shadowMap, fireShadows, fresh)
+        return ShaderBrush(s)
+    }
+
+    /**
+     * [tileLight] without the board's shadows, for tiles lifted clear of it (a matched pair in
+     * flight): traced from the board's height map, those would print the outlines of the tiles
+     * beneath onto them, so they would look see-through. Its own shader, as [tileLight]'s is
+     * drawn in the same frame with other uniforms.
+     */
+    fun raisedTileLight(width: Float, height: Float, flame: FlameLight): ShaderBrush {
+        val s = raisedShader ?: RuntimeShader(FLAME_TILE_AGSL).also { raisedShader = it }
+        s.setFloatUniform("res", width, height)
+        flame.setUniforms(s)
+        setShadowUniforms(s, null, fireShadows = false, cull = false)
         return ShaderBrush(s)
     }
 

@@ -77,6 +77,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -297,13 +298,10 @@ private fun BoardContent(
                 )
                 activeSmashes += smashItem
                 animationScope.launch {
-                    delay(280.milliseconds)
-                    onTileMatch()
-                }
-                animationScope.launch {
-                    // Burst the moment the raised pair's edges touch, where they meet
+                    // Click and burst the moment the raised pair's edges touch, where they meet
                     val transform = currentTransform
                     delay((SMASH_MILLIS * smashContactFraction(t1, t2, transform)).toLong().milliseconds)
+                    onTileMatch()
                     val lift = with(density) { 16.dp.toPx() }
                     matchBursts.burst(
                         x = (transform.tilePixelX(t1.x, t1.z) + transform.tilePixelX(t2.x, t2.z) + transform.tileWidth) / 2f,
@@ -508,15 +506,6 @@ private fun BoardContent(
                 )
             }
 
-            // Draw matching pairs being raised, smashed into each other, and disappearing
-            for (smash in activeSmashes) {
-                drawSmashAnimation(
-                    smash = smash,
-                    transform = currentTransform,
-                    density = density,
-                )
-            }
-
             // Lamp and firelight: multiplies everything drawn on the table (alpha untouched), full and
             // warm under the lamp, falling off towards the dark edges
             if (!PerfSwitches.isOff("tilelight")) drawRect(
@@ -525,6 +514,28 @@ private fun BoardContent(
                 size = Size(canvasW * 1.5f, canvasH * 1.5f),
                 blendMode = BlendMode.Modulate,
             )
+
+            // Matching pairs being raised, smashed into each other and disappearing: on a small
+            // layer of their own over the lit board, lit by the lamp and flame but not shaded by
+            // the board's shadows, which would show the tiles beneath through them
+            if (activeSmashes.isNotEmpty()) {
+                val area = smashBounds(activeSmashes, currentTransform, density)
+                drawContext.canvas.saveLayer(area, Paint())
+                for (smash in activeSmashes) {
+                    drawSmashAnimation(
+                        smash = smash,
+                        transform = currentTransform,
+                        density = density,
+                    )
+                }
+                if (!PerfSwitches.isOff("tilelight")) drawRect(
+                    brush = TableSurfaceRenderer.raisedTileLight(canvasW, canvasH, flame),
+                    topLeft = area.topLeft,
+                    size = area.size,
+                    blendMode = BlendMode.Modulate,
+                )
+                drawContext.canvas.restore()
+            }
             drawContext.canvas.restore()
             nativeCanvas.restore()
             drawContext.canvas.restore()
@@ -614,7 +625,23 @@ private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLigh
     return TableSurfaceRenderer.flameGlare(u, v, flame)
 }
 
-private const val SMASH_MILLIS = 420
+private const val SMASH_MILLIS = 840
+
+// The smash's phases, as fractions of its progress: until RUSH_END the pair rises and rushes
+// together in one movement, starting slowly and gathering speed all the way to the clash; then it
+// shrinks into the burst and is gone
+private const val RUSH_END = 0.70f
+
+// Along that movement (its distance travelled, 0..1), the pair has risen fully by LIFT_END and
+// starts drawing together at RUSH_START
+private const val LIFT_END = 0.17f
+private const val RUSH_START = 0.05f
+
+// The pair's size at the clash, from rising and arching in, as if nearer the eye
+private const val PEAK_SCALE = 1.4f
+
+// How sharply that movement gathers speed: its distance grows with time to this power
+private const val EASE_IN_POWER = 3.5f
 
 // The firelight's frame interval: 20 a second, less a little so a 60 or 120 Hz screen's frames
 // land on it (every 3rd or 6th)
@@ -628,14 +655,33 @@ private const val FIRE_FRAME_NANOS = 1_000_000_000L / 20 - 2_000_000L
 private fun smashContactFraction(t1: BoardTile, t2: BoardTile, transform: BoardTransform): Float {
     val dx = abs(transform.tilePixelX(t1.x, t1.z) - transform.tilePixelX(t2.x, t2.z))
     val dy = abs(transform.tilePixelY(t1.y, t1.z) - transform.tilePixelY(t2.y, t2.z))
-    // The rectangles touch once both gaps are within a (raised, 1.18x) tile's width and height
+    // The rectangles touch once both gaps are within a raised tile's width and height (at about
+    // its full size by then)
     val apart = minOf(
-        if (dx > 0f) 1.18f * transform.tileWidth / dx else 1f,
-        if (dy > 0f) 1.18f * transform.tileHeight / dy else 1f,
+        if (dx > 0f) PEAK_SCALE * transform.tileWidth / dx else 1f,
+        if (dy > 0f) PEAK_SCALE * transform.tileHeight / dy else 1f,
     ).coerceIn(0f, 1f)
-    // The rush closes the gap by rushRaw squared
-    val rushRaw = sqrt(1f - apart).coerceAtLeast(0.5f)
-    return 0.25f + 0.45f * rushRaw
+    // The rush closes the gap by its share of the way squared (see drawSmashAnimation)
+    val share = sqrt(1f - apart).coerceAtLeast(0.5f)
+    return RUSH_END * (RUSH_START + (1f - RUSH_START) * share).pow(1f / EASE_IN_POWER)
+}
+
+/** The area the smashes in flight can reach: both tiles, raised and enlarged, their glow and shadows. */
+private fun smashBounds(smashes: List<SmashAnimationItem>, transform: BoardTransform, density: Density): Rect {
+    val pad = transform.tileWidth * 0.6f + with(density) { 24.dp.toPx() }
+    var left = Float.MAX_VALUE
+    var top = Float.MAX_VALUE
+    var right = -Float.MAX_VALUE
+    var bottom = -Float.MAX_VALUE
+    for (smash in smashes) for (tile in listOf(smash.tile1, smash.tile2)) {
+        val x = transform.tilePixelX(tile.x, tile.z)
+        val y = transform.tilePixelY(tile.y, tile.z)
+        left = minOf(left, x)
+        top = minOf(top, y)
+        right = maxOf(right, x + transform.tileWidth)
+        bottom = maxOf(bottom, y + transform.tileHeight)
+    }
+    return Rect(left - pad, top - pad, right + pad, bottom + pad)
 }
 
 private fun DrawScope.drawSmashAnimation(
@@ -657,63 +703,50 @@ private fun DrawScope.drawSmashAnimation(
 
     val maxLift = with(density) { 16.dp.toPx() }
 
-    // Phases:
-    // Phase 1 (0f..0.25f): Raise off board
-    // Phase 2 (0.25f..0.70f): Smash into midpoint
-    // Phase 3 (0.70f..1.0f): Impact & Disappear
-    val liftFraction = (p / 0.25f).coerceIn(0f, 1f)
+    // One movement from the first lift to the clash: the distance travelled grows with time to
+    // the power 3.5, so it starts very slowly and keeps accelerating. Along it the pair rises first
+    // (most of its height early on), and draws together ever faster once it is up
+    val travelled = (p / RUSH_END).coerceIn(0f, 1f).pow(EASE_IN_POWER)
+    val liftT = (travelled / LIFT_END).coerceIn(0f, 1f)
+    val liftFraction = 1f - (1f - liftT) * (1f - liftT)
     val liftY = -maxLift * liftFraction
+    val share = ((travelled - RUSH_START) / (1f - RUSH_START)).coerceIn(0f, 1f)
+    val rushEased = share * share
+    // How high the pair seems: it rises, then keeps growing as it arches in towards the clash,
+    // its shadow falling further away, as if still gaining height
+    val height = 0.6f * liftFraction + 0.4f * rushEased
 
-    val frame = when {
-        p < 0.25f -> {
-            val s = 1f + 0.18f * liftFraction
-            SmashFrame(
-                x1 = start1X,
-                y1 = start1Y + liftY,
-                x2 = start2X,
-                y2 = start2Y + liftY,
-                scale = s,
-                alpha = 1f,
-                impactFraction = 0f
-            )
-        }
-        p < 0.70f -> {
-            val rushRaw = (p - 0.25f) / 0.45f
-            val rushEased = rushRaw * rushRaw
-            val s = 1.18f
-            SmashFrame(
-                x1 = start1X + (midX - start1X) * rushEased,
-                y1 = start1Y + (midY - start1Y) * rushEased + liftY,
-                x2 = start2X + (midX - start2X) * rushEased,
-                y2 = start2Y + (midY - start2Y) * rushEased + liftY,
-                scale = s,
-                alpha = 1f,
-                impactFraction = 0f
-            )
-        }
-        else -> {
-            val impact = (p - 0.70f) / 0.30f
-            val s = 1.18f * (1f - impact * 0.7f)
-            val a = (1f - impact).coerceIn(0f, 1f)
-            SmashFrame(
-                x1 = midX,
-                y1 = midY + liftY,
-                x2 = midX,
-                y2 = midY + liftY,
-                scale = s,
-                alpha = a,
-                impactFraction = impact
-            )
-        }
+    val frame = if (p < RUSH_END) {
+        SmashFrame(
+            x1 = start1X + (midX - start1X) * rushEased,
+            y1 = start1Y + (midY - start1Y) * rushEased + liftY,
+            x2 = start2X + (midX - start2X) * rushEased,
+            y2 = start2Y + (midY - start2Y) * rushEased + liftY,
+            scale = 1f + (PEAK_SCALE - 1f) * height,
+            alpha = 1f,
+            impactFraction = 0f
+        )
+    } else {
+        // Shrinking into the burst, solid until it is half gone, then fading out
+        val impact = (p - RUSH_END) / (1f - RUSH_END)
+        SmashFrame(
+            x1 = midX,
+            y1 = midY + liftY,
+            x2 = midX,
+            y2 = midY + liftY,
+            scale = PEAK_SCALE * (1f - impact * 0.7f),
+            alpha = (2f - 2f * impact).coerceIn(0f, 1f),
+            impactFraction = impact
+        )
     }
 
     // 1. Raised shadow cast on table plane during lift and rush
-    if (frame.alpha > 0.05f && p < 0.70f) {
+    if (frame.alpha > 0.05f && p < RUSH_END) {
         val shadowAlpha = 0.35f * liftFraction
         val shadowCorner = CornerRadius(transform.tileWidth * 0.085f)
         val shadowW = transform.tileWidth * frame.scale
         val shadowH = transform.tileHeight * frame.scale
-        val shadowOffset = with(density) { (6.dp + 10.dp * liftFraction).toPx() }
+        val shadowOffset = with(density) { (6.dp + 16.dp * height).toPx() }
 
         drawRoundRect(
             color = Color.Black.copy(alpha = shadowAlpha),
