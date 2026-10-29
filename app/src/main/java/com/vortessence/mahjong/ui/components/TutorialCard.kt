@@ -84,10 +84,11 @@ fun TutorialCard(
                     )
                 } else {
                     Text(
-                        text = if (current.action == TutorialAction.TAP_BLOCKED) {
-                            "Tap the blue tile"
-                        } else {
-                            "Match the blue tiles"
+                        text = when (current.action) {
+                            TutorialAction.TAP_BLOCKED -> "Tap the blue tile"
+                            TutorialAction.PINCH_ZOOM -> "Pinch the board"
+                            TutorialAction.ZOOM_OUT -> "Tap the magnifying glass"
+                            else -> "Match the blue tiles"
                         },
                         style = MaterialTheme.typography.labelLargeEmphasized,
                         color = MaterialTheme.colorScheme.secondary,

@@ -5,6 +5,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import com.vortessence.mahjong.ui.theme.TutorialHighlight
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
@@ -104,6 +109,9 @@ fun MahjongBoard(
     modifier: Modifier = Modifier,
     settings: GameSettings = GameSettings(),
     highlightedTileIds: Set<Int> = emptySet(),
+    // The tutorial points the zoom-out button out, ringed in its blue
+    highlightZoomOut: Boolean = false,
+    onZoomedInChange: (Boolean) -> Unit = {},
     onTileClick: (Int) -> Unit,
     onTileMatch: () -> Unit = {},
     // How much of the bottom of the board's area lies under something drawn over it (the game
@@ -165,6 +173,8 @@ fun MahjongBoard(
                     gameState = gameState,
                     settings = settings,
                     highlightedTileIds = highlightedTileIds,
+                    highlightZoomOut = highlightZoomOut,
+                    onZoomedInChange = onZoomedInChange,
                     onTileClick = onTileClick,
                     onTileMatch = onTileMatch,
                     canvasW = canvasW,
@@ -184,6 +194,8 @@ private fun BoardContent(
     gameState: GameState,
     settings: GameSettings,
     highlightedTileIds: Set<Int>,
+    highlightZoomOut: Boolean,
+    onZoomedInChange: (Boolean) -> Unit,
     onTileClick: (Int) -> Unit,
     onTileMatch: () -> Unit = {},
     canvasW: Float,
@@ -378,6 +390,8 @@ private fun BoardContent(
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     val zoomedIn by remember { derivedStateOf { zoom > 1.01f } }
+    val reportZoom by rememberUpdatedState(onZoomedInChange)
+    LaunchedEffect(zoomedIn) { reportZoom(zoomedIn) }
     val scope = rememberCoroutineScope()
     var zoomOutJob by remember { mutableStateOf<Job?>(null) }
     val clampPan = { p: Offset, z: Float ->
@@ -570,12 +584,33 @@ private fun BoardContent(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier
+                    .size(56.dp)
+                    .then(if (highlightZoomOut) Modifier.tutorialRing(settings.animationsEnabled) else Modifier),
             ) {
                 Icon(Icons.Rounded.ZoomOut, contentDescription = "Zoom out to the whole board", modifier = Modifier.size(28.dp))
             }
         }
     }
+}
+
+/**
+ * The tutorial's pointer for a button: a ring in its sky blue around it, gently pulsing (steady
+ * with animations off).
+ */
+@Composable
+private fun Modifier.tutorialRing(animate: Boolean): Modifier {
+    val pulse = if (animate) {
+        rememberInfiniteTransition(label = "tutorialRing").animateFloat(
+            initialValue = 0.6f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "tutorialRingAlpha",
+        ).value
+    } else {
+        1f
+    }
+    return border(4.dp, TutorialHighlight.copy(alpha = pulse), CircleShape)
 }
 
 /**

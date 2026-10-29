@@ -26,7 +26,7 @@ data class GameSettings(
     val fireplaceLit: Boolean = false,
     val fireIntensity: Float = 0.5f,
     // The fire's crackle, on its own volume (subtle by default)
-    val fireVolume: Float = 0.3f,
+    val fireVolume: Float = 0.35f,
 ) {
     val theme: TableSurface get() = tableSurface
 }

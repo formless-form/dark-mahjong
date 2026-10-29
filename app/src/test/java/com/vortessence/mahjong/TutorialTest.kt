@@ -42,6 +42,14 @@ class TutorialTest {
         for (step in TutorialScript.steps) {
             when (step.action) {
                 TutorialAction.CONTINUE -> Unit
+                TutorialAction.PINCH_ZOOM -> {
+                    assertFalse(TutorialScript.isZoomStepComplete(step, zoomedIn = false))
+                    assertTrue(TutorialScript.isZoomStepComplete(step, zoomedIn = true))
+                }
+                TutorialAction.ZOOM_OUT -> {
+                    assertFalse(TutorialScript.isZoomStepComplete(step, zoomedIn = true))
+                    assertTrue(TutorialScript.isZoomStepComplete(step, zoomedIn = false))
+                }
                 TutorialAction.TAP_BLOCKED -> {
                     val target = step.targetTileIds.single()
                     val (newState, result) = MahjongGameEngine.handleTileTap(state, target)

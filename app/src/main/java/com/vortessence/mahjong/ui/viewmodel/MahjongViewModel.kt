@@ -302,6 +302,12 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         audioManager.playTileMatch()
     }
 
+    /** The board was zoomed in or back out: the tutorial's zoom steps wait on this. */
+    fun onBoardZoom(zoomedIn: Boolean) {
+        val step = currentTutorialStep ?: return
+        if (TutorialScript.isZoomStepComplete(step, zoomedIn)) advanceTutorial()
+    }
+
     fun advanceTutorial() {
         val index = _tutorialStepIndex.value ?: return
         _tutorialStepIndex.value = (index + 1).takeIf { it < TutorialScript.steps.size }

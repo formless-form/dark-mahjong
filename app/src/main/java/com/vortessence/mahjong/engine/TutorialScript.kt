@@ -10,6 +10,10 @@ enum class TutorialAction {
     TAP_BLOCKED,
     // Player matches the target tiles
     MATCH_PAIR,
+    // Player pinches the board to zoom in
+    PINCH_ZOOM,
+    // Player goes back to the whole board (the zoom-out button, or pinching back out)
+    ZOOM_OUT,
 }
 
 data class TutorialStep(
@@ -19,6 +23,7 @@ data class TutorialStep(
     val targetTileIds: Set<Int> = emptySet(),
     val highlightFreeTiles: Boolean = false,
     val showSettingsToggles: Boolean = false,
+    val highlightZoomOut: Boolean = false,
     val continueLabel: String = "Next",
 )
 
@@ -79,6 +84,19 @@ object TutorialScript {
             targetTileIds = setOf(PLUM, CHRYSANTHEMUM),
         ),
         TutorialStep(
+            title = "Zoom In",
+            message = "Want a closer look? Pinch the board with two fingers to zoom in, " +
+                "then drag to look around.",
+            action = TutorialAction.PINCH_ZOOM,
+        ),
+        TutorialStep(
+            title = "Zoom Out",
+            message = "To see the whole board again, tap the magnifying glass with the minus sign. " +
+                "It appears whenever you're zoomed in.",
+            action = TutorialAction.ZOOM_OUT,
+            highlightZoomOut = true,
+        ),
+        TutorialStep(
             title = "Helpful Settings",
             message = "Want a little help? You can turn these on right here, " +
                 "or change them any time in the Settings menu.",
@@ -136,5 +154,17 @@ object TutorialScript {
             TutorialAction.MATCH_PAIR -> newState.tiles
                 .filter { it.id in step.targetTileIds }
                 .all { it.isRemoved }
+            TutorialAction.PINCH_ZOOM, TutorialAction.ZOOM_OUT -> false
+        }
+
+    /**
+     * Whether the board's zoom completes [step]: zoomed in for the pinch, back to the whole board
+     * for the zoom out.
+     */
+    fun isZoomStepComplete(step: TutorialStep, zoomedIn: Boolean): Boolean =
+        when (step.action) {
+            TutorialAction.PINCH_ZOOM -> zoomedIn
+            TutorialAction.ZOOM_OUT -> !zoomedIn
+            else -> false
         }
 }

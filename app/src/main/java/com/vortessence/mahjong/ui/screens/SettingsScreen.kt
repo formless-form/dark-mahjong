@@ -70,7 +70,7 @@ fun SettingsScreen(
                 buildList {
                     add { shapes ->
                         ToggleRow(
-                            shapes, Icons.AutoMirrored.Rounded.VolumeUp, "Game sounds", "Tile taps, matches and the finish",
+                            shapes, Icons.AutoMirrored.Rounded.VolumeUp, "Game sounds", null,
                             settings.soundEnabled,
                         ) { onSettingsChanged(settings.copy(soundEnabled = it)) }
                     }
@@ -83,7 +83,7 @@ fun SettingsScreen(
                     }
                     add { shapes ->
                         ToggleRow(
-                            shapes, Icons.Rounded.MusicNote, "Background music", "Tranquil Chinese pentatonic melody",
+                            shapes, Icons.Rounded.MusicNote, "Background music", null,
                             settings.musicEnabled,
                         ) { onSettingsChanged(settings.copy(musicEnabled = it)) }
                     }
@@ -198,7 +198,7 @@ private fun ToggleRow(
     shapes: ListItemShapes,
     icon: ImageVector,
     title: String,
-    summary: String,
+    summary: String?,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -210,7 +210,7 @@ private fun ToggleRow(
         colors = segmentColors(),
         leadingContent = { LeadingIcon(icon) },
         trailingContent = { CheckSwitch(checked = checked, onCheckedChange = null) },
-        supportingContent = { Text(summary) },
+        supportingContent = summary?.let { { Text(it) } },
     ) {
         Text(title)
     }

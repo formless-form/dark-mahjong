@@ -7,6 +7,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +23,10 @@ import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.repository.ConstellationRepository
+import com.vortessence.mahjong.engine.TutorialAction
 import com.vortessence.mahjong.engine.TutorialStep
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 import com.vortessence.mahjong.ui.components.GameHeader
 import com.vortessence.mahjong.ui.components.GameToolbar
 import com.vortessence.mahjong.ui.components.LoadingPage
@@ -51,6 +56,7 @@ fun GameScreen(
     onMainMenu: () -> Unit,
     onTutorialContinue: () -> Unit = {},
     onSettingsChanged: (GameSettings) -> Unit = {},
+    onBoardZoom: (Boolean) -> Unit = {},
 ) {
     if (gameState == null) {
         LoadingPage(Modifier.background(MaterialTheme.colorScheme.background))
@@ -63,6 +69,15 @@ fun GameScreen(
         tutorialStep == null -> emptySet()
         tutorialStep.highlightFreeTiles -> gameState.tiles.filter { it.isFree }.map { it.id }.toSet()
         else -> tutorialStep.targetTileIds
+    }
+
+    // The tutorial's zoom steps: each new step is checked against the zoom as it stands, so one
+    // already done (zoomed in before the pinch step) passes at once. The pinch step lets the
+    // zoom settle a moment first, so its card doesn't change in the middle of the pinch
+    var boardZoomedIn by remember { mutableStateOf(false) }
+    LaunchedEffect(tutorialStep, boardZoomedIn) {
+        if (tutorialStep?.action == TutorialAction.PINCH_ZOOM && boardZoomedIn) delay(700.milliseconds)
+        onBoardZoom(boardZoomedIn)
     }
 
     // When the board is cleared it softly blurs behind the celebration, as Android 17 blurs
@@ -94,6 +109,8 @@ fun GameScreen(
                 gameState = gameState,
                 settings = settings,
                 highlightedTileIds = tutorialHighlights,
+                highlightZoomOut = tutorialStep?.highlightZoomOut == true,
+                onZoomedInChange = { boardZoomedIn = it },
                 onTileClick = onTileClick,
                 onTileMatch = onTileMatch,
                 bottomOverlap = with(density) { overlay.toDp() },

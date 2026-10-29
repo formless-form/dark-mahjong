@@ -179,6 +179,39 @@ class ScreenshotTour {
         shoot("tutorial")
     }
 
+    // The tutorial's zoom steps: the pinch prompt, then pinched in, with the zoom-out button ringed
+    private fun tutorialStep(title: String, pinched: Boolean, shot: String) {
+        TileWear.prepareNow()
+        val tutorial = ConstellationRepository.tutorialConstellation
+        compose.setContent {
+            MahjongTheme {
+                GameScreen(
+                    gameState = MahjongGameEngine.startNewGame(tutorial),
+                    levelIndex = ConstellationRepository.TUTORIAL_LEVEL,
+                    tutorialStep = TutorialScript.steps.single { it.title == title },
+                    onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
+                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                )
+            }
+        }
+        if (pinched) {
+            compose.waitForIdle()
+            compose.onRoot().performTouchInput {
+                val c = Offset(centerX, height * 0.35f)
+                pinch(
+                    start0 = c - Offset(60f, 0f), end0 = c - Offset(132f, 0f),
+                    start1 = c + Offset(60f, 0f), end1 = c + Offset(132f, 0f),
+                    durationMillis = 400,
+                )
+            }
+        }
+        compose.waitForIdle()
+        shoot(shot)
+    }
+
+    @Test fun tutorialZoomIn() = tutorialStep("Zoom In", pinched = false, shot = "tutorial_zoom_in")
+    @Test fun tutorialZoomOut() = tutorialStep("Zoom Out", pinched = true, shot = "tutorial_zoom_out")
+
     @Test
     fun noMovesDialog() {
         TileWear.prepareNow()
