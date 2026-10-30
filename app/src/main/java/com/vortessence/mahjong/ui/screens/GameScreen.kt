@@ -53,7 +53,6 @@ fun GameScreen(
     onRestart: () -> Unit,
     onReshuffle: () -> Unit,
     onNextLevel: () -> Unit,
-    onChooseConstellation: () -> Unit,
     onMainMenu: () -> Unit,
     onTutorialContinue: (TutorialStep) -> Unit = {},
     onSettingsChanged: (GameSettings) -> Unit = {},

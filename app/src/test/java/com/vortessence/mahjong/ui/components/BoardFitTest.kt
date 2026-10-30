@@ -35,7 +35,7 @@ class BoardFitTest {
 
     @Test
     fun everyLayoutFitsOnScreen() {
-        val layouts = (ConstellationRepository.constellations + ConstellationRepository.getLevelConstellations(false))
+        val layouts = (ConstellationRepository.constellations + ConstellationRepository.levelConstellations)
             .distinctBy { it.id }
         for ((w, h) in canvases) {
             val camera = TableCamera.planeMatrix(w, h)

@@ -140,9 +140,9 @@ class ScreenshotTour {
                 LevelSelectScreen(
                     progress = someProgress.copy(
                         highestLevelReached = 4,
-                        completedConstellations = ConstellationRepository.getLevelConstellations(false).take(3).map { it.id }.toSet() + "tutorial",
+                        completedConstellations = ConstellationRepository.levelConstellations.take(3).map { it.id }.toSet() + "tutorial",
                     ),
-                    levels = ConstellationRepository.getLevelConstellations(false),
+                    levels = ConstellationRepository.levelConstellations,
                     onLevelSelected = {},
                     onBack = {},
                 )
@@ -170,7 +170,7 @@ class ScreenshotTour {
                     levelIndex = null,
                     settings = GameSettings(tableSurface = surface),
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
-                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
             }
         }
@@ -200,7 +200,7 @@ class ScreenshotTour {
                     levelIndex = ConstellationRepository.TUTORIAL_LEVEL,
                     tutorialStep = TutorialScript.steps.first(),
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
-                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
             }
         }
@@ -218,7 +218,7 @@ class ScreenshotTour {
                     levelIndex = ConstellationRepository.TUTORIAL_LEVEL,
                     tutorialStep = TutorialScript.steps.single { it.title == title },
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
-                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
             }
         }
@@ -271,7 +271,7 @@ class ScreenshotTour {
     }
 
     private fun level(index: Int): GameState =
-        MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(index, isTablet = false))
+        MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(index))
 
     private fun game(surface: TableSurface, levelIndex: Int, state: GameState = level(levelIndex), message: String? = null) {
         TileWear.prepareNow()
@@ -282,9 +282,9 @@ class ScreenshotTour {
                     levelIndex = levelIndex,
                     settings = GameSettings(tableSurface = surface),
                     winMessage = message,
-                    totalLevels = ConstellationRepository.getTotalLevels(false),
+                    totalLevels = ConstellationRepository.totalLevels,
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
-                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
             }
         }

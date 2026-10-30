@@ -31,7 +31,7 @@ class TileCullingTest {
 
     @Test
     fun onlyCoveredTilesAreLeftOut() {
-        val layouts = (ConstellationRepository.constellations + ConstellationRepository.getLevelConstellations(false)).distinctBy { it.id }
+        val layouts = (ConstellationRepository.constellations + ConstellationRepository.levelConstellations).distinctBy { it.id }
         for (layout in layouts) {
             val tiles = MahjongGameEngine.startNewGame(layout).tiles
             val kept = TileCulling.visibleInDrawOrder(tiles).map { it.id }.toSet()

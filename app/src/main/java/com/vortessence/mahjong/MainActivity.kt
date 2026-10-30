@@ -59,13 +59,9 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) openPerfScene(intent)
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        openPerfScene(intent)
-    }
-
-    // Test builds only: adb shell am start -n com.formlessform.darkmahjong/com.vortessence.mahjong.MainActivity
+    // Test builds only: adb shell am start -S -n com.formlessform.darkmahjong/com.vortessence.mahjong.MainActivity
     //   --es perfLayout Quad --ez perfFire true [--es perfSurface WALNUT]
+    // (-S stops the app first, so the scene opens on a fresh start)
     private fun openPerfScene(intent: Intent?) {
         if (!BuildConfig.PERF_HOOKS) return
         PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()

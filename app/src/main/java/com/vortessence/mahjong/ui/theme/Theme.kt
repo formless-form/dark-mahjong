@@ -6,7 +6,6 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.vortessence.mahjong.data.model.TableSurface
 
 // Dark only: there is no light scheme
 val MahjongColorScheme = darkColorScheme(
@@ -48,8 +47,6 @@ val MahjongColorScheme = darkColorScheme(
 
 @Composable
 fun MahjongTheme(
-    @Suppress("UNUSED_PARAMETER") appTheme: Any? = null,
-    @Suppress("UNUSED_PARAMETER") tableSurface: TableSurface = TableSurface.GREEN_MAT,
     content: @Composable () -> Unit,
 ) {
     // Android 17's Material 3 Expressive: springy motion, its larger rounded shapes and the

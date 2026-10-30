@@ -69,7 +69,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
         )
     }
 
-    MahjongTheme(tableSurface = settings.tableSurface) {
+    MahjongTheme {
         val motion = MaterialTheme.motionScheme
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             // The title screen, revealed behind a screen that's being swiped back
@@ -144,7 +144,6 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 onRestart = { viewModel.restartGame() },
                                 onReshuffle = { viewModel.reshuffle() },
                                 onNextLevel = { viewModel.playNextLevel() },
-                                onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
                                 onMainMenu = toMenu,
                                 onTutorialContinue = { step -> viewModel.continueTutorial(step) },
                                 onBoardZoom = { viewModel.onBoardZoom(it) },

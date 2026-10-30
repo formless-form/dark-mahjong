@@ -11,8 +11,6 @@ data class GameState(
     val selectedTileId: Int? = null,
     val hintPair: Pair<Int, Int>? = null,
     val moveHistory: List<Move> = emptyList(),
-    val movesCount: Int = 0,
-    val isPlaying: Boolean = true,
     val isWon: Boolean = false,
     val isStalemate: Boolean = false,
     val availablePairsCount: Int = 0,
@@ -20,6 +18,4 @@ data class GameState(
 ) {
     val remainingTilesCount: Int get() = tiles.count { !it.isRemoved }
     val totalTilesCount: Int get() = tiles.size
-    @Suppress("unused")
-    val removedTilesCount: Int get() = totalTilesCount - remainingTilesCount
 }

@@ -152,7 +152,7 @@ class MahjongEngineTest {
 
     @Test
     fun testGameEngineTapAndMatchFlow() {
-        val miniTurtle = ConstellationRepository.getById("mini_turtle")
+        val miniTurtle = ConstellationRepository.getById("mini_turtle")!!
         val initialState = MahjongGameEngine.startNewGame(miniTurtle)
 
         assertTrue("Initial state must have active tiles", initialState.tiles.isNotEmpty())
@@ -174,7 +174,7 @@ class MahjongEngineTest {
         val (stateAfter2, result2) = MahjongGameEngine.handleTileTap(stateAfter1, id2)
         assertTrue(result2 is TileTapResult.Matched)
         assertEquals(null, stateAfter2.selectedTileId)
-        assertEquals(1, stateAfter2.movesCount)
+        assertEquals(1, stateAfter2.moveHistory.size)
         assertEquals(1, stateAfter2.moveHistory.size)
 
         val tile1 = stateAfter2.tiles.first { it.id == id1 }
@@ -184,7 +184,7 @@ class MahjongEngineTest {
 
         // Test Undo
         val stateAfterUndo = MahjongGameEngine.undo(stateAfter2)
-        assertEquals(0, stateAfterUndo.movesCount)
+        assertEquals(0, stateAfterUndo.moveHistory.size)
         assertEquals(0, stateAfterUndo.moveHistory.size)
 
         val tile1Restored = stateAfterUndo.tiles.first { it.id == id1 }
@@ -268,14 +268,14 @@ class MahjongEngineTest {
         )
 
         for (id in preservedIds) {
-            val classic = ConstellationRepository.getById(id)
+            val classic = ConstellationRepository.getById(id)!!
             assertNotNull("Classic constellation with id '$id' must be preserved", classic)
             assertEquals(id, classic.id)
             assertFalse("Classic constellation '$id' should not be marked portrait-optimized", classic.isPortraitOptimized)
         }
 
         // Verify classic turtle is indeed wide (> 30 units wide, aspect ratio > 1.0)
-        val turtle = ConstellationRepository.getById("classic_turtle")
+        val turtle = ConstellationRepository.getById("classic_turtle")!!
         val turtleW = (turtle.positions.maxOf { it.x } - turtle.positions.minOf { it.x }) + 2f
         val turtleH = ((turtle.positions.maxOf { it.y } - turtle.positions.minOf { it.y }) + 2f) * 1.333f
         assertTrue("Classic turtle must be wide", turtleW > 30f)
@@ -284,7 +284,7 @@ class MahjongEngineTest {
 
     @Test
     fun testSavedGameStateSerializationAndRestoration() {
-        val constellation = ConstellationRepository.getById("jade_pillar")
+        val constellation = ConstellationRepository.getById("jade_pillar")!!
         val initialState = MahjongGameEngine.startNewGame(constellation)
         val initialPairs = MahjongGameEngine.findAvailablePairs(initialState.tiles)
         assertTrue(initialPairs.isNotEmpty())
@@ -297,7 +297,7 @@ class MahjongEngineTest {
         assertTrue(matchResult2 is TileTapResult.Matched)
 
         val simulatedState = stateMatched
-        assertEquals(1, simulatedState.movesCount)
+        assertEquals(1, simulatedState.moveHistory.size)
         assertEquals(1, simulatedState.moveHistory.size)
         assertEquals(34, simulatedState.remainingTilesCount)
 
@@ -311,7 +311,7 @@ class MahjongEngineTest {
         assertNotNull(restoredSaved)
         assertEquals("jade_pillar", restoredSaved!!.constellationId)
         assertEquals(1, restoredSaved.levelIndex)
-        assertEquals(1, restoredSaved.movesCount)
+        assertEquals(1, restoredSaved.moveHistory.size)
         assertEquals(1, restoredSaved.moveHistory.size)
         assertEquals(simulatedState.tiles.size, restoredSaved.tiles.size)
 
@@ -319,20 +319,20 @@ class MahjongEngineTest {
         val restoredGameState = restoredSaved.toGameState()
         assertNotNull(restoredGameState)
         assertEquals("jade_pillar", restoredGameState.constellation.id)
-        assertEquals(1, restoredGameState.movesCount)
+        assertEquals(1, restoredGameState.moveHistory.size)
         assertEquals(34, restoredGameState.remainingTilesCount)
         assertFalse(restoredGameState.isWon)
 
         // Verify that undo still works seamlessly on the restored state!
         val stateAfterUndo = MahjongGameEngine.undo(restoredGameState)
-        assertEquals(0, stateAfterUndo.movesCount)
+        assertEquals(0, stateAfterUndo.moveHistory.size)
         assertEquals(0, stateAfterUndo.moveHistory.size)
         assertEquals(36, stateAfterUndo.remainingTilesCount)
     }
 
     @Test
     fun testSavedGameStateHandlesNullLevelIndex() {
-        val constellation = ConstellationRepository.getById("classic_turtle")
+        val constellation = ConstellationRepository.getById("classic_turtle")!!
         val initialState = MahjongGameEngine.startNewGame(constellation)
 
         val saved = SavedGameState.fromGameState(initialState, levelIndex = null)
@@ -374,24 +374,6 @@ class MahjongEngineTest {
         val walnutSettings = defaultSettings.copy(tableSurface = TableSurface.WALNUT)
         assertEquals(TableSurface.WALNUT, walnutSettings.tableSurface)
         assertEquals("Walnut", TableSurface.WALNUT.displayName)
-    }
-
-    @Test
-    fun testTabletLevelConstellationsConsistOfHorizontalLevels() {
-        val tabletLevels = ConstellationRepository.getLevelConstellations(isTablet = true)
-        val phoneLevels = ConstellationRepository.getLevelConstellations(isTablet = false)
-
-        // Tablets keep upstream's 12 classic (wide) levels; the phone levels are checked in
-        // testLevelsRunEasyToHard and, for size on screen, BoardFitTest
-        assertEquals(12, tabletLevels.size)
-        assertEquals(12 + ConstellationRepository.mahConstellations.size, phoneLevels.size)
-
-        for (constellation in tabletLevels) {
-            assertFalse(
-                "Tablet level constellation ${constellation.name} must not be portrait-optimized",
-                constellation.isPortraitOptimized
-            )
-        }
     }
 
     @Test
@@ -462,7 +444,7 @@ class MahjongEngineTest {
         val state = stackedDeadEndState()
         val pairs = MahjongGameEngine.findAvailablePairs(state.tiles)
         assertEquals("East Winds are still a free pair", 1, pairs.size)
-        assertEquals(false, BoardSolvabilityGenerator.canBeCleared(state.tiles.map { it.position to it.tile }))
+        assertEquals(false, canBeCleared(state.tiles.map { it.position to it.tile }))
         assertFalse("A pair is left, so play goes on", MahjongGameEngine.isStuck(state.tiles, pairs))
     }
 
@@ -473,7 +455,7 @@ class MahjongEngineTest {
             assertFalse("Reshuffle must leave a solvable board", reshuffled.isStalemate)
             val active = reshuffled.tiles.filter { !it.isRemoved }
             assertEquals(4, active.size)
-            assertEquals(true, BoardSolvabilityGenerator.canBeCleared(active.map { it.position to it.tile }))
+            assertEquals(true, canBeCleared(active.map { it.position to it.tile }))
         }
     }
 

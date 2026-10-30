@@ -53,7 +53,7 @@ class StoreScreenshots {
                     settings = GameSettings(tableSurface = surface),
                     winMessage = message,
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
-                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
             }
         }

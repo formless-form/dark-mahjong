@@ -114,32 +114,22 @@ object ConstellationRepository {
     }
 
     /** The level number a layout is in Levels mode (0 for the tutorial), or null if it isn't a level. */
-    fun levelIndexOf(id: String, isTablet: Boolean = false): Int? =
+    fun levelIndexOf(id: String): Int? =
         if (id == TUTORIAL_ID) TUTORIAL_LEVEL
-        else getLevelConstellations(isTablet).indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1)
+        else levelConstellations.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1)
 
-    val tabletLevelConstellations: List<Constellation> by lazy {
-        classicConstellations
-    }
+    /** The layout with [id], or null if there's none (a save from a layout since removed). */
+    fun getById(id: String): Constellation? = constellations.firstOrNull { it.id == id }
 
-    fun getLevelConstellations(isTablet: Boolean = false): List<Constellation> =
-        if (isTablet) tabletLevelConstellations else levelConstellations
-
-    fun getById(id: String): Constellation {
-        return constellations.firstOrNull { it.id == id } ?: levelConstellations.first()
-    }
-
-    fun getLevel(levelIndex: Int, isTablet: Boolean = false): Constellation {
+    fun getLevel(levelIndex: Int): Constellation {
         if (levelIndex == TUTORIAL_LEVEL) return tutorialConstellation
-        val levels = getLevelConstellations(isTablet)
+        val levels = levelConstellations
         val index = (levelIndex - 1).coerceIn(0, levels.size - 1)
         return levels[index]
     }
 
     val totalLevels: Int
         get() = levelConstellations.size
-
-    fun getTotalLevels(isTablet: Boolean = false): Int = getLevelConstellations(isTablet).size
 
     // =========================================================================
     // TUTORIAL (Level 0)

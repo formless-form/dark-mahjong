@@ -6,6 +6,7 @@ import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.model.Move
 import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TilePosition
+import kotlin.random.Random
 
 sealed class TileTapResult {
     data class Blocked(val tileId: Int) : TileTapResult()
@@ -21,23 +22,20 @@ object MahjongGameEngine {
     /**
      * Initializes a new game state with a solvable board layout.
      */
-    fun startNewGame(constellation: Constellation): GameState {
-        val boardTiles = BoardSolvabilityGenerator.generateSolvableBoard(constellation)
-        val tilesWithFreedom = recalculateFreedom(boardTiles)
-        val availablePairs = findAvailablePairs(tilesWithFreedom)
+    fun startNewGame(constellation: Constellation, random: Random = Random): GameState =
+        stateOf(constellation, BoardSolvabilityGenerator.generateSolvableBoard(constellation, random))
 
+    /** A game in play on [tiles], nothing selected: a new deal, or one restored from a save. */
+    fun stateOf(constellation: Constellation, tiles: List<BoardTile>, moveHistory: List<Move> = emptyList()): GameState {
+        val tilesWithFreedom = recalculateFreedom(tiles)
+        val availablePairs = findAvailablePairs(tilesWithFreedom)
         return GameState(
             constellation = constellation,
             tiles = tilesWithFreedom,
-            selectedTileId = null,
-            hintPair = null,
-            moveHistory = emptyList(),
-            movesCount = 0,
-            isPlaying = true,
-            isWon = false,
-            isStalemate = false,
+            moveHistory = moveHistory,
+            isWon = tilesWithFreedom.none { !it.isRemoved },
+            isStalemate = isStuck(tilesWithFreedom, availablePairs),
             availablePairsCount = availablePairs.size,
-            blockedTileId = null,
         )
     }
 
@@ -108,7 +106,6 @@ object MahjongGameEngine {
                 hintPair = null,
                 blockedTileId = null,
                 moveHistory = newHistory,
-                movesCount = currentState.movesCount + 1,
                 isWon = isWon,
                 isStalemate = isStalemate,
                 availablePairsCount = availablePairs.size
@@ -152,7 +149,6 @@ object MahjongGameEngine {
             hintPair = null,
             blockedTileId = null,
             moveHistory = remainingHistory,
-            movesCount = (currentState.movesCount - 1).coerceAtLeast(0),
             isWon = false,
             isStalemate = isStuck(refreshedTiles, availablePairs),
             availablePairsCount = availablePairs.size

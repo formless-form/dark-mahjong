@@ -18,15 +18,15 @@ data class ContinueInfo(
 data class SavedGameState(
     val constellationId: String,
     val levelIndex: Int?,
-    val movesCount: Int,
     val tiles: List<SavedTile>,
     val moveHistory: List<Move>,
     // The tutorial's step: an index into TutorialScript.steps, FREE_PLAY once the guided part is
     // over, or null (any other board, or a save from before steps were kept)
     val tutorialStep: Int? = null,
 ) {
+    // deserialize only accepts saves on a layout that exists
     fun toGameState(): GameState {
-        val constellation = ConstellationRepository.getById(constellationId)
+        val constellation = requireNotNull(ConstellationRepository.getById(constellationId))
         val boardTiles = tiles.map { st ->
             BoardTile(
                 id = st.id,
@@ -36,25 +36,7 @@ data class SavedGameState(
                 isFree = false,
             )
         }
-        val tilesWithFreedom = MahjongGameEngine.recalculateFreedom(boardTiles)
-        val availablePairs = MahjongGameEngine.findAvailablePairs(tilesWithFreedom)
-        val remainingCount = tilesWithFreedom.count { !it.isRemoved }
-        val isWon = remainingCount == 0
-        val isStalemate = MahjongGameEngine.isStuck(tilesWithFreedom, availablePairs)
-
-        return GameState(
-            constellation = constellation,
-            tiles = tilesWithFreedom,
-            selectedTileId = null,
-            hintPair = null,
-            moveHistory = moveHistory,
-            movesCount = movesCount,
-            isPlaying = true,
-            isWon = isWon,
-            isStalemate = isStalemate,
-            availablePairsCount = availablePairs.size,
-            blockedTileId = null,
-        )
+        return MahjongGameEngine.stateOf(constellation, boardTiles, moveHistory)
     }
 
     fun serialize(): String {
@@ -69,7 +51,7 @@ data class SavedGameState(
             constellationId,
             levelStr,
             "", // Unused slot (formerly the timer), kept so the format stays stable
-            movesCount.toString(),
+            moveHistory.size.toString(), // The move count, unread now; kept for older builds
             tilesStr,
             movesStr,
             tutorialStep?.toString() ?: "",
@@ -83,7 +65,6 @@ data class SavedGameState(
             return SavedGameState(
                 constellationId = state.constellation.id,
                 levelIndex = levelIndex,
-                movesCount = state.movesCount,
                 tiles = state.tiles.map { bt ->
                     SavedTile(
                         id = bt.id,
@@ -105,9 +86,9 @@ data class SavedGameState(
                 if (parts.size < 6) return null
 
                 val constellationId = parts[0]
-                if (constellationId.isBlank()) return null
+                // A layout that no longer exists can't be played on: the save is dropped
+                if (ConstellationRepository.getById(constellationId) == null) return null
                 val levelIndex = parts[1].toIntOrNull()
-                val movesCount = parts[3].toIntOrNull() ?: 0
 
                 val tilesRaw = parts[4]
                 if (tilesRaw.isBlank()) return null
@@ -151,7 +132,6 @@ data class SavedGameState(
                 return SavedGameState(
                     constellationId = constellationId,
                     levelIndex = levelIndex,
-                    movesCount = movesCount,
                     tiles = tiles,
                     moveHistory = moves,
                     tutorialStep = parts.getOrNull(6)?.toIntOrNull(),

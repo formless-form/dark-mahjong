@@ -38,7 +38,7 @@ class LightingPreview {
                     settings = GameSettings(tableSurface = surface, fireplaceLit = fireplace, lampBrightness = lamp, fireIntensity = fire),
                     winMessage = null,
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
-                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
             }
         }

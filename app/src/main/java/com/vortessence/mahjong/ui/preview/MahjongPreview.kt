@@ -71,7 +71,7 @@ private fun TableSurfaceItem(name: String, surface: TableSurface) {
 @Preview(widthDp = 400, heightDp = 650, showBackground = true)
 @Composable
 fun BoardWithWalnutPreview() {
-    val miniTurtle = ConstellationRepository.getById("mini_turtle")
+    val miniTurtle = ConstellationRepository.getById("mini_turtle")!!
     val state = MahjongGameEngine.startNewGame(miniTurtle)
 
     MahjongTheme {
@@ -91,7 +91,7 @@ fun BoardWithWalnutPreview() {
 @Preview(widthDp = 400, heightDp = 650, showBackground = true)
 @Composable
 fun BoardPreview() {
-    val miniTurtle = ConstellationRepository.getById("mini_turtle")
+    val miniTurtle = ConstellationRepository.getById("mini_turtle")!!
     val state = MahjongGameEngine.startNewGame(miniTurtle)
 
     MahjongTheme {

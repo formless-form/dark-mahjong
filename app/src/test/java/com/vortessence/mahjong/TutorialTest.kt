@@ -19,11 +19,9 @@ class TutorialTest {
     private val tutorial = ConstellationRepository.tutorialConstellation
 
     @Test
-    fun testTutorialIsLevelZeroOnPhoneAndTablet() {
-        assertEquals(tutorial, ConstellationRepository.getLevel(0, isTablet = false))
-        assertEquals(tutorial, ConstellationRepository.getLevel(0, isTablet = true))
-        assertEquals("jade_pillar", ConstellationRepository.getLevel(1, isTablet = false).id)
-        assertEquals("mini_turtle", ConstellationRepository.getLevel(1, isTablet = true).id)
+    fun testTutorialIsLevelZero() {
+        assertEquals(tutorial, ConstellationRepository.getLevel(0))
+        assertEquals("jade_pillar", ConstellationRepository.getLevel(1).id)
         assertEquals(tutorial, ConstellationRepository.constellations.first())
     }
 

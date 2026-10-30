@@ -14,7 +14,6 @@ import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.data.repository.PreferencesRepository
 import com.vortessence.mahjong.data.repository.levelLabel
-import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TileTapResult
 import com.vortessence.mahjong.audio.FireRoom
@@ -50,10 +49,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     // Dark Mahjong is portrait-only, so levels use upstream's tall, phone-shaped layouts
     // (most mahjong layouts are taller than wide); the wide classics stay under Layouts
-    private val useWideLayouts = false
-
     val currentLevelConstellations: List<Constellation>
-        get() = ConstellationRepository.getLevelConstellations(useWideLayouts)
+        get() = ConstellationRepository.levelConstellations
 
     private val _currentScreen = MutableStateFlow<Screen>(Screen.MainMenu)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
@@ -83,8 +80,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     val progress: StateFlow<Progress> = _progress.asStateFlow()
 
     private val _savedGame = MutableStateFlow<SavedGameState?>(null)
-    @Suppress("unused")
-    val savedGame: StateFlow<SavedGameState?> = _savedGame.asStateFlow()
 
     val continueInfo: StateFlow<ContinueInfo?> = combine(
         _gameState,
@@ -94,8 +89,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         if (state != null && !state.isWon && (state.remainingTilesCount > 0)) {
             ContinueInfo(title = continueTitle(levelIdx, state.constellation.name))
         } else if (saved != null && saved.tiles.any { !it.isRemoved }) {
-            val constellation = ConstellationRepository.getById(saved.constellationId)
-            ContinueInfo(title = continueTitle(savedLevelIndex(saved), constellation.name))
+            ConstellationRepository.getById(saved.constellationId)?.let { constellation ->
+                ContinueInfo(title = continueTitle(savedLevelIndex(saved), constellation.name))
+            }
         } else {
             null
         }
@@ -152,7 +148,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     // A level game saved before the levels were reordered keeps its layout; its number follows it
     private fun savedLevelIndex(saved: SavedGameState): Int? =
-        saved.levelIndex?.let { ConstellationRepository.levelIndexOf(saved.constellationId, useWideLayouts) ?: it }
+        saved.levelIndex?.let { ConstellationRepository.levelIndexOf(saved.constellationId) ?: it }
 
     fun continueGame() {
         perfAutoplay?.cancel()
@@ -175,7 +171,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun startLevel(levelIndex: Int) {
         _currentLevelIndex.value = levelIndex
-        val constellation = ConstellationRepository.getLevel(levelIndex, useWideLayouts)
+        val constellation = ConstellationRepository.getLevel(levelIndex)
         initGame(constellation)
         _currentScreen.value = Screen.Game
     }
@@ -217,13 +213,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     private var perfAutoplay: Job? = null
 
-    private fun initGame(constellation: Constellation, random: Random? = null) {
+    private fun initGame(constellation: Constellation, random: Random = Random) {
         perfAutoplay?.cancel()
-        val fresh = MahjongGameEngine.startNewGame(constellation)
-        val state = if (random == null) fresh else {
-            val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(constellation, random))
-            fresh.copy(tiles = tiles, availablePairsCount = MahjongGameEngine.findAvailablePairs(tiles).size)
-        }
+        val state = MahjongGameEngine.startNewGame(constellation, random)
         _winMessage.value = null
         _gameState.value = state
         _tutorialStepIndex.value = if (TutorialScript.isTutorial(state)) 0 else null
@@ -377,7 +369,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun playNextLevel() {
         val currentLevel = _currentLevelIndex.value ?: return
-        if (currentLevel < ConstellationRepository.getTotalLevels(useWideLayouts)) {
+        if (currentLevel < ConstellationRepository.totalLevels) {
             startLevel(currentLevel + 1)
         }
     }

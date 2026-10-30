@@ -67,7 +67,7 @@ class PerfPreview {
                     tutorialStep = if (highlights) TutorialStep("", "", highlightFreeTiles = true) else null,
                     winMessage = null,
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
-                    onReshuffle = {}, onNextLevel = {}, onChooseConstellation = {}, onMainMenu = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
             }
         }

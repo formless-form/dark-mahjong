@@ -20,6 +20,7 @@ import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import java.time.LocalDateTime
@@ -95,7 +96,7 @@ class PreferencesRepository(private val context: Context) {
             highestLevelReached = prefs[Keys.HIGHEST_LEVEL] ?: 1,
             completedConstellations = prefs[Keys.COMPLETED_CONSTELLATIONS] ?: emptySet(),
         )
-    }
+    }.distinctUntilChanged()
 
     /**
      * Writes the settings that differ between [from] and [to], and only those: the others keep
@@ -188,14 +189,10 @@ class PreferencesRepository(private val context: Context) {
         return index
     }
 
-    val savedGameFlow: Flow<SavedGameState?> = data.map { prefs ->
-        val raw = prefs[Keys.SAVED_GAME] ?: ""
-        if (raw.isNotEmpty()) {
-            SavedGameState.deserialize(raw)
-        } else {
-            null
-        }
-    }
+    // Parsed again only when the save itself changed, not on every other write
+    val savedGameFlow: Flow<SavedGameState?> = data.map { prefs -> prefs[Keys.SAVED_GAME] ?: "" }
+        .distinctUntilChanged()
+        .map { raw -> if (raw.isNotEmpty()) SavedGameState.deserialize(raw) else null }
 
     suspend fun saveGame(savedState: SavedGameState) {
         write { prefs ->
