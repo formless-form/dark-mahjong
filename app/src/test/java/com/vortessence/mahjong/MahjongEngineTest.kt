@@ -11,6 +11,7 @@ import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TilePosition
 import com.vortessence.mahjong.data.model.TileSuit
 import com.vortessence.mahjong.data.repository.ConstellationRepository
+import com.vortessence.mahjong.data.repository.LayoutDifficulty
 import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TileTapResult
@@ -241,11 +242,14 @@ class MahjongEngineTest {
         assertEquals("12 phone-shaped levels plus the Mah layouts", 12 + ConstellationRepository.mahConstellations.size, levels.size)
         assertEquals("Total levels count should match", levels.size, ConstellationRepository.totalLevels)
 
-        // Never harder then easier again
+        // Every layout has been measured, and the levels run from the most often cleared to the
+        // least, their labels never easier then harder again
+        val rates = ConstellationRepository.constellations.drop(1).associate { it.id to LayoutDifficulty.clearRate[it.id] }
+        assertTrue("Not measured: ${rates.filterValues { it == null }.keys}", rates.values.all { it != null })
         for (i in 1 until levels.size) {
             assertTrue(
                 "Level ${i + 1} (${levels[i].name}) is easier than level $i (${levels[i - 1].name})",
-                levels[i].difficulty >= levels[i - 1].difficulty,
+                rates.getValue(levels[i].id)!! <= rates.getValue(levels[i - 1].id)!! && levels[i].difficulty >= levels[i - 1].difficulty,
             )
         }
 
@@ -490,5 +494,20 @@ class MahjongEngineTest {
         assertTrue(replayed.tiles.none { it.isRemoved })
         assertTrue(replayed.moveHistory.isEmpty())
         assertTrue(MahjongGameEngine.planHolds(replayed.tiles, replayed.plan))
+    }
+
+    // After the reorder no layout a player could play is locked: a player who had reached old
+    // level 10 (Fence) can still play Heart (old 9, now 22), so 22 becomes the highest
+    @Test
+    fun testUnlockedLevelsCarryOverToTheMeasuredOrder() {
+        val old = LayoutDifficulty.levelsBeforeMeasuredOrder
+        val newLevel = { id: String -> ConstellationRepository.levelIndexOf(id) }
+        for (highest in 1..old.size) {
+            val after = LayoutDifficulty.highestAfterReorder(highest, newLevel)
+            for (id in old.take(highest)) assertTrue("$id locked after $highest", newLevel(id)!! <= after)
+        }
+        assertEquals(22, LayoutDifficulty.highestAfterReorder(10, newLevel))
+        assertEquals(old.size + 1, LayoutDifficulty.highestAfterReorder(old.size + 1, newLevel))
+        assertEquals(1, LayoutDifficulty.highestAfterReorder(1, newLevel))
     }
 }

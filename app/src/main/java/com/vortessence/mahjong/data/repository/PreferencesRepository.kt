@@ -32,6 +32,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
 )
 
+private const val MEASURED_LEVEL_ORDER = 2
+
 class PreferencesRepository(private val context: Context) {
 
     private object Keys {
@@ -53,6 +55,9 @@ class PreferencesRepository(private val context: Context) {
         val FIRE_VOLUME = floatPreferencesKey("fire_volume")
         val FIRE_INTENSITY = floatPreferencesKey("fire_intensity")
         val LAST_WIN_DAY = longPreferencesKey("last_win_epoch_day")
+        // Which level numbering the stored highest level is in: 2 since levels were ordered by
+        // measured difficulty (absent means the order before)
+        val LEVEL_ORDER = intPreferencesKey("level_order")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
@@ -121,6 +126,19 @@ class PreferencesRepository(private val context: Context) {
             put(Keys.FIREPLACE) { it.fireplaceLit }
             put(Keys.FIRE_VOLUME) { it.fireVolume }
             put(Keys.FIRE_INTENSITY) { it.fireIntensity }
+        }
+    }
+
+    /**
+     * Once, after levels were ordered by measured difficulty: the stored highest level is carried
+     * over to the new numbering, so no layout a player could play becomes locked.
+     */
+    suspend fun migrateLevelOrder() {
+        write { prefs ->
+            if ((prefs[Keys.LEVEL_ORDER] ?: 1) >= MEASURED_LEVEL_ORDER) return@write
+            prefs[Keys.LEVEL_ORDER] = MEASURED_LEVEL_ORDER
+            val highest = prefs[Keys.HIGHEST_LEVEL] ?: return@write
+            prefs[Keys.HIGHEST_LEVEL] = LayoutDifficulty.highestAfterReorder(highest) { ConstellationRepository.levelIndexOf(it) }
         }
     }
 

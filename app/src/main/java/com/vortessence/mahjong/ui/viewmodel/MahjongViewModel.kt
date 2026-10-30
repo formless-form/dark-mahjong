@@ -105,6 +105,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         listOfNotNull(levelLabel(level), name).distinct().joinToString(": ")
 
     init {
+        // Levels were reordered by measured difficulty: carry the highest level over, once
+        viewModelScope.launch { prefsRepo.migrateLevelOrder() }
         // Collect settings. While the player's own changes are still being written, what's read
         // back is older than what they see, so it waits until the writes are done
         viewModelScope.launch {

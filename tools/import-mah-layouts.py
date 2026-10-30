@@ -16,7 +16,9 @@ checked by tile arrangement when this was first run (2026-10-26); the closest sh
 but stack their tiles quite differently.
 
 Difficulty, provisional until a proper difficulty measure exists: the share of tiles free at
-the start (every board here is a full 144 tiles, so the count says nothing).
+the start (every board here is a full 144 tiles, so the count says nothing). The app now labels
+and orders layouts by their measured clear rate (LayoutDifficulty.kt); this label is only used
+for a layout not yet measured.
 
 Run from the repo root:
     python3 tools/import-mah-layouts.py [boards.json]

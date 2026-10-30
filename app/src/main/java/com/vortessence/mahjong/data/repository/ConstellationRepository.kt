@@ -5,8 +5,6 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TilePosition
 import com.vortessence.mahjong.data.model.TileSuit
-import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
-import java.util.concurrent.ConcurrentHashMap
 
 /** "Level 3", "Tutorial", or null for a board that isn't a level. */
 fun levelLabel(levelIndex: Int?): String? = when (levelIndex) {
@@ -53,7 +51,7 @@ object ConstellationRepository {
             createRuyiScepter(),
             createPillarOfHeaven(),
             createGrandPagodaSpire(),
-        )
+        ).map(::measured)
     }
 
     /**
@@ -73,19 +71,25 @@ object ConstellationRepository {
             createCastle(),
             createDragon(),
             createPagoda(),
-        )
+        ).map(::measured)
     }
 
     /**
      * Layouts ported from Mah by ffalt (MIT licence): the ones that suit a phone held upright.
      */
     val mahConstellations: List<Constellation> by lazy {
-        MahLayouts.boards.map { it.toConstellation() }
+        MahLayouts.boards.map { measured(it.toConstellation()) }
     }
+
+    // A layout labelled by how often its deals are really cleared (LayoutDifficulty), rather than
+    // by the label it was made with
+    private fun measured(c: Constellation): Constellation =
+        LayoutDifficulty.clearRate[c.id]?.let { c.copy(difficulty = LayoutDifficulty.label(it)) } ?: c
 
     /**
      * The progressive levels in Levels mode, easy to hard: the phone-shaped layouts and the ones
-     * from Mah. Levels 1 to 8 are the same as before the Mah layouts joined.
+     * from Mah. Levels 1 to 8 are the same as before the Mah layouts joined (they measured easiest
+     * too).
      */
     val levelConstellations: List<Constellation> by lazy {
         (phoneConstellations + mahConstellations).sortedWith(easyToHard)
@@ -99,18 +103,19 @@ object ConstellationRepository {
     }
 
     /**
-     * Easy to hard: by difficulty band, then fewer tiles first, then the board that starts with
-     * more tiles free (more choices, fewer dead ends).
+     * Easy to hard: the layout whose deals are cleared most often first (LayoutDifficulty), then
+     * fewer tiles, then by name. A layout not yet measured goes by its label.
      */
-    private val easyToHard: Comparator<Constellation> by lazy {
-        // Concurrent: the catalog is built off the main thread, and a screen may want it meanwhile
-        val openness = ConcurrentHashMap<String, Float>()
-        fun open(c: Constellation) = openness.getOrPut(c.id) {
-            c.positions.count { BoardSolvabilityGenerator.isTileFree(it, c.positions) }.toFloat() / c.tileCount
-        }
-        compareBy<Constellation>({ it.difficulty.ordinal }, { it.tileCount })
-            .thenByDescending { open(it) }
+    private val easyToHard: Comparator<Constellation> =
+        compareByDescending<Constellation> { LayoutDifficulty.clearRate[it.id] ?: unmeasured(it) }
+            .thenBy { it.tileCount }
             .thenBy { it.name }
+
+    private fun unmeasured(c: Constellation): Float = when (c.difficulty) {
+        Difficulty.EASY -> 0.90f
+        Difficulty.MEDIUM -> 0.60f
+        Difficulty.HARD -> 0.35f
+        Difficulty.EXPERT -> 0.10f
     }
 
     /** The level number a layout is in Levels mode (0 for the tutorial), or null if it isn't a level. */
