@@ -5,12 +5,12 @@ A DARKER AMBIENCE
 • Dynamic light and shadow: every tile casts its own shadows from the lights around it.
 • Light an optional fireplace beside the table: flickering, shifting firelight, with shadows that move with the flames. An intensity slider runs it from glowing embers to a roaring blaze.
 • A misty mountain photograph and a seal-script name seal on the title screen.
-• Dark everywhere, with quiet, modern menus.
+• Quiet, modern menus on dark slate, lit faintly by the same fire, with its soft crackle.
 
 A DIFFERENT LOOK
 • The table seen at a slight angle, in true perspective, with every tile face visible.
 • Glossy, well-used tiles: a thick glaze with streaky reflections, hairline scratches, aged ivory and engraved artwork. No two tiles alike.
-• Three tabletops: lacquered walnut, green felt and a woven Thai straw mat.
+• Four tabletops: lacquered walnut, green felt, a woven Thai straw mat and dark slate.
 • Pinch to zoom in on the stacks, and tap once to zoom back out.
 
 RELAXED PLAY
