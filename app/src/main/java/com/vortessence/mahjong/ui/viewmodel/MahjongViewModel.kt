@@ -163,7 +163,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             if (!restored.isWon && restored.remainingTilesCount > 0) {
                 _currentLevelIndex.value = savedLevelIndex(saved)
                 _gameState.value = restored
-                _tutorialStepIndex.value = TutorialScript.resumeStepFor(restored)
+                _tutorialStepIndex.value = TutorialScript.resumeStep(restored, saved.tutorialStep)
                 _currentScreen.value = Screen.Game
             }
         }
@@ -229,7 +229,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private fun saveCurrentGame() {
         val current = _gameState.value ?: return
         if (current.isWon || current.remainingTilesCount == 0) return
-        val saved = SavedGameState.fromGameState(current, _currentLevelIndex.value)
+        val step = if (TutorialScript.isTutorial(current)) _tutorialStepIndex.value ?: SavedGameState.FREE_PLAY else null
+        val saved = SavedGameState.fromGameState(current, _currentLevelIndex.value, step)
         _savedGame.value = saved
         viewModelScope.launch {
             prefsRepo.saveGame(saved)
@@ -315,9 +316,20 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         if (TutorialScript.isZoomStepComplete(step, zoomedIn)) advanceTutorial()
     }
 
-    fun advanceTutorial() {
+    /**
+     * The button on the tutorial card showing [step]: it moves on only from that step, so a second
+     * tap on a card already fading out can't skip the one after.
+     */
+    fun continueTutorial(step: TutorialStep) {
+        if (step == currentTutorialStep) advanceTutorial()
+    }
+
+    private fun advanceTutorial() {
         val index = _tutorialStepIndex.value ?: return
-        _tutorialStepIndex.value = (index + 1).takeIf { it < TutorialScript.steps.size }
+        val state = _gameState.value ?: return
+        _tutorialStepIndex.value = TutorialScript.nextStep(index, state)
+        // Saved with the step, so Continue picks up where the player was
+        saveCurrentGame()
     }
 
     fun undo() {

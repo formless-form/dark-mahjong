@@ -27,7 +27,7 @@ import com.vortessence.mahjong.engine.TutorialStep
 fun TutorialCard(
     step: TutorialStep,
     settings: GameSettings,
-    onContinue: () -> Unit,
+    onContinue: (TutorialStep) -> Unit,
     onSettingsChanged: (GameSettings) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -78,7 +78,7 @@ fun TutorialCard(
                 if (current.action == TutorialAction.CONTINUE) {
                     BigButton(
                         text = current.continueLabel,
-                        onClick = onContinue,
+                        onClick = { onContinue(current) },
                         primary = true,
                         modifier = Modifier.align(Alignment.End)
                     )

@@ -22,6 +22,9 @@ data class SavedGameState(
     val movesCount: Int,
     val tiles: List<SavedTile>,
     val moveHistory: List<Move>,
+    // The tutorial's step: an index into TutorialScript.steps, FREE_PLAY once the guided part is
+    // over, or null (any other board, or a save from before steps were kept)
+    val tutorialStep: Int? = null,
 ) {
     fun toGameState(): GameState {
         val constellation = ConstellationRepository.getById(constellationId)
@@ -70,11 +73,14 @@ data class SavedGameState(
             movesCount.toString(),
             tilesStr,
             movesStr,
+            tutorialStep?.toString() ?: "",
         ).joinToString("|")
     }
 
     companion object {
-        fun fromGameState(state: GameState, levelIndex: Int?): SavedGameState {
+        const val FREE_PLAY = -1
+
+        fun fromGameState(state: GameState, levelIndex: Int?, tutorialStep: Int? = null): SavedGameState {
             return SavedGameState(
                 constellationId = state.constellation.id,
                 levelIndex = levelIndex,
@@ -89,6 +95,7 @@ data class SavedGameState(
                     )
                 },
                 moveHistory = state.moveHistory,
+                tutorialStep = tutorialStep,
             )
         }
 
@@ -148,6 +155,7 @@ data class SavedGameState(
                     movesCount = movesCount,
                     tiles = tiles,
                     moveHistory = moves,
+                    tutorialStep = parts.getOrNull(6)?.toIntOrNull(),
                 )
             } catch (_: Exception) {
                 return null

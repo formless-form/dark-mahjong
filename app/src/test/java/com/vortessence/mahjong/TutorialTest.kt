@@ -1,6 +1,7 @@
 package com.vortessence.mahjong
 
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TileSuit
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
@@ -95,6 +96,50 @@ class TutorialTest {
         val state = start.copy(tiles = start.tiles.map { if (it.id == 0 || it.id == 3) it.copy(isRemoved = true) else it })
         val resumed = TutorialScript.steps[TutorialScript.resumeStepFor(state)!!]
         assertEquals("Seasons", resumed.title)
+    }
+
+    // The board as it stands when [index] is shown: every guided pair before it matched
+    private fun boardAtStep(index: Int): GameState {
+        val start = MahjongGameEngine.startNewGame(tutorial)
+        val gone = TutorialScript.steps.take(index).filter { it.action == TutorialAction.MATCH_PAIR }.flatMap { it.targetTileIds }.toSet()
+        return start.copy(tiles = MahjongGameEngine.recalculateFreedom(start.tiles.map { if (it.id in gone) it.copy(isRemoved = true) else it }))
+    }
+
+    private fun roundTrip(state: GameState, step: Int?): SavedGameState =
+        SavedGameState.deserialize(SavedGameState.fromGameState(state, 0, step).serialize())!!
+
+    @Test
+    fun testEveryStepResumesWhereItWasSaved() {
+        for (index in TutorialScript.steps.indices) {
+            val state = boardAtStep(index)
+            val saved = roundTrip(state, index)
+            assertEquals(TutorialScript.steps[index].title, index, TutorialScript.resumeStep(saved.toGameState(), saved.tutorialStep))
+        }
+        val free = roundTrip(boardAtStep(TutorialScript.steps.size), SavedGameState.FREE_PLAY)
+        assertNull(TutorialScript.resumeStep(free.toGameState(), free.tutorialStep))
+    }
+
+    @Test
+    fun testSavesWithoutAStepWorkItOutFromTheTiles() {
+        val state = boardAtStep(4)
+        // A save from before steps were kept has six parts
+        val old = SavedGameState.fromGameState(state, 0).serialize().substringBeforeLast("|")
+        val saved = SavedGameState.deserialize(old)!!
+        assertNull(saved.tutorialStep)
+        assertEquals(TutorialScript.resumeStepFor(state), TutorialScript.resumeStep(saved.toGameState(), null))
+        // A saved step that disagrees with the tiles is not trusted
+        assertEquals(TutorialScript.resumeStepFor(state), TutorialScript.resumeStep(state, 1))
+    }
+
+    @Test
+    fun testPairStepsAlreadyMatchedAreSkipped() {
+        val flowers = TutorialScript.steps.indexOfFirst { it.title == "Flowers" }
+        val start = MahjongGameEngine.startNewGame(tutorial)
+        val targets = TutorialScript.steps[flowers].targetTileIds
+        val state = start.copy(tiles = start.tiles.map { if (it.id in targets) it.copy(isRemoved = true) else it })
+        val resumed = TutorialScript.resumeStep(state, null)!!
+        assertTrue(resumed < flowers)
+        assertFalse(flowers == TutorialScript.nextStep(flowers - 1, state))
     }
 
     private fun alwaysWinnable(state: GameState): Boolean {

@@ -1,6 +1,7 @@
 package com.vortessence.mahjong.engine
 
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 
 enum class TutorialAction {
@@ -117,6 +118,41 @@ object TutorialScript {
 
     fun isTutorial(state: GameState): Boolean =
         state.constellation.id == ConstellationRepository.TUTORIAL_ID
+
+    /**
+     * The step to resume a restored tutorial game at, or null for free play: the step it was saved
+     * on, if that agrees with the tiles gone (the guided pairs before it, and no others), else
+     * worked out from the tiles.
+     */
+    fun resumeStep(state: GameState, savedStep: Int?): Int? {
+        if (!isTutorial(state)) return null
+        if (savedStep == SavedGameState.FREE_PLAY) return null
+        if (savedStep != null && savedStep in steps.indices) {
+            val removed = state.tiles.filter { it.isRemoved }.map { it.id }.toSet()
+            val matchedBefore = steps.take(savedStep)
+                .filter { it.action == TutorialAction.MATCH_PAIR }
+                .flatMap { it.targetTileIds }
+                .toSet()
+            if (removed == matchedBefore) return savedStep
+        }
+        return resumeStepFor(state)?.let { skipMatched(it, state) }
+    }
+
+    /**
+     * The step after [index], passing over any pair step whose tiles are already gone (they can be
+     * matched out of order in free play, then undone back into the guided part), or null at the end.
+     */
+    fun nextStep(index: Int, state: GameState): Int? = skipMatched(index + 1, state)
+
+    private fun skipMatched(from: Int, state: GameState): Int? {
+        val removed = state.tiles.filter { it.isRemoved }.map { it.id }.toSet()
+        var index = from
+        while (index < steps.size &&
+            steps[index].action == TutorialAction.MATCH_PAIR &&
+            removed.containsAll(steps[index].targetTileIds)
+        ) index++
+        return index.takeIf { it < steps.size }
+    }
 
     /**
      * Picks the step to resume at for a restored tutorial game, or null if the guided part is over.

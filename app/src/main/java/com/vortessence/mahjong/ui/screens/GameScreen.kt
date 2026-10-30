@@ -55,7 +55,7 @@ fun GameScreen(
     onNextLevel: () -> Unit,
     onChooseConstellation: () -> Unit,
     onMainMenu: () -> Unit,
-    onTutorialContinue: () -> Unit = {},
+    onTutorialContinue: (TutorialStep) -> Unit = {},
     onSettingsChanged: (GameSettings) -> Unit = {},
     onBoardZoom: (Boolean) -> Unit = {},
     onWinShown: () -> Unit = {},

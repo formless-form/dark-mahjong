@@ -146,7 +146,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 onNextLevel = { viewModel.playNextLevel() },
                                 onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
                                 onMainMenu = toMenu,
-                                onTutorialContinue = { viewModel.advanceTutorial() },
+                                onTutorialContinue = { step -> viewModel.continueTutorial(step) },
                                 onBoardZoom = { viewModel.onBoardZoom(it) },
                                 onWinShown = { viewModel.playWin() },
                                 onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
