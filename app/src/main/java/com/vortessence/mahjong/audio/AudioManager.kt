@@ -14,6 +14,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import com.vortessence.mahjong.R
 import com.vortessence.mahjong.data.model.GameSettings
+import java.util.concurrent.Executors
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -112,6 +113,8 @@ class AudioManager(private val context: Context) {
 
     fun setFireRoom(room: FireRoom) {
         this.room = room
+        // At the table the fireworks are made ready for a win; anywhere else they aren't needed
+        if (room == FireRoom.TABLE && isInForeground) prepareWin() else dropReadyWin()
         val settings = currentSettings ?: return
         if (isInForeground) fireplace.play(fireLevel(settings))
     }
@@ -134,6 +137,7 @@ class AudioManager(private val context: Context) {
 
     fun onResume() {
         isInForeground = true
+        if (room == FireRoom.TABLE) prepareWin()
         // Do not play any music until settings have actually been checked and loaded
         val settings = currentSettings ?: return
         if (settings.musicEnabled && (settings.musicVolume > 0f)) {
@@ -147,12 +151,18 @@ class AudioManager(private val context: Context) {
         isInForeground = false
         musicPlayer.pause()
         fireplace.pause()
-        // The fireworks don't carry on in the background
+        // The fireworks don't carry on in the background, nor wait there
         releaseWinPlayer()
+        dropReadyWin()
+        pendingWinVolume = null
     }
 
     fun release() {
+        // So nothing more is made ready, and what's being made is let go
+        isInForeground = false
         releaseWinPlayer()
+        dropReadyWin()
+        winLoader.shutdown()
         musicPlayer.release()
         fireplace.stop()
         try {
@@ -226,8 +236,38 @@ class AudioManager(private val context: Context) {
     private var winBoost: LoudnessEnhancer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private fun playWinPhrase(volume: Float) {
-        releaseWinPlayer()
+    // The fireworks' player is made (the recording opened and decoding started) off the main
+    // thread, and kept ready while a board is open, so a win starts it without a hitch. Touched
+    // only on the main thread, apart from the making
+    private class WinSound(val player: MediaPlayer, val boost: LoudnessEnhancer?)
+    private val winLoader = Executors.newSingleThreadExecutor { r -> Thread(r, "win-sound").apply { isDaemon = true } }
+    private var readyWin: WinSound? = null
+    private var winLoading = false
+    // A win that came before the player was ready, at this volume
+    private var pendingWinVolume: Float? = null
+
+    private fun prepareWin() {
+        if (readyWin != null || winLoading) return
+        winLoading = true
+        if (winLoader.isShutdown) return
+        winLoader.execute {
+            val made = runCatching { makeWinSound() }.getOrNull()
+            mainHandler.post {
+                winLoading = false
+                if (made == null) return@post
+                val volume = pendingWinVolume
+                pendingWinVolume = null
+                when {
+                    !isInForeground -> release(made)
+                    volume != null -> startWin(made, volume)
+                    room == FireRoom.TABLE && readyWin == null -> readyWin = made
+                    else -> release(made)
+                }
+            }
+        }
+    }
+
+    private fun makeWinSound(): WinSound? {
         val player = MediaPlayer.create(
             context.applicationContext,
             R.raw.win_fireworks,
@@ -239,23 +279,51 @@ class AudioManager(private val context: Context) {
             // here leaves the player on session 0, the whole output, which the enhancer can't use
             context.getSystemService(android.media.AudioManager::class.java)?.generateAudioSessionId()
                 ?: android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
-        ) ?: return
-        val level = volume.coerceIn(0f, 1f)
-        player.setVolume(level, level)
+        ) ?: return null
         // The recording already peaks at full scale, so it is boosted as it plays, with Android's
         // loudness enhancer keeping the peaks from distorting
-        winBoost = runCatching {
+        val boost = runCatching {
             LoudnessEnhancer(player.audioSessionId).apply {
                 setTargetGain(WIN_BOOST_MILLIBELS)
                 enabled = true
             }
         }.getOrNull()
-        player.setOnCompletionListener {
+        return WinSound(player, boost)
+    }
+
+    private fun playWinPhrase(volume: Float) {
+        releaseWinPlayer()
+        val ready = readyWin
+        readyWin = null
+        if (ready != null) {
+            startWin(ready, volume)
+        } else {
+            // Not ready (the board opened a moment ago): it starts as soon as it is
+            pendingWinVolume = volume
+            prepareWin()
+        }
+    }
+
+    private fun startWin(sound: WinSound, volume: Float) {
+        val level = volume.coerceIn(0f, 1f)
+        sound.player.setVolume(level, level)
+        sound.player.setOnCompletionListener {
             if (winPlayer === it) releaseWinPlayer()
         }
-        winPlayer = player
+        winPlayer = sound.player
+        winBoost = sound.boost
         rampMusic(to = 0.4f)
-        player.start()
+        sound.player.start()
+    }
+
+    private fun release(sound: WinSound) {
+        runCatching { sound.boost?.release() }
+        runCatching { sound.player.release() }
+    }
+
+    private fun dropReadyWin() {
+        readyWin?.let(::release)
+        readyWin = null
     }
 
     private fun releaseWinPlayer() {
@@ -269,6 +337,8 @@ class AudioManager(private val context: Context) {
             // Ignore
         }
         rampMusic(to = 1f)
+        // Ready for the next win, if still at the table
+        if (room == FireRoom.TABLE && isInForeground) prepareWin()
     }
 
     // Eases the music's ducking to [to] over about half a second
