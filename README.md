@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android%2013%2B-green.svg)](https://developer.android.com)
 
-Play a relaxed, ad-free, traditional Mahjong game by the light and crackle of a real woodfire. Glossy, well-worn tiles on a softly lit table in a dark room; misty mountains on the title screen; no timers, scores or interruptions.
+Play a relaxed, traditional Mahjong game by the light and crackle of a real woodfire. Glossy, well-worn tiles on a softly lit table in a dark room; misty mountains on the title screen; no timers, scores or interruptions.
 
 Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/PcmciaKai/mahjong_solitaire)**, whose solid, guaranteed-solvable game engine it builds on. The fork changes the look and the feel. The rules are the same: match free pairs until the table is clear.
 

@@ -322,4 +322,14 @@ class ScreenshotTour {
         compose.onNodeWithText("Straw").performScrollTo()
         shoot("settings")
     }
+
+    // The whole settings list on one tall page, down to the credits at its foot
+    @Test @Config(qualifiers = "w427dp-h3400dp-port-360dpi")
+    fun settingsFullLength() {
+        compose.setContent {
+            MahjongTheme { SettingsScreen(settings = GameSettings(fireplaceLit = true), onSettingsChanged = {}, onBack = {}) }
+        }
+        compose.waitForIdle()
+        shoot("settings_full")
+    }
 }

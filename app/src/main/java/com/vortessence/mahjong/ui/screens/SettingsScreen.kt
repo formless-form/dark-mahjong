@@ -1,5 +1,6 @@
 package com.vortessence.mahjong.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Highlight
 import androidx.compose.material.icons.rounded.MusicNote
@@ -182,9 +184,95 @@ fun SettingsScreen(
                     },
                 ),
             )
+            // The game's own source: a tile of its own, just below About's
+            Spacer(Modifier.height(12.dp))
+            SegmentedGroup(
+                listOf(
+                    { shapes ->
+                        SegmentedListItem(
+                            onClick = { uriHandler.openUri(SOURCE_CODE_URL) },
+                            shapes = shapes,
+                            colors = segmentColors(),
+                            leadingContent = { LeadingIcon(Icons.Rounded.Code) },
+                            supportingContent = { Text("Free and open source on GitHub · GPL v3") },
+                        ) {
+                            Text("Dark Mahjong source code")
+                        }
+                    },
+                ),
+            )
+
+            // Everyone whose work the game is made from (as NOTICE.md), starting with the game it
+            // grew from: quiet, small rows in one panel, no icons. Each opens its source in the
+            // browser
+            SectionHeader("Credits")
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = panel(MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(vertical = 8.dp)) {
+                    CREDITS.forEachIndexed { index, (group, credits) ->
+                        Text(
+                            group.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = if (index == 0) 8.dp else 16.dp, bottom = 2.dp),
+                        )
+                        credits.forEach { credit ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { uriHandler.openUri(credit.url) }
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                            ) {
+                                Text(credit.title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(credit.by, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+private class Credit(val title: String, val by: String, val url: String)
+
+// The credits in groups, each under a small label, the game it grew from first
+private val CREDITS = listOf(
+    "Code" to listOf(
+        Credit("Mahjong Solitaire", "The game Dark Mahjong grew from, by PcmciaKai · GPL v3", "https://github.com/PcmciaKai/mahjong_solitaire"),
+    ),
+    "Art & layouts" to listOf(
+        Credit("Tile artwork", "samoheen · CC0", "https://github.com/samoheen/mahjong-tiles"),
+        Credit("Layouts from Mah", "ffalt · MIT", "https://github.com/ffalt/mah"),
+        Credit("Title-screen photograph", "Huangdan2060, Wikimedia Commons · CC0", "https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg"),
+        Credit("Thai straw mat pattern", "Modelled on a photograph by Willuconquer · CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg"),
+    ),
+    "Sound & music" to listOf(
+        Credit(
+            "Sounds",
+            "‘Tile taps’ by Kenney, ‘Tile match’ by Grevillea Labs, ‘Crackling woodfire’ by Chris C. Courter, " +
+                "and ‘Win fireworks’ by greysound (both on Freesound) · CC0",
+            NOTICE_URL,
+        ),
+        Credit("Background music", "Made with Suno · CC0", NOTICE_URL),
+    ),
+    "Fonts" to listOf(
+        Credit(
+            "Google Sans Flex, Cinzel and Seal Script",
+            "The Google Sans Flex Project Authors and Natanael Gama (OFL 1.1), and CNS11643, " +
+                "Ministry of Digital Affairs, Taiwan (Open Government Data Licence)",
+            NOTICE_URL,
+        ),
+    ),
+)
+
+// The full notices and licences, for credits with no page of their own (or several)
+private const val NOTICE_URL = "https://github.com/formless-form/dark-mahjong/blob/dark-mahjong/NOTICE.md"
+
+private const val SOURCE_CODE_URL = "https://github.com/formless-form/dark-mahjong"
 
 // Opened in the browser; the app itself has no internet access
 private const val PRIVACY_POLICY_URL = "https://github.com/formless-form/dark-mahjong/blob/dark-mahjong/docs/PRIVACY.md"

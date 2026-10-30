@@ -115,15 +115,28 @@ val LocalPanelAlpha = staticCompositionLocalOf { 1f }
 
 // Over a backdrop, a panel is a faint veil: enough to group its rows, little enough that the
 // stone reads through
-private const val PANEL_ALPHA_OVER_BACKDROP = 0.18f
+private const val PANEL_ALPHA_OVER_BACKDROP = 0.34f
 
 /**
  * [colour] as a panel on this screen: as it is on the plain page, more see-through over a
  * backdrop, but never below [atLeast] of its own opacity (for controls that must stay legible).
  */
 @Composable
-fun panel(colour: Color, atLeast: Float = 0f): Color =
-    colour.copy(alpha = colour.alpha * maxOf(LocalPanelAlpha.current, atLeast))
+fun panel(colour: Color, atLeast: Float = 0f): Color {
+    val alpha = LocalPanelAlpha.current
+    if (alpha >= 1f) return colour
+    // Over the stone, the panels' green tint is half drained, so they read as veils of the stone
+    val grey = 0.2126f * colour.red + 0.7152f * colour.green + 0.0722f * colour.blue
+    return Color(
+        red = grey + (colour.red - grey) * PANEL_SATURATION_OVER_BACKDROP,
+        green = grey + (colour.green - grey) * PANEL_SATURATION_OVER_BACKDROP,
+        blue = grey + (colour.blue - grey) * PANEL_SATURATION_OVER_BACKDROP,
+        alpha = colour.alpha * maxOf(alpha, atLeast),
+    )
+}
+
+// How much of their colour the panels keep over a backdrop
+private const val PANEL_SATURATION_OVER_BACKDROP = 0.5f
 
 /** The small accent-coloured heading above a group of list items. */
 @Composable
