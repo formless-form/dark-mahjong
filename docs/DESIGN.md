@@ -196,6 +196,22 @@ Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit
 - **Test builds** (`tools/deploy-to-phone.sh`, `-PperfHooks=true`) can be told over adb to open a fixed deal, switch drawing stages off, set the fire's rate or play matches by themselves, for measuring; Play builds never can.
 - Still to do: a Baseline Profile for fast cold start; perhaps a cheaper fire-shadow trace for weaker GPUs.
 
+## Updates
+
+Since 2026-10-30 there are two builds. **play** is the one on Google Play. **foss** is
+fully open source, for F-Droid and anyone building from source. They differ only in
+`AppUpdates` (`app/src/play`, `app/src/foss`).
+
+The Play build asks Google Play, through the Play Store app and Google's in-app update library,
+whether a newer version is out for this player. Testers hear of their own track's releases. If one
+is out, the title screen's foot says "Version 1.3.5 · A new version is available" in a soft jade.
+Tapping it brings up Play's confirmation, then the update downloads in the background ("Downloading
+new version · 42%"), then the foot reads "Restart to finish updating", and a tap installs it.
+
+The app itself still has no internet permission: the library adds none (checked 2026-10-30), and
+the privacy policy says how the Play version asks. Sideloaded copies never hear of updates. To
+test it, upload two versions to internal testing, install the older one from Play, then open it.
+
 ## Licences
 
 - Code: GPLv3 with upstream's app-store exception; keep `NOTICE.md` and add Dark Mahjong's changes. Since 2026-10-29 an additional GPLv3 §7(e) term withholds the names "Dark Mahjong" / 暗夜麻將, the name seal, the launcher icon and "Grevillea Labs" from modified versions, and the README asks forks to stay ad-free and not be sold (a request: GPLv3 allows commercial use).

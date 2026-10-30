@@ -67,6 +67,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Dp
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.TableSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -87,6 +89,7 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -99,6 +102,10 @@ private class SmashAnimationItem(
     // The pair as drawn in flight: standing and free, whatever the board now says of them
     val flying1 = tile1.copy(isRemoved = false, isFree = true)
     val flying2 = tile2.copy(isRemoved = false, isFree = true)
+
+    // Its click and burst at contact, and its flight: an undo cancels both
+    var contact: Job? = null
+    var flight: Job? = null
 }
 
 private data class SmashFrame(
@@ -282,6 +289,13 @@ private fun BoardContent(
     var activeSmashes by remember { mutableStateOf<List<SmashAnimationItem>>(emptyList()) }
     var prevMoveCount by remember { mutableIntStateOf(gameState.moveHistory.size) }
 
+    // Read the latest values inside the gesture detector so it is not restarted on every
+    // zoom animation frame (which would drop in-flight taps), and in the match animations, which
+    // run on while the board re-fits around what is left
+    val latestTiles by rememberUpdatedState(gameState.tiles)
+    val latestTransform by rememberUpdatedState(currentTransform)
+    val latestOnTileClick by rememberUpdatedState(onTileClick)
+
     // The smash, the match sound and the burst are launched in the board's own scope, not the
     // effect's: the next match restarts the effect, and must not cut short the one before
     val animationScope = rememberCoroutineScope()
@@ -301,11 +315,12 @@ private fun BoardContent(
                     animatable = Animatable(0f)
                 )
                 activeSmashes += smashItem
-                animationScope.launch {
-                    // Click and burst the moment the raised pair's edges touch, where they meet
-                    val transform = currentTransform
-                    delay((SMASH_MILLIS * smashContactFraction(t1, t2, transform)).toLong().milliseconds)
+                smashItem.contact = animationScope.launch {
+                    // Click and burst the moment the raised pair's edges touch, where they meet:
+                    // where the board stands by then, as it may be re-fitting around what is left
+                    delay((SMASH_MILLIS * smashContactFraction(t1, t2, currentTransform)).toLong().milliseconds)
                     onTileMatch()
+                    val transform = latestTransform
                     val lift = with(density) { 16.dp.toPx() }
                     matchBursts.burst(
                         x = (transform.tilePixelX(t1.x, t1.z) + transform.tilePixelX(t2.x, t2.z) + transform.tileWidth) / 2f,
@@ -314,7 +329,7 @@ private fun BoardContent(
                         canvasHeight = canvasH,
                     )
                 }
-                animationScope.launch {
+                smashItem.flight = animationScope.launch {
                     smashItem.animatable.animateTo(
                         targetValue = 1f,
                         animationSpec = tween(durationMillis = SMASH_MILLIS, easing = LinearEasing)
@@ -323,27 +338,28 @@ private fun BoardContent(
                 }
             }
         } else if (currentCount < prevMoveCount) {
-            // Undo occurred: cancel in-flight animations so restored tiles display normally
+            // Undo occurred: cancel in-flight animations so restored tiles display normally, and
+            // with them any click and burst still to come
+            for (smash in activeSmashes) {
+                smash.contact?.cancel()
+                smash.flight?.cancel()
+            }
             activeSmashes = emptyList()
         }
         prevMoveCount = currentCount
     }
 
-    // Read the latest values inside the gesture detector so it is not restarted on every
-    // zoom animation frame (which would drop in-flight taps)
-    val latestTiles by rememberUpdatedState(gameState.tiles)
-    val latestTransform by rememberUpdatedState(currentTransform)
-    val latestOnTileClick by rememberUpdatedState(onTileClick)
-
     // Flat table layout -> screen through the tilted camera, and back again for taps
     val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
     val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
+    // As drawn now: the board's area changes height when the toolbar or tutorial card below changes
+    val latestScreenToPlane by rememberUpdatedState(screenToPlane)
     // A hint's pair pulses gently in gold for as long as the hint shows (steady with animations
     // off), timed from when it appeared
     val hinting = (gameState.hintPair != null) && settings.animationsEnabled
     var hintShownAt by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(gameState.hintPair) {
-        if (gameState.hintPair != null) hintShownAt = withFrameNanos { it / 1e9f }
+        if (gameState.hintPair != null) hintShownAt = withFrameNanos { FrameClock.seconds(it) }
     }
     // Firelight flickers, so the board is redrawn for it, 20 times a second (chosen by eye against
     // 30: the flicker looks the same), and as often for a hint's pulse; the lamp alone never changes
@@ -356,7 +372,7 @@ private fun BoardContent(
             while (true) withFrameNanos { now ->
                 if (now - last >= interval) {
                     last = now
-                    value = now / 1e9f
+                    value = FrameClock.seconds(now)
                 }
             }
         }
@@ -413,6 +429,24 @@ private fun BoardContent(
     }
     // For the layers drawn each frame
     val layerPaint = remember { Paint() }
+    // The slate's surface map, which way each spot of it faces, so the lamp and the fire catch
+    // its ridges: worked out on the GPU for the view once it settles (as the table's colour is
+    // drawn afresh), and kept, still placed right, while the view moves
+    val surfaceLayer = rememberGraphicsLayer()
+    var slateSurface by remember { mutableStateOf<TableSurfaceRenderer.SlateSurface?>(null) }
+    val layoutDirection = LocalLayoutDirection.current
+    val boardHeight = canvasH + with(density) { bottomOverlap.toPx() }
+    LaunchedEffect(settings.tableSurface, canvasW, boardHeight, viewSettled) {
+        if (settings.tableSurface != TableSurface.SLATE) {
+            slateSurface = null
+            return@LaunchedEffect
+        }
+        if (!viewSettled && (slateSurface != null)) return@LaunchedEffect
+        TableSurfaceRenderer.bakeSlateSurface(
+            surfaceLayer, density, layoutDirection, IntSize(canvasW.roundToInt(), boardHeight.roundToInt()),
+            canvasW, canvasH, zoom, pan,
+        )?.let { slateSurface = it }
+    }
     val reportZoom by rememberUpdatedState(onZoomedInChange)
     LaunchedEffect(zoomedIn) { reportZoom(zoomedIn) }
     val scope = rememberCoroutineScope()
@@ -446,7 +480,7 @@ private fun BoardContent(
                 detectTapGestures { offset ->
                     // Back through the zoom and the camera to the flat layout
                     val p = floatArrayOf((offset.x - pan.x) / zoom, (offset.y - pan.y) / zoom)
-                    screenToPlane.mapPoints(p)
+                    latestScreenToPlane.mapPoints(p)
                     val tappedId = findTappedTileId(p[0], p[1], latestTiles, latestTransform)
                     if (tappedId != null) {
                         latestOnTileClick(tappedId)
@@ -477,7 +511,7 @@ private fun BoardContent(
             drawContext.canvas.scale(zoom, zoom)
 
             val flame = FlameLight.at(clockSeconds, settings.lampBrightness, settings.fireplaceLit, settings.fireIntensity)
-            val hintStrength = if (hinting) hintPulse(clockSeconds - hintShownAt) else 1f
+            val hintStrength = if (hinting) hintPulse(FrameClock.since(clockSeconds, hintShownAt)) else 1f
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableLight(
                 scope = this,
                 surface = settings.tableSurface,
@@ -489,6 +523,7 @@ private fun BoardContent(
                 shadowMap = placedShadows,
                 fireShadows = tracedShadows,
                 cullUnder = shadowsFresh,
+                slateSurface = slateSurface,
             )
             TileRenderer.TileAtlas.screenScale = zoom * TableCamera.nearEdgeScale()
 

@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 
 /**
  * The lamp alone, and with the fireplace, side by side on each table surface, at the Pixel 9 Pro's size.
- * Rendered into build/lighting-preview. Run: ./gradlew testDebugUnitTest --tests '*LightingPreview*'
+ * Rendered into build/lighting-preview. Run: ./gradlew testFossDebugUnitTest --tests '*LightingPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -189,7 +190,12 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
      */
     fun startPerfScene(layoutName: String, fireplace: Boolean, surface: TableSurface?, autoplay: Boolean = false) {
         val constellation = ConstellationRepository.constellations.firstOrNull { it.name.equals(layoutName, ignoreCase = true) } ?: return
-        updateSettings(_settings.value.copy(fireplaceLit = fireplace, tableSurface = surface ?: _settings.value.tableSurface))
+        // From the saved settings, which may not have loaded yet (a scene opens with the app), so
+        // that only the fire and the table change
+        viewModelScope.launch {
+            val saved = prefsRepo.settingsFlow.first()
+            prefsRepo.updateSettings(saved.copy(fireplaceLit = fireplace, tableSurface = surface ?: saved.tableSurface))
+        }
         _currentLevelIndex.value = null
         initGame(constellation, Random(7))
         _currentScreen.value = Screen.Game

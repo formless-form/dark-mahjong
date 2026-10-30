@@ -22,15 +22,19 @@ import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.ui.components.PerfSwitches
 import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
+import com.vortessence.mahjong.update.AppUpdates
 import kotlin.math.abs
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MahjongViewModel by viewModels()
+    private lateinit var updates: AppUpdates
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         TileWear.prepareAsync()
+        // Play builds ask Google Play for newer versions; the open-source build never does
+        updates = AppUpdates(this)
         enableEdgeToEdge()
         // Full-screen game: system bars stay hidden and reappear briefly on an edge swipe
         WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -47,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 ?.let { mode -> window.attributes = window.attributes.apply { preferredDisplayModeId = mode.modeId } }
         }
         setContent {
-            MahjongApp(viewModel = viewModel)
+            MahjongApp(viewModel = viewModel, updates = updates)
         }
         openPerfScene(intent)
     }

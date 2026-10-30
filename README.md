@@ -60,16 +60,18 @@ Next up is a first release on Google Play. After that: a 300-level journey with 
 
 Gradle with the included wrapper; JDK 17 or newer.
 
+There are two builds. **foss** is entirely open source. **play**, for Google Play, adds Google's in-app update library (closed source), so the title screen can say when a newer version is available on Play. They differ in nothing else.
+
 ```sh
 # Debug build
-./gradlew assembleDebug
+./gradlew assembleFossDebug
 
 # Release build (minified, unsigned)
-./gradlew assembleRelease
+./gradlew assembleFossRelease
 
 # Unit tests, plus screenshots of every main screen rendered on the JVM
 # (shaders included) into app/build/screenshots
-./gradlew testDebugUnitTest
+./gradlew testFossDebugUnitTest
 ```
 
 `tools/deploy-to-phone.sh [--no-launch] [adb-serial]` builds a small minified APK, signs it with the local debug key and installs it over adb.

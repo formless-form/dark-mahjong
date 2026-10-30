@@ -17,12 +17,12 @@ export DARK_MAHJONG_UPLOAD_KEY_PASS
 
 # Memory-capped, as for every Gradle build on this server
 systemd-run --user --collect --wait --pipe -p MemoryMax=6G -p MemorySwapMax=1G \
-    --working-directory="$PWD" --unit=mahjong-build "$PWD/gradlew" bundleRelease --no-daemon --console=plain -q
+    --working-directory="$PWD" --unit=mahjong-build "$PWD/gradlew" bundlePlayRelease --no-daemon --console=plain -q
 
 VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
 mkdir -p dist
 OUT="dist/DarkMahjong-$VERSION.aab"
-cp app/build/outputs/bundle/release/app-release.aab "$OUT"
+cp app/build/outputs/bundle/playRelease/app-play-release.aab "$OUT"
 jarsigner -keystore "$KEYSTORE" -storetype PKCS12 -storepass:env DARK_MAHJONG_UPLOAD_KEY_PASS \
     -sigalg SHA256withRSA -digestalg SHA-256 "$OUT" upload >/dev/null
 jarsigner -verify "$OUT" | tail -1

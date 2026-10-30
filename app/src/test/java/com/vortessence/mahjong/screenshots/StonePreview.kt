@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
  * The menu screens' slate background (the firelight's clock never lets the test go idle, so
  * without it). The JVM draws in software, where the slate can't be baked, so this checks that
  * its shaders compile and the page falls back to plain dark; see it on a phone.
- * Run: ./gradlew testDebugUnitTest --tests '*StonePreview*'
+ * Run: ./gradlew testFossDebugUnitTest --tests '*StonePreview*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")

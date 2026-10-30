@@ -25,7 +25,7 @@ import kotlin.random.Random
  * Fixed deals of big layouts at a fixed moment of the fire, at the Pixel 9 Pro's size, for
  * comparing the look before and after rendering changes. Rendered into build/perf-preview/<set>,
  * where <set> is the system property perfSet (default "current").
- * Run: ./gradlew testDebugUnitTest --tests '*PerfPreview*'
+ * Run: ./gradlew testFossDebugUnitTest --tests '*PerfPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")

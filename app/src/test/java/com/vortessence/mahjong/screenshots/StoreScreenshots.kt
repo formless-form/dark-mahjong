@@ -27,7 +27,7 @@ import org.robolectric.annotation.Config
 /**
  * Google Play listing screenshots: 1080 x 1920 px (Play wants phone screenshots at exactly 9:16,
  * and the Pixel's own screen is taller than that). Rendered into
- * build/store-screenshots. Run: ./gradlew testDebugUnitTest --tests '*StoreScreenshots*'
+ * build/store-screenshots. Run: ./gradlew testFossDebugUnitTest --tests '*StoreScreenshots*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp-port-xxhdpi")

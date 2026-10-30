@@ -41,6 +41,7 @@ import com.vortessence.mahjong.ui.screens.ConstellationSelectScreen
 import com.vortessence.mahjong.ui.screens.GameScreen
 import com.vortessence.mahjong.ui.screens.LevelSelectScreen
 import com.vortessence.mahjong.ui.screens.MainMenuScreen
+import com.vortessence.mahjong.data.model.UpdateNotice
 import com.vortessence.mahjong.ui.screens.SettingsScreen
 import com.vortessence.mahjong.ui.screens.TitleMenuStyle
 import com.vortessence.mahjong.ui.theme.MahjongTheme
@@ -53,7 +54,7 @@ import org.robolectric.annotation.Config
 /**
  * Renders the app's screens on the JVM through Robolectric's real Android graphics stack (AGSL
  * shaders and render effects included), at the Pixel 9 Pro's portrait size and density, into
- * build/screenshots. Run: ./gradlew testDebugUnitTest --tests '*ScreenshotTour*'
+ * build/screenshots. Run: ./gradlew testFossDebugUnitTest --tests '*ScreenshotTour*'
  *
  * API 36 rather than 37: Espresso, used by the Compose test rule, still calls an InputManager
  * method that API 37 removed.
@@ -103,6 +104,26 @@ class ScreenshotTour {
         compose.setContent { MahjongTheme { TitleScreen() } }
         shoot("title")
     }
+
+    // A newer version on Google Play (Play builds), at the foot: there, being fetched, fetched
+    private fun titleUpdate(update: UpdateNotice, shot: String) {
+        compose.setContent {
+            MahjongTheme {
+                MainMenuScreen(
+                    continueInfo = ContinueInfo("Level 3: Celestial Lantern", "40 tiles remaining"),
+                    onPlayLevels = {},
+                    onChooseConstellation = {},
+                    onSettings = {},
+                    update = update,
+                )
+            }
+        }
+        shoot(shot)
+    }
+
+    @Test fun titleUpdateAvailable() = titleUpdate(UpdateNotice.Available, "title_update_available")
+    @Test fun titleUpdateDownloading() = titleUpdate(UpdateNotice.Downloading(0.42f), "title_update_downloading")
+    @Test fun titleUpdateReady() = titleUpdate(UpdateNotice.Ready, "title_update_ready")
 
     @Test
     fun titleSerifMenu() {

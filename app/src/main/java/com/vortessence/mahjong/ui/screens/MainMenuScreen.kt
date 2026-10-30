@@ -30,7 +30,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,6 +43,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.vortessence.mahjong.R
 import com.vortessence.mahjong.data.model.ContinueInfo
+import com.vortessence.mahjong.data.model.UpdateNotice
 import com.vortessence.mahjong.ui.components.NameSeal
 import com.vortessence.mahjong.ui.components.TitleBackdrop
 import com.vortessence.mahjong.ui.theme.Cinzel
@@ -69,6 +73,9 @@ fun MainMenuScreen(
     onChooseConstellation: () -> Unit,
     onSettings: () -> Unit,
     onMenuClick: () -> Unit = {},
+    // A newer version on Google Play, mentioned beside the version at the foot (Play builds only)
+    update: UpdateNotice? = null,
+    onUpdate: () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize().background(Shade)) {
         // Scaled uniformly to fill, so the photo is never stretched; film grain in the same pass
@@ -141,16 +148,31 @@ fun MainMenuScreen(
             // The app's version, in Google Sans Flex, where it sat above the photo credit (since
             // removed): the credit's line and 40 px above the screen's foot
             if (version != null) {
-                Text(
-                    text = "Version $version",
-                    style = TextStyle(
-                        fontFamily = SansText,
-                        fontSize = 14.sp,
-                        letterSpacing = 0.02.em,
-                        color = TitleText.copy(alpha = 0.4f),
-                    ),
+                val footStyle = TextStyle(
+                    fontFamily = SansText,
+                    fontSize = 14.sp,
+                    letterSpacing = 0.02.em,
+                    color = TitleText.copy(alpha = 0.4f),
                 )
-                Spacer(Modifier.height(with(LocalDensity.current) { 40.toDp() + 7.6.sp.toDp() }))
+                val gap = with(LocalDensity.current) { 40.toDp() + 7.6.sp.toDp() }
+                if (update != null) {
+                    // Tappable (except while it downloads), over a taller strip than the line itself so
+                    // it is easy to hit; the line stays where the version alone sits
+                    Text(
+                        text = buildAnnotatedString {
+                            append("Version $version  ·  ")
+                            withStyle(SpanStyle(color = UpdateTint)) { append(updateText(update)) }
+                        },
+                        style = footStyle,
+                        modifier = Modifier
+                            .clickable(enabled = update !is UpdateNotice.Downloading, onClick = onUpdate)
+                            .padding(horizontal = 12.dp, vertical = UPDATE_TAP_PAD),
+                    )
+                    Spacer(Modifier.height(gap - UPDATE_TAP_PAD))
+                } else {
+                    Text(text = "Version $version", style = footStyle)
+                    Spacer(Modifier.height(gap))
+                }
             }
         }
     }
@@ -171,6 +193,19 @@ private fun titleStyle(color: Color, size: TextUnit = 17.sp) = TextStyle(
     letterSpacing = 0.32.em,
     color = color,
 )
+
+// An update's mention: the app's jade, softened for the photograph
+private val UpdateTint = Color(0xFF7FB8B0)
+
+// How far the update's tap strip reaches above and below its line
+private val UPDATE_TAP_PAD = 14.dp
+
+/** What the foot says of an update, after the version (chosen 2026-10-30). */
+private fun updateText(update: UpdateNotice): String = when (update) {
+    UpdateNotice.Available -> "A new version is available"
+    is UpdateNotice.Downloading -> "Downloading new version · ${(update.progress * 100).toInt()}%"
+    UpdateNotice.Ready -> "Restart to finish updating"
+}
 
 /**
  * A plain text menu row with no button chrome. The whole row is the tap target; it brightens

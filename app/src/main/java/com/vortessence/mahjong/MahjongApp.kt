@@ -33,9 +33,10 @@ import com.vortessence.mahjong.ui.screens.SettingsScreen
 import com.vortessence.mahjong.ui.theme.MahjongTheme
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
 import com.vortessence.mahjong.ui.viewmodel.Screen
+import com.vortessence.mahjong.update.AppUpdates
 
 @Composable
-fun MahjongApp(viewModel: MahjongViewModel) {
+fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
     val levelIndex by viewModel.currentLevelIndex.collectAsStateWithLifecycle()
@@ -44,6 +45,7 @@ fun MahjongApp(viewModel: MahjongViewModel) {
     val continueInfo by viewModel.continueInfo.collectAsStateWithLifecycle()
     val tutorialStep by viewModel.tutorialStep.collectAsStateWithLifecycle()
     val winMessage by viewModel.winMessage.collectAsStateWithLifecycle()
+    val update by updates.notice.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
@@ -59,6 +61,11 @@ fun MahjongApp(viewModel: MahjongViewModel) {
             onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
             onSettings = { viewModel.navigateTo(Screen.Settings) },
             onMenuClick = { viewModel.audioManager.playMenuClick() },
+            update = update,
+            onUpdate = {
+                viewModel.audioManager.playMenuClick()
+                updates.act()
+            },
         )
     }
 

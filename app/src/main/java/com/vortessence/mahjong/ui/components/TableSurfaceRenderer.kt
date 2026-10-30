@@ -1,7 +1,13 @@
 package com.vortessence.mahjong.ui.components
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapShader
 import android.graphics.RuntimeShader
+import android.graphics.Shader
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.ShaderBrush
@@ -17,8 +23,8 @@ import com.vortessence.mahjong.data.model.TableSurface
 import kotlin.math.exp
 
 /**
- * Draws the tabletop: procedural green felt, walnut, or Thai straw mat (redrawn from
- * measurements of a real woven sedge mat), seen through [TableCamera]'s tilted perspective and lit
+ * Draws the tabletop: procedural green felt, walnut, Thai straw mat (redrawn from measurements
+ * of a real woven sedge mat) or the menus' slate, seen through [TableCamera]'s tilted perspective and lit
  * by a single warm lamp above the middle of the table, with the room falling away into darkness
  * around it. Its colour never changes, so it is drawn once and kept; only its light is worked out
  * each frame.
@@ -57,6 +63,8 @@ const float WALNUT_SCALE = 1.2;
 const float STRAW_SCALE = 1.1;
 $CAMERA_AGSL
 $SURFACES_AGSL
+$STONE_AGSL
+$SLATE_TABLE_AGSL
 half4 main(float2 p) {
     float fp;
     float2 q = tablePoint((p - pan) / zoom, fp);
@@ -66,8 +74,29 @@ half4 main(float2 p) {
     else if (mode < 1.5) albedo = walnut(q * WALNUT_SCALE, fp * WALNUT_SCALE);
     // The straw mat a little finer too, for the same reason
     else if (mode < 2.5) albedo = straw(q * STRAW_SCALE, fp * STRAW_SCALE);
-    else albedo = slate(q, fp);
+    // The menus' slate, its colour here and its relief lit by the table's light (SLATE_SURFACE_AGSL)
+    else albedo = stoneColour(q * SLATE_SCALE) * SLATE_GAIN;
     return half4(half3(albedo), 1.0);
+}
+"""
+
+    /**
+     * The slate tabletop's surface: which way it faces at each screen pixel (0.5 + 0.5 n, n with
+     * x right, y up the table, z up), worked out once for a view, as its colour is, so the lamp
+     * and the fire can catch its ridges each frame (TABLE_LIGHT_AGSL).
+     */
+    private const val SLATE_SURFACE_AGSL = """
+$CAMERA_AGSL
+$STONE_AGSL
+$SLATE_TABLE_AGSL
+half4 main(float2 p) {
+    float fp;
+    float2 q = tablePoint((p - pan) / zoom, fp);
+    // Its slope over a pixel, as in the menus; detail finer than the pixels can show at this
+    // zoom is left out (it would only make the light sparkle), and comes in as the view zooms in
+    float e = max(fp, 1e-5) * SLATE_SCALE;
+    float3 n = stoneNormal(q * SLATE_SCALE, e, e);
+    return half4(half3(n * 0.5 + 0.5), 1.0);
 }
 """
 
@@ -80,6 +109,16 @@ half4 main(float2 p) {
     private const val TABLE_LIGHT_AGSL = """
 $CAMERA_AGSL
 $FLAME_AGSL
+$SLATE_TABLE_AGSL
+uniform shader surface;      // the slate's surface (SLATE_SURFACE_AGSL) for the view it was made for
+uniform float4 surfaceXform; // unzoomed canvas point to that map's pixel: scale x, y, then offset x, y
+uniform float2 surfaceSize;  // that map's size in pixels
+uniform float relief;        // 1 on slate, whose ridges catch the lamp and the fire
+// How much brighter (or darker) a surface facing n is than a flat one, in light from direction
+// l: a share of the light whatever it faces ([even]), the rest as it turns towards the light
+float facing(float3 n, float3 l, float even) {
+    return (even + max(dot(n, l), 0.0)) / (even + max(l.z, 1e-3));
+}
 half4 main(float2 p) {
     float fp;
     float2 q = tablePoint(p, fp);
@@ -87,9 +126,24 @@ half4 main(float2 p) {
     float2 lq = (q - LAMP_AT) * float2(1.0, 0.85);
     float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
     float fire = fireShadow(q, 0.0);
+    // Slate's relief: lit as in the menus by a lamp low enough to rake it, and by the fire, which
+    // burns low beside the table, so ridges turned towards it catch its flicker
+    float lampFacing = 1.0;
+    float fireFacing = 1.0;
+    if (relief > 0.5) {
+        // Where a pinch or pan has moved past the map (made for the view before), the stone is
+        // lit as level, fading in over a few pixels, rather than smearing the map's edge into
+        // streaks; it is made afresh once the view settles
+        float2 sp = p * surfaceXform.xy + surfaceXform.zw;
+        float2 inside = min(sp, surfaceSize - sp);
+        float cover = clamp(min(inside.x, inside.y) / 8.0, 0.0, 1.0);
+        float3 n = normalize(mix(float3(0.0, 0.0, 1.0), surface.eval(sp).rgb * 2.0 - 1.0, cover));
+        lampFacing = facing(n, normalize(float3(LAMP_AT - q, SLATE_LAMP_HEIGHT)), SLATE_LAMP_EVEN);
+        fireFacing = min(facing(n, normalize(float3(flame.xy - q, flameHeight)), SLATE_FIRE_EVEN), 3.0);
+    }
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
-    float3 c = (lampLevel * pool * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TABLE + flameLight(q) * fire)
-        * ambient(q);
+    float3 c = (lampLevel * pool * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TABLE * lampFacing
+        + flameLight(q) * fire * fireFacing) * ambient(q);
     // Screen-edge vignette deepens the dark corners; the real screen pixel, not the table's
     float2 sp = p * zoom + pan;
     float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
@@ -152,7 +206,15 @@ half4 main(float2 p) {
         }
     }
 
+    /** The slate's surface map for the view it was made for (SLATE_SURFACE_AGSL), and where it lies. */
+    class SlateSurface internal constructor(internal val shader: BitmapShader, internal val xform: FloatArray, internal val width: Float, internal val height: Float)
+
     private var lightShader: RuntimeShader? = null
+    private var surfaceShader: RuntimeShader? = null
+    // A level surface, where there is no slate to light
+    private val flatSurface by lazy {
+        BitmapShader(Bitmap.createBitmap(intArrayOf(0xFF8080FF.toInt()), 1, 1, Bitmap.Config.ARGB_8888), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+    }
     private var glossShader: RuntimeShader? = null
     private var flameShader: RuntimeShader? = null
     private var raisedShader: RuntimeShader? = null
@@ -208,11 +270,7 @@ half4 main(float2 p) {
         if (!sameTable || (!sameView && (settled || !cache.covers(zoom, pan)))) {
             // The whole board can't pan, and zooming in from it stays within the view; zoomed in,
             // the layer reaches past the screen, so a pan or a pinch out can follow it for a while
-            val m = if (zoom > 1.001f) {
-                IntOffset((size.width * ALBEDO_MARGIN).roundToInt(), (size.height * ALBEDO_MARGIN).roundToInt())
-            } else {
-                IntOffset.Zero
-            }
+            val m = viewMargin(size, zoom)
             val s = cache.shader ?: RuntimeShader(ALBEDO_AGSL).also { cache.shader = it }
             setAlbedoUniforms(s, surface, width, height, context, zoom, pan + Offset(m.x.toFloat(), m.y.toFloat()))
             cache.layer.compositingStrategy = CompositingStrategy.Offscreen
@@ -246,6 +304,45 @@ half4 main(float2 p) {
     // of the screen
     private const val ALBEDO_MARGIN = 0.2f
 
+    // The whole board can't pan, and zooming in from it stays within the view; zoomed in, a
+    // cached view reaches past the screen, so a pan or a pinch out can follow it for a while
+    private fun viewMargin(size: IntSize, zoom: Float): IntOffset = if (zoom > 1.001f) {
+        IntOffset((size.width * ALBEDO_MARGIN).roundToInt(), (size.height * ALBEDO_MARGIN).roundToInt())
+    } else {
+        IntOffset.Zero
+    }
+
+    /**
+     * Works out the slate's surface map on the GPU for the board seen at [zoom] and [pan], over
+     * [size] (the board's whole area) and with the cached colour's margin; null where nothing
+     * can be read back (the JVM's renders), where the slate stays level.
+     */
+    suspend fun bakeSlateSurface(
+        layer: GraphicsLayer,
+        density: Density,
+        layoutDirection: LayoutDirection,
+        size: IntSize,
+        width: Float,
+        height: Float,
+        zoom: Float,
+        pan: Offset,
+    ): SlateSurface? = runCatching {
+        val m = viewMargin(size, zoom)
+        val s = surfaceShader ?: RuntimeShader(SLATE_SURFACE_AGSL).also { surfaceShader = it }
+        setCameraUniforms(s, width, height, zoom, pan + Offset(m.x.toFloat(), m.y.toFloat()))
+        layer.record(density, layoutDirection, IntSize(size.width + 2 * m.x, size.height + 2 * m.y)) {
+            drawRect(ShaderBrush(s))
+        }
+        val bitmap = layer.toImageBitmap().asAndroidBitmap()
+        // Its pixel for an unzoomed canvas point p: p * zoom + pan, plus the margin
+        SlateSurface(
+            BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply { filterMode = BitmapShader.FILTER_MODE_LINEAR },
+            floatArrayOf(zoom, zoom, pan.x + m.x, pan.y + m.y),
+            bitmap.width.toFloat(),
+            bitmap.height.toFloat(),
+        )
+    }.getOrNull()
+
     /**
      * The light on the table, multiplied over its colour, and the reflections of a glossy
      * surface added over that. Drawn under the zoom. [cullUnder]: [shadowMap] matches the tiles
@@ -262,11 +359,24 @@ half4 main(float2 p) {
         shadowMap: BoardShadowMap.Placed?,
         fireShadows: Boolean,
         cullUnder: Boolean = false,
+        // The slate's surface map, when the table is slate and it has been worked out
+        slateSurface: SlateSurface? = null,
     ) {
         val light = lightShader ?: RuntimeShader(TABLE_LIGHT_AGSL).also { lightShader = it }
         setCameraUniforms(light, width, height, zoom, pan)
         flame.setUniforms(light)
         setShadowUniforms(light, shadowMap, fireShadows, cullUnder)
+        if ((surface == TableSurface.SLATE) && (slateSurface != null)) {
+            light.setInputShader("surface", slateSurface.shader)
+            light.setFloatUniform("surfaceXform", slateSurface.xform)
+            light.setFloatUniform("surfaceSize", slateSurface.width, slateSurface.height)
+            light.setFloatUniform("relief", 1f)
+        } else {
+            light.setInputShader("surface", flatSurface)
+            light.setFloatUniform("surfaceXform", 1f, 1f, 0f, 0f)
+            light.setFloatUniform("surfaceSize", 1f, 1f)
+            light.setFloatUniform("relief", 0f)
+        }
         scope.drawRect(ShaderBrush(light), blendMode = BlendMode.Modulate)
         val gloss = when (surface) {
             TableSurface.WALNUT -> 1f
@@ -376,6 +486,19 @@ internal const val LAMP_HEIGHT = 0.9f
 // tilted camera
 private const val LAMP_MIRROR_U = LAMP_U * 0.6f
 private const val LAMP_MIRROR_V = LAMP_V + 0.2f
+
+/**
+ * The menus' slate as a tabletop: about as large against the tiles as it is against the menus'
+ * screen, brighter (the table's light falls away into the dark around it), and its relief lit by
+ * a lamp low enough to rake it, as in the menus, and by the fire.
+ */
+private const val SLATE_TABLE_AGSL = """
+const float SLATE_SCALE = 7.0;       // slate units per table height
+const float SLATE_GAIN = 2.2;
+const float SLATE_LAMP_HEIGHT = 0.3; // the lamp's height for the slate's relief, in table heights
+const float SLATE_LAMP_EVEN = 0.7;   // the share of the lamp's light whichever way the stone faces
+const float SLATE_FIRE_EVEN = 0.15;  // and of the fire's: little, as it rakes across from low down
+"""
 
 /**
  * Firelight at plane point q (in table heights, v up), shared by both shaders: one warm source
@@ -591,54 +714,6 @@ float3 felt(float2 q, float fp) {
     float fib = smoothstep(0.88, 0.98, vnoise(float2(r.x * 2600.0, r.y * 600.0)));
     c += float3(0.03, 0.06, 0.05) * fib * fine;
     return c;
-}
-
-// ---- Slate: the menu screens' stone (SlateBackdrop) as a tabletop. Thin layers split along
-// their cleavage into terraces, with hairline cleavage lines, flakes, grit and pits; its relief is
-// shaded here by the lamp hanging above and beyond the middle of the table, so the cached colour
-// carries it. Detail finer than a pixel fades out, so it never shimmers ----
-float slateFbm3(float2 p) {
-    float v = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < 3; i++) {
-        v += a * vnoise(p);
-        p = p * 2.03 + float2(1.7, 9.2);
-        a *= 0.5;
-    }
-    return v / 0.875;
-}
-
-float slateHeight(float2 u, float fine) {
-    float2 s = float2(u.x * 0.55 + u.y * 0.12, u.y * 2.2);
-    float layers = fbm(s * 0.6);
-    float steps = floor(layers * 7.0) / 7.0 + smoothstep(0.0, 0.12, fract(layers * 7.0)) / 7.0;
-    float2 c = float2(u.x * 3.0 + u.y * 0.6, u.y * 26.0);
-    float hair = 1.0 - abs(vnoise(c + slateFbm3(u * 2.0) * 3.0) * 2.0 - 1.0);
-    float flake = smoothstep(0.62, 0.7, vnoise(u * float2(9.0, 22.0) + 3.0)) * 0.6;
-    float grit = vnoise(u * 55.0) * 0.6 + vnoise(u * 120.0) * 0.4;
-    float pit = smoothstep(0.93, 0.98, vnoise(u * 38.0 + 7.0));
-    return steps * 1.3 + fbm(u * 3.0) * 0.22 + hair * 0.05 + flake * 0.03
-        + (grit * 0.03 - pit * 0.05) * fine;
-}
-
-float3 slate(float2 q, float fp) {
-    // About as large against the tiles as the menu slate is against the screen
-    float k = 7.0;
-    float2 u = q * k;
-    float fine = 1.0 - smoothstep(0.0006, 0.0016, fp);
-    float e = max(fp, 0.0003) * k;
-    float h = slateHeight(u, fine);
-    float3 n = normalize(float3(h - slateHeight(u + float2(e, 0.0), fine), h - slateHeight(u + float2(0.0, e), fine), e * 3.5));
-    // The lamp hangs above, a little beyond the middle (v up is away from the player)
-    float3 l = normalize(float3(-0.15, 0.45, 0.88));
-    float shade = 0.62 + 0.5 * max(dot(n, l), 0.0);
-    float tone = fbm(u * 0.35 + 4.0);
-    float3 col = mix(float3(0.05, 0.059, 0.063), float3(0.13, 0.143, 0.15), tone);
-    col = mix(col, float3(0.12, 0.09, 0.07), smoothstep(0.62, 0.8, fbm(u * float2(0.4, 1.6) + 9.0)) * 0.3);
-    col *= 0.85 + (0.25 * vnoise(u * 70.0) - 0.125) * fine + 0.1 * fbm(u * 18.0);
-    col += step(0.992, hash21(floor(u * 160.0))) * 0.05 * fine;
-    // Lighter than the menu slate: the table's light multiplies it, falling away into the dark
-    return col * shade * 2.1;
 }
 
 // ---- Thai straw mat: a woven sedge mat, redrawn procedurally from measurements of a real one

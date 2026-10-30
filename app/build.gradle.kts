@@ -16,13 +16,22 @@ android {
         // Android 13: AGSL RuntimeShader for the generated backgrounds and tile effects
         minSdk = 33
         targetSdk = 37
-        versionCode = 11
-        versionName = "1.3.5"
+        versionCode = 12
+        versionName = "1.3.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Test builds for the phone (-PperfHooks=true, as tools/deploy-to-phone.sh builds them)
         // can be told over adb to open a fixed scene for measuring; Play builds never can
         buildConfigField("boolean", "PERF_HOOKS", (findProperty("perfHooks") == "true").toString())
+    }
+
+    // Two builds: "play" for Google Play also asks Play whether a newer version is out (Google's
+    // in-app update library, which is closed source); "foss", for F-Droid and anyone building
+    // from source, has none of it. They differ only in AppUpdates
+    flavorDimensions += "store"
+    productFlavors {
+        create("play") { dimension = "store" }
+        create("foss") { dimension = "store" }
     }
 
     buildTypes {
@@ -80,6 +89,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
+
+    "playImplementation"(libs.play.app.update)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
