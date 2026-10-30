@@ -14,6 +14,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import com.vortessence.mahjong.R
 import com.vortessence.mahjong.data.model.GameSettings
+import kotlin.math.pow
 import kotlin.random.Random
 
 class AudioManager(private val context: Context) {
@@ -56,6 +57,13 @@ class AudioManager(private val context: Context) {
         soundPool.load(context.applicationContext, R.raw.tile_match_4, 1),
     )
 
+    // The dull knock of a blocked tile. Built by tools/make-knock-sound.py
+    private val blockedSoundIds = intArrayOf(soundPool.load(context.applicationContext, R.raw.tile_blocked, 1))
+
+    // While the Fire sound slider is dragged, the fire is heard as loud as at the table (it's set
+    // by ear for the table, and the menus play it at a fifth)
+    private var auditioningFire = false
+
     private val vibrator: Vibrator? by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -71,7 +79,7 @@ class AudioManager(private val context: Context) {
         currentSettings = settings
 
         if (settings.musicEnabled && (settings.musicVolume > 0f)) {
-            musicPlayer.setVolume(settings.musicVolume)
+            musicPlayer.setVolume(loudness(settings.musicVolume))
             val wasMusicEnabled = previousSettings?.let { it.musicEnabled && (it.musicVolume > 0f) } ?: false
             if (!isInForeground) {
                 // Never start playback while in the background; onResume() will start it.
@@ -95,6 +103,13 @@ class AudioManager(private val context: Context) {
      * (Settings, Levels, Layouts), whose stone it lights faintly, softly (a fifth as loud); on
      * the title screen not at all.
      */
+    /** The Fire sound slider is being dragged ([on]), or has been let go. */
+    fun auditionFire(on: Boolean) {
+        auditioningFire = on
+        val settings = currentSettings ?: return
+        if (isInForeground) fireplace.play(fireLevel(settings))
+    }
+
     fun setFireRoom(room: FireRoom) {
         this.room = room
         val settings = currentSettings ?: return
@@ -108,7 +123,8 @@ class AudioManager(private val context: Context) {
      * always its soft crackle. Silent on the title screen.
      */
     private fun fireLevel(settings: GameSettings): Float {
-        val level = settings.fireVolume * 0.45f * (0.8f + 0.4f * settings.fireIntensity)
+        val level = loudness(settings.fireVolume) * 0.45f * (0.8f + 0.4f * settings.fireIntensity)
+        if (auditioningFire) return level
         return when (room) {
             FireRoom.TABLE -> if (settings.fireplaceLit) level else 0f
             FireRoom.MENU -> level * MENU_FIRE_SHARE
@@ -149,7 +165,7 @@ class AudioManager(private val context: Context) {
     fun playTileSelect() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(pickSoundIds, settings.soundVolume)
+            playRandomSound(pickSoundIds, loudness(settings.soundVolume))
         }
         vibrate { HapticPatterns.select(it) }
     }
@@ -158,7 +174,7 @@ class AudioManager(private val context: Context) {
     fun playMenuClick() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(pickSoundIds, settings.soundVolume * 0.35f, rate = 1.25f)
+            playRandomSound(pickSoundIds, loudness(settings.soundVolume) * 0.35f, rate = 1.25f)
         }
         vibrate { HapticPatterns.select(it) }
     }
@@ -166,7 +182,7 @@ class AudioManager(private val context: Context) {
     fun playTileDeselect() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(pickSoundIds, settings.soundVolume)
+            playRandomSound(pickSoundIds, loudness(settings.soundVolume))
         }
         vibrate { HapticPatterns.deselect(it) }
     }
@@ -174,7 +190,7 @@ class AudioManager(private val context: Context) {
     fun playTileMatch() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(matchSoundIds, settings.soundVolume, rate = 0.97f + Random.nextFloat() * 0.06f)
+            playRandomSound(matchSoundIds, loudness(settings.soundVolume), rate = 0.97f + Random.nextFloat() * 0.06f)
         }
         val now = SystemClock.elapsedRealtime()
         matchStreak = if ((now - lastMatchTimeMs) <= MATCH_STREAK_WINDOW_MS) {
@@ -189,7 +205,7 @@ class AudioManager(private val context: Context) {
     fun playTileBlocked() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            AudioEffects.playBlocked(settings.soundVolume)
+            playRandomSound(blockedSoundIds, loudness(settings.soundVolume))
         }
         vibrate { HapticPatterns.blocked() }
     }
@@ -198,7 +214,7 @@ class AudioManager(private val context: Context) {
         if (!isInForeground) return
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playWinPhrase(settings.soundVolume)
+            playWinPhrase(loudness(settings.soundVolume))
         }
         vibrate { HapticPatterns.win(it) }
     }
@@ -219,7 +235,10 @@ class AudioManager(private val context: Context) {
                 .setUsage(AudioAttributes.USAGE_GAME)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build(),
-            android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
+            // A session of its own for the loudness enhancer: on Android 13, AUDIO_SESSION_ID_GENERATE
+            // here leaves the player on session 0, the whole output, which the enhancer can't use
+            context.getSystemService(android.media.AudioManager::class.java)?.generateAudioSessionId()
+                ?: android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
         ) ?: return
         val level = volume.coerceIn(0f, 1f)
         player.setVolume(level, level)
@@ -303,6 +322,13 @@ class AudioManager(private val context: Context) {
         const val WIN_BOOST_MILLIBELS = 500
     }
 }
+
+/**
+ * A volume slider's position (0..1) as a gain: on a decibel scale over 40 dB, as loudness is
+ * heard, so the whole slider changes it evenly. 0 is silent, 1 full.
+ */
+internal fun loudness(slider: Float): Float =
+    if (slider <= 0f) 0f else 10f.pow(2f * (slider.coerceAtMost(1f) - 1f))
 
 /** Where the fireplace can be heard from. */
 enum class FireRoom { TABLE, MENU, NONE }

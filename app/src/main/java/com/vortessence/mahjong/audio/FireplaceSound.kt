@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import com.vortessence.mahjong.R
+import java.util.concurrent.Executors
 
 /**
  * The fireplace's soft crackle, looping for as long as the fire burns. The recording's ends are
@@ -16,7 +17,12 @@ class FireplaceSound(private val context: Context) {
     private var current = 0
     private var volume = 0f
     private var playing = false
+    private var paused = false
     private val lock = Any()
+
+    // The players are made (each decodes the start of the recording) off the main thread, so
+    // opening a menu screen doesn't wait on them
+    private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "fireplace").apply { isDaemon = true } }
 
     /** Plays at [level] (0..1), or stops when it is 0. */
     fun play(level: Float) {
@@ -29,28 +35,37 @@ class FireplaceSound(private val context: Context) {
             players.forEach { runCatching { it?.setVolume(volume, volume) } }
             if (playing) return
             playing = true
-            try {
-                val first = create() ?: return
-                val second = create() ?: return
-                players[0] = first
-                players[1] = second
-                current = 0
-                first.setNextMediaPlayer(second)
-                first.start()
-            } catch (_: Exception) {
-                stop()
+        }
+        loader.execute {
+            synchronized(lock) {
+                // Stopped meanwhile, or already started by an earlier request
+                if (!playing || players[0] != null) return@execute
+                try {
+                    val first = create() ?: return@execute
+                    val second = create() ?: return@execute
+                    players[0] = first
+                    players[1] = second
+                    current = 0
+                    first.setNextMediaPlayer(second)
+                    // Made while the app was going to the background: resume() starts it
+                    if (!paused) first.start()
+                } catch (_: Exception) {
+                    stop()
+                }
             }
         }
     }
 
     fun pause() {
         synchronized(lock) {
+            paused = true
             runCatching { players[current]?.takeIf { it.isPlaying }?.pause() }
         }
     }
 
     fun resume() {
         synchronized(lock) {
+            paused = false
             if (playing && volume > 0f) runCatching { players[current]?.start() }
         }
     }

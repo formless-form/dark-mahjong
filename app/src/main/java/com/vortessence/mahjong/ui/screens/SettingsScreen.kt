@@ -63,6 +63,7 @@ fun SettingsScreen(
     // A slider moving shows its value without saving it; it's saved when let go
     onSettingsPreview: (GameSettings) -> Unit = onSettingsChanged,
     onSettingsCommit: () -> Unit = {},
+    onFireAudition: (Boolean) -> Unit = {},
 ) {
     ExpressiveScreen(
         title = "Settings",
@@ -159,15 +160,22 @@ fun SettingsScreen(
                                 onSettingsPreview(settings.copy(fireIntensity = it))
                             }
                         },
-                        { shapes ->
-                            SliderRow(shapes, "Fire sound", settings.fireVolume, onSettingsCommit) {
-                                onSettingsPreview(settings.copy(fireVolume = it))
-                            }
-                        },
                     )
                 } else {
                     emptyList()
-                },
+                } + listOf<@Composable (ListItemShapes) -> Unit>(
+                    // Always shown: the menus crackle softly whether or not the fireplace is lit.
+                    // While it's dragged the fire is heard as loud as at the table
+                    { shapes ->
+                        SliderRow(
+                            shapes, "Fire sound", settings.fireVolume,
+                            onValueChangeFinished = { onSettingsCommit(); onFireAudition(false) },
+                        ) {
+                            onFireAudition(true)
+                            onSettingsPreview(settings.copy(fireVolume = it))
+                        }
+                    },
+                ),
             )
 
             SectionHeader("About")

@@ -53,7 +53,7 @@ object HapticPatterns {
     }
 
     /**
-     * Win: follows the pentatonic chime in [AudioEffects] (one note every 160ms). Four rising
+     * Win: follows a pentatonic chime (one note every 160ms). Four rising
      * taps for C5, E5, G5 and A5, then a strong hit on the final C6 that shimmers out.
      */
     fun win(vibrator: Vibrator): VibrationEffect {

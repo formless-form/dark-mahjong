@@ -160,6 +160,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 onBack = toMenu,
                                 onSettingsPreview = { updated -> viewModel.previewSettings(updated) },
                                 onSettingsCommit = { viewModel.commitSettings() },
+                                onFireAudition = { viewModel.auditionFire(it) },
                             )
                         }
                     }

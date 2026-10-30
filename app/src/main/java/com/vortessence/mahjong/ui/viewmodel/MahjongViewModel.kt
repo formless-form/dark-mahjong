@@ -433,6 +433,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         showSettings(newSettings)
     }
 
+    /** The Fire sound slider is being dragged, so the fire is heard at table loudness. */
+    fun auditionFire(on: Boolean) {
+        audioManager.auditionFire(on)
+    }
+
     /** The slider is let go: what it shows is saved. */
     fun commitSettings() {
         updateSettings(_settings.value)
