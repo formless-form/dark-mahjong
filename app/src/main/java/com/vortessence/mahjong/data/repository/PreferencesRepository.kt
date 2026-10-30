@@ -2,10 +2,12 @@ package com.vortessence.mahjong.data.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -17,11 +19,17 @@ import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import java.time.LocalDateTime
 import kotlin.random.Random
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "mahjong_preferences")
+// A corrupted file starts afresh rather than crashing every launch
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "mahjong_preferences",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
 
 class PreferencesRepository(private val context: Context) {
 
@@ -48,7 +56,20 @@ class PreferencesRepository(private val context: Context) {
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
-    val settingsFlow: Flow<GameSettings> = context.dataStore.data.map { prefs ->
+    // Storage that can't be read plays on with the defaults, and a write that fails (a full phone)
+    // is lost rather than crashing the game
+    private val data: Flow<Preferences> = context.dataStore.data.catch {
+        if (it is IOException) emit(emptyPreferences()) else throw it
+    }
+
+    private suspend fun write(transform: suspend (MutablePreferences) -> Unit) {
+        try {
+            context.dataStore.edit(transform)
+        } catch (_: IOException) {
+        }
+    }
+
+    val settingsFlow: Flow<GameSettings> = data.map { prefs ->
         val surfaceStr = prefs[Keys.TABLE_SURFACE] ?: prefs[Keys.THEME] ?: TableSurface.GREEN_MAT.name
         val surface = when (surfaceStr) {
             "WOOD" -> TableSurface.WALNUT
@@ -77,7 +98,7 @@ class PreferencesRepository(private val context: Context) {
         )
     }
 
-    val progressFlow: Flow<Progress> = context.dataStore.data.map { prefs ->
+    val progressFlow: Flow<Progress> = data.map { prefs ->
         Progress(
             highestLevelReached = prefs[Keys.HIGHEST_LEVEL] ?: 1,
             completedConstellations = prefs[Keys.COMPLETED_CONSTELLATIONS] ?: emptySet(),
@@ -85,7 +106,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun updateSettings(settings: GameSettings) {
-        context.dataStore.edit { prefs ->
+        write { prefs ->
             prefs[Keys.SOUND_ENABLED] = settings.soundEnabled
             prefs[Keys.SOUND_VOLUME] = settings.soundVolume
             prefs[Keys.MUSIC_ENABLED] = settings.musicEnabled
@@ -104,7 +125,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun recordGameWon(constellationId: String, levelIndex: Int?) {
-        context.dataStore.edit { prefs ->
+        write { prefs ->
             // Level progression
             if (levelIndex != null) {
                 val currentHighest = prefs[Keys.HIGHEST_LEVEL] ?: 1
@@ -127,7 +148,7 @@ class PreferencesRepository(private val context: Context) {
      */
     suspend fun nextCongratsMessage(isTutorial: Boolean, now: LocalDateTime = LocalDateTime.now()): String {
         var message = CongratsPool.GENERAL.messages.first()
-        context.dataStore.edit { prefs ->
+        write { prefs ->
             val today = now.toLocalDate().toEpochDay()
             val firstToday = (prefs[Keys.LAST_WIN_DAY] ?: Long.MIN_VALUE) != today
             prefs[Keys.LAST_WIN_DAY] = today
@@ -167,7 +188,7 @@ class PreferencesRepository(private val context: Context) {
         return index
     }
 
-    val savedGameFlow: Flow<SavedGameState?> = context.dataStore.data.map { prefs ->
+    val savedGameFlow: Flow<SavedGameState?> = data.map { prefs ->
         val raw = prefs[Keys.SAVED_GAME] ?: ""
         if (raw.isNotEmpty()) {
             SavedGameState.deserialize(raw)
@@ -177,13 +198,13 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun saveGame(savedState: SavedGameState) {
-        context.dataStore.edit { prefs ->
+        write { prefs ->
             prefs[Keys.SAVED_GAME] = savedState.serialize()
         }
     }
 
     suspend fun clearSavedGame() {
-        context.dataStore.edit { prefs ->
+        write { prefs ->
             prefs.remove(Keys.SAVED_GAME)
         }
     }
