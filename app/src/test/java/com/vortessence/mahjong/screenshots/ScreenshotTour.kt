@@ -64,6 +64,12 @@ class ScreenshotTour {
     @get:Rule
     val compose = createComposeRule()
 
+    // The menu firelight's clock never lets the screen settle
+    @org.junit.Before
+    fun holdMenuFireStill() {
+        com.vortessence.mahjong.ui.components.MenuFire.flickers = false
+    }
+
     private fun shoot(name: String) = compose.onRoot().captureRoboImage("build/screenshots/$name.png")
 
     private fun tabletop(surface: TableSurface) {
@@ -81,6 +87,7 @@ class ScreenshotTour {
     @Test fun tabletopGreenMat() = tabletop(TableSurface.GREEN_MAT)
     @Test fun tabletopWalnut() = tabletop(TableSurface.WALNUT)
     @Test fun tabletopThaiStraw() = tabletop(TableSurface.THAI_STRAW)
+    @Test fun tabletopSlate() = tabletop(TableSurface.SLATE)
 
     @Composable
     private fun TitleScreen(style: TitleMenuStyle = TitleMenuStyle.SANS) = MainMenuScreen(
@@ -265,6 +272,7 @@ class ScreenshotTour {
     @Test fun gameGreenMat() { game(TableSurface.GREEN_MAT, 8); shoot("game_green_mat") }
     @Test fun gameWalnut() { game(TableSurface.WALNUT, 11); shoot("game_walnut") }
     @Test fun gameThaiStraw() { game(TableSurface.THAI_STRAW, 12); shoot("game_thai_straw") }
+    @Test fun gameSlate() { game(TableSurface.SLATE, 8); shoot("game_slate") }
 
     // Pinched in to about 2.2x near the top of the board: the zoom-out button appears
     @Test
@@ -311,7 +319,7 @@ class ScreenshotTour {
                 SettingsScreen(settings = GameSettings(tableSurface = TableSurface.THAI_STRAW), onSettingsChanged = {}, onBack = {})
             }
         }
-        compose.onNodeWithText("Thai straw").performScrollTo()
+        compose.onNodeWithText("Straw").performScrollTo()
         shoot("settings")
     }
 }

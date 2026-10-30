@@ -44,13 +44,13 @@ float2 tablePoint(float2 p, out float fp) {
 """
 
     /**
-     * The tabletop's own colour, unlit: procedural felt, walnut or straw, in screen
+     * The tabletop's own colour, unlit: procedural felt, walnut, straw or slate, in screen
      * pixels (the zoom and pan are worked into it, so fine detail stays sharp when zoomed). It
      * never flickers, so the board draws it into a cached layer, remade only when the zoom, pan,
      * size or surface changes.
      */
     private const val ALBEDO_AGSL = """
-uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat (TableSurface order)
+uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat, 3 slate (TableSurface order)
 const float WALNUT_SCALE = 1.2;
 const float STRAW_SCALE = 1.1;
 $CAMERA_AGSL
@@ -63,7 +63,8 @@ half4 main(float2 p) {
     // The walnut a little finer than life, narrower boards, so the tiles on it read larger
     else if (mode < 1.5) albedo = walnut(q * WALNUT_SCALE, fp * WALNUT_SCALE);
     // The straw mat a little finer too, for the same reason
-    else albedo = straw(q * STRAW_SCALE, fp * STRAW_SCALE);
+    else if (mode < 2.5) albedo = straw(q * STRAW_SCALE, fp * STRAW_SCALE);
+    else albedo = slate(q, fp);
     return half4(half3(albedo), 1.0);
 }
 """
@@ -214,6 +215,8 @@ half4 main(float2 p) {
         val gloss = when (surface) {
             TableSurface.WALNUT -> 1f
             TableSurface.THAI_STRAW -> 0.1f
+            // Honed slate: a faint satin sheen
+            TableSurface.SLATE -> 0.18f
             TableSurface.GREEN_MAT -> 0f
         }
         if (gloss > 0f) {
@@ -504,6 +507,54 @@ float3 felt(float2 q, float fp) {
     float fib = smoothstep(0.88, 0.98, vnoise(float2(r.x * 2600.0, r.y * 600.0)));
     c += float3(0.03, 0.06, 0.05) * fib * fine;
     return c;
+}
+
+// ---- Slate: the menu screens' stone (SlateBackdrop) as a tabletop. Thin layers split along
+// their cleavage into terraces, with hairline cleavage lines, flakes, grit and pits; its relief is
+// shaded here by the lamp hanging above and beyond the middle of the table, so the cached colour
+// carries it. Detail finer than a pixel fades out, so it never shimmers ----
+float slateFbm3(float2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 3; i++) {
+        v += a * vnoise(p);
+        p = p * 2.03 + float2(1.7, 9.2);
+        a *= 0.5;
+    }
+    return v / 0.875;
+}
+
+float slateHeight(float2 u, float fine) {
+    float2 s = float2(u.x * 0.55 + u.y * 0.12, u.y * 2.2);
+    float layers = fbm(s * 0.6);
+    float steps = floor(layers * 7.0) / 7.0 + smoothstep(0.0, 0.12, fract(layers * 7.0)) / 7.0;
+    float2 c = float2(u.x * 3.0 + u.y * 0.6, u.y * 26.0);
+    float hair = 1.0 - abs(vnoise(c + slateFbm3(u * 2.0) * 3.0) * 2.0 - 1.0);
+    float flake = smoothstep(0.62, 0.7, vnoise(u * float2(9.0, 22.0) + 3.0)) * 0.6;
+    float grit = vnoise(u * 55.0) * 0.6 + vnoise(u * 120.0) * 0.4;
+    float pit = smoothstep(0.93, 0.98, vnoise(u * 38.0 + 7.0));
+    return steps * 1.3 + fbm(u * 3.0) * 0.22 + hair * 0.05 + flake * 0.03
+        + (grit * 0.03 - pit * 0.05) * fine;
+}
+
+float3 slate(float2 q, float fp) {
+    // About as large against the tiles as the menu slate is against the screen
+    float k = 7.0;
+    float2 u = q * k;
+    float fine = 1.0 - smoothstep(0.0006, 0.0016, fp);
+    float e = max(fp, 0.0003) * k;
+    float h = slateHeight(u, fine);
+    float3 n = normalize(float3(h - slateHeight(u + float2(e, 0.0), fine), h - slateHeight(u + float2(0.0, e), fine), e * 3.5));
+    // The lamp hangs above, a little beyond the middle (v up is away from the player)
+    float3 l = normalize(float3(-0.15, 0.45, 0.88));
+    float shade = 0.62 + 0.5 * max(dot(n, l), 0.0);
+    float tone = fbm(u * 0.35 + 4.0);
+    float3 col = mix(float3(0.05, 0.059, 0.063), float3(0.13, 0.143, 0.15), tone);
+    col = mix(col, float3(0.12, 0.09, 0.07), smoothstep(0.62, 0.8, fbm(u * float2(0.4, 1.6) + 9.0)) * 0.3);
+    col *= 0.85 + (0.25 * vnoise(u * 70.0) - 0.125) * fine + 0.1 * fbm(u * 18.0);
+    col += step(0.992, hash21(floor(u * 160.0))) * 0.05 * fine;
+    // Lighter than the menu slate: the table's light multiplies it, falling away into the dark
+    return col * shade * 2.1;
 }
 
 // ---- Thai straw mat: a woven sedge mat, redrawn procedurally from measurements of a real one

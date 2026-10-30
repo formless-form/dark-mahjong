@@ -16,6 +16,7 @@ import com.vortessence.mahjong.data.repository.PreferencesRepository
 import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TileTapResult
+import com.vortessence.mahjong.audio.FireRoom
 import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.engine.TutorialStep
 import kotlinx.coroutines.Job
@@ -114,9 +115,17 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 audioManager.updateSettings(s)
             }
         }
-        // The fireplace is only heard at the table
+        // The fireplace is heard at the table, and softly on the menu screens
         viewModelScope.launch {
-            currentScreen.collect { screen -> audioManager.setAtTable(screen is Screen.Game) }
+            currentScreen.collect { screen ->
+                audioManager.setFireRoom(
+                    when (screen) {
+                        is Screen.Game -> FireRoom.TABLE
+                        is Screen.Settings, is Screen.LevelSelect, is Screen.ConstellationSelect -> FireRoom.MENU
+                        else -> FireRoom.NONE
+                    },
+                )
+            }
         }
         // Collect progress
         viewModelScope.launch {

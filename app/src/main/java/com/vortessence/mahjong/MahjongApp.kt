@@ -108,6 +108,7 @@ fun MahjongApp(viewModel: MahjongViewModel) {
                                 levels = viewModel.currentLevelConstellations,
                                 onLevelSelected = { level -> viewModel.startLevel(level) },
                                 onBack = toMenu,
+                                fireIntensity = settings.fireIntensity,
                             )
                         }
 
@@ -116,6 +117,7 @@ fun MahjongApp(viewModel: MahjongViewModel) {
                                 progress = progress,
                                 onConstellationSelected = { constellation -> viewModel.startConstellation(constellation) },
                                 onBack = toMenu,
+                                fireIntensity = settings.fireIntensity,
                             )
                         }
 

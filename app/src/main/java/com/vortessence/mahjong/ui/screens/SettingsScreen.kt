@@ -47,6 +47,8 @@ import com.vortessence.mahjong.ui.components.ExpressiveScreen
 import com.vortessence.mahjong.ui.components.LeadingIcon
 import com.vortessence.mahjong.ui.components.SectionHeader
 import com.vortessence.mahjong.ui.components.SegmentGap
+import com.vortessence.mahjong.ui.components.panel
+import com.vortessence.mahjong.ui.components.MenuBackdrop
 import com.vortessence.mahjong.ui.components.segmentColors
 
 private typealias Segment = @Composable (ListItemShapes) -> Unit
@@ -57,7 +59,11 @@ fun SettingsScreen(
     onSettingsChanged: (GameSettings) -> Unit,
     onBack: () -> Unit,
 ) {
-    ExpressiveScreen(title = "Settings", onBack = onBack) { padding ->
+    ExpressiveScreen(
+        title = "Settings",
+        onBack = onBack,
+        backdrop = { MenuBackdrop(settings.fireIntensity) },
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -126,8 +132,8 @@ fun SettingsScreen(
                 listOf<@Composable (ListItemShapes) -> Unit>(
                     { shapes ->
                         ChoiceRow(
-                            shapes, Icons.Rounded.Texture, "Table surface", "What the tiles are played on",
-                            TableSurface.entries, { it.displayName }, settings.tableSurface,
+                            shapes, Icons.Rounded.Texture, "Table surface", null,
+                            TableSurface.entries, { it.shortName }, settings.tableSurface,
                         ) { onSettingsChanged(settings.copy(tableSurface = it)) }
                     },
                     { shapes ->
@@ -235,7 +241,7 @@ private fun SliderRow(shapes: ListItemShapes, title: String, value: Float, onVal
                 value = value,
                 onValueChange = onValueChange,
                 colors = SliderDefaults.colors(
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    inactiveTrackColor = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.5f),
                     inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
@@ -251,24 +257,26 @@ private fun <T> ChoiceRow(
     shapes: ListItemShapes,
     icon: ImageVector,
     title: String,
-    subtitle: String,
+    subtitle: String?,
     choices: List<T>,
     label: (T) -> String,
     selected: T,
     onSelect: (T) -> Unit,
 ) {
-    Surface(shape = shapes.shape, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LeadingIcon(icon)
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    subtitle?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -286,7 +294,7 @@ private fun <T> ChoiceRow(
                             else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                         },
                         colors = ToggleButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            containerColor = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
                             contentColor = MaterialTheme.colorScheme.onSurface,
                         ),
                         modifier = Modifier

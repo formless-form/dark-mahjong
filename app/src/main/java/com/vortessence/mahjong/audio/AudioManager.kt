@@ -23,7 +23,7 @@ class AudioManager(private val context: Context) {
     private var currentSettings: GameSettings? = null
     private var isInForeground = false
     // On the game screen, where the fireplace burns beside the table
-    private var atTable = false
+    private var room = FireRoom.NONE
     private var matchStreak = 0
     private var lastMatchTimeMs = 0L
 
@@ -90,24 +90,31 @@ class AudioManager(private val context: Context) {
         if (isInForeground) fireplace.play(fireLevel(settings))
     }
 
-    /** The game screen opened ([atTable]) or closed: the fireplace is only heard there. */
-    fun setAtTable(atTable: Boolean) {
-        this.atTable = atTable
+    /**
+     * Where the player is: at the table, the fireplace is heard as set; on the menu screens
+     * (Settings, Levels, Layouts), whose stone it lights faintly, softly (a fifth as loud); on
+     * the title screen not at all.
+     */
+    fun setFireRoom(room: FireRoom) {
+        this.room = room
         val settings = currentSettings ?: return
         if (isInForeground) fireplace.play(fireLevel(settings))
     }
 
     /**
      * The fireplace's crackle: ambience, never a distraction. Its own volume setting runs up to
-     * just under half the recording's level, a little louder as the fire burns brighter. Silent
-     * when the fire is out, and away from the game screen.
+     * just under half the recording's level, a little louder as the fire burns brighter. At the
+     * table it is silent when the fire is out; the menu screens always have their faint fire, so
+     * always its soft crackle. Silent on the title screen.
      */
-    private fun fireLevel(settings: GameSettings): Float =
-        if (settings.fireplaceLit && atTable) {
-            settings.fireVolume * 0.45f * (0.8f + 0.4f * settings.fireIntensity)
-        } else {
-            0f
+    private fun fireLevel(settings: GameSettings): Float {
+        val level = settings.fireVolume * 0.45f * (0.8f + 0.4f * settings.fireIntensity)
+        return when (room) {
+            FireRoom.TABLE -> if (settings.fireplaceLit) level else 0f
+            FireRoom.MENU -> level * MENU_FIRE_SHARE
+            FireRoom.NONE -> 0f
         }
+    }
 
     fun onResume() {
         isInForeground = true
@@ -293,3 +300,9 @@ class AudioManager(private val context: Context) {
         const val WIN_BOOST_MILLIBELS = 500
     }
 }
+
+/** Where the fireplace can be heard from. */
+enum class FireRoom { TABLE, MENU, NONE }
+
+// On the menu screens the fire is heard at a fifth of its table volume
+private const val MENU_FIRE_SHARE = 0.2f

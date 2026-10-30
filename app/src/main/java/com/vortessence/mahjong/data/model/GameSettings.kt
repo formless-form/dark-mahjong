@@ -1,10 +1,12 @@
 package com.vortessence.mahjong.data.model
 
 // Order matters: the table shader selects the surface by ordinal
-enum class TableSurface(val displayName: String) {
-    GREEN_MAT("Green mat"),
-    WALNUT("Walnut"),
-    THAI_STRAW("Thai straw"),
+// shortName: one word, for the four buttons in Settings, where the full names don't fit
+enum class TableSurface(val displayName: String, val shortName: String) {
+    GREEN_MAT("Green mat", "Felt"),
+    WALNUT("Walnut", "Walnut"),
+    THAI_STRAW("Thai straw", "Straw"),
+    SLATE("Slate", "Slate"),
 }
 
 @Suppress("unused")
@@ -24,7 +26,7 @@ data class GameSettings(
     val lampBrightness: Float = 0.5f,
     // A fire in a hearth beside the table, lit or not, and how brightly it burns (as the lamp)
     val fireplaceLit: Boolean = false,
-    val fireIntensity: Float = 0.5f,
+    val fireIntensity: Float = 0.6f,
     // The fire's crackle, on its own volume (subtle by default)
     val fireVolume: Float = 0.35f,
 ) {

@@ -35,6 +35,7 @@ import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.ui.components.BadgeState
 import com.vortessence.mahjong.ui.components.DifficultyStars
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
+import com.vortessence.mahjong.ui.components.MenuBackdrop
 import com.vortessence.mahjong.ui.components.LevelBadge
 import com.vortessence.mahjong.ui.components.SegmentGap
 import com.vortessence.mahjong.ui.components.segmentColors
@@ -44,20 +45,17 @@ fun ConstellationSelectScreen(
     progress: Progress,
     onConstellationSelected: (Constellation) -> Unit,
     onBack: () -> Unit,
+    fireIntensity: Float = 0.5f,
 ) {
     var selectedDifficultyFilter by remember { mutableStateOf<Difficulty?>(null) }
-    var selectedLayoutFilter by remember { mutableStateOf<Boolean?>(null) }
 
-    val filteredConstellations = remember(selectedDifficultyFilter, selectedLayoutFilter) {
+    val filteredConstellations = remember(selectedDifficultyFilter) {
         ConstellationRepository.constellations.filter { constellation ->
-            val matchDifficulty = (selectedDifficultyFilter == null) || (constellation.difficulty == selectedDifficultyFilter)
-            val isTutorial = constellation.id == ConstellationRepository.TUTORIAL_ID
-            val matchLayout = isTutorial || (selectedLayoutFilter == null) || (constellation.isPortraitOptimized == selectedLayoutFilter)
-            matchDifficulty && matchLayout
+            (selectedDifficultyFilter == null) || (constellation.difficulty == selectedDifficultyFilter)
         }
     }
 
-    ExpressiveScreen(title = "Layouts", onBack = onBack) { padding ->
+    ExpressiveScreen(title = "Layouts", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -70,17 +68,6 @@ fun ConstellationSelectScreen(
                             label = diff?.displayName ?: "All difficulties",
                             selected = selectedDifficultyFilter == diff,
                             onClick = { selectedDifficultyFilter = if (diff != null && selectedDifficultyFilter == diff) null else diff },
-                        )
-                    }
-                }
-            }
-            ChipRow {
-                listOf<Pair<String, Boolean?>>("All shapes" to null, "Tall" to true, "Wide" to false).forEach { (label, tall) ->
-                    item {
-                        FilterOption(
-                            label = label,
-                            selected = selectedLayoutFilter == tall,
-                            onClick = { selectedLayoutFilter = if (tall != null && selectedLayoutFilter == tall) null else tall },
                         )
                     }
                 }

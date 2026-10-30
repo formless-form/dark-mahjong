@@ -3,6 +3,7 @@ package com.vortessence.mahjong.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -21,6 +22,7 @@ import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.ui.components.BadgeState
 import com.vortessence.mahjong.ui.components.DifficultyStars
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
+import com.vortessence.mahjong.ui.components.MenuBackdrop
 import com.vortessence.mahjong.ui.components.LevelBadge
 import com.vortessence.mahjong.ui.components.SegmentGap
 import com.vortessence.mahjong.ui.components.segmentColors
@@ -32,6 +34,7 @@ fun LevelSelectScreen(
     tutorial: Constellation = ConstellationRepository.tutorialConstellation,
     onLevelSelected: (Int) -> Unit,
     onBack: () -> Unit,
+    fireIntensity: Float = 0.5f,
 ) {
     val highestUnlocked = progress.highestLevelReached.coerceAtLeast(1)
     // The tutorial first (always open), then the levels in order
@@ -39,14 +42,17 @@ fun LevelSelectScreen(
     // Open near the level you're up to rather than at level 1
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (highestUnlocked - 1).coerceIn(0, rows.lastIndex))
 
-    ExpressiveScreen(title = "Levels", onBack = onBack) { padding ->
+    ExpressiveScreen(title = "Levels", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity) }) { padding ->
+        // Below the title bar, as on Layouts, so the list never shows through it
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = padding.calculateTopPadding()),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
-                top = padding.calculateTopPadding() + 8.dp,
+                top = 12.dp,
                 bottom = padding.calculateBottomPadding() + 32.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(SegmentGap),

@@ -73,7 +73,7 @@ class PreferencesRepository(private val context: Context) {
             lampBrightness = prefs[Keys.LAMP_BRIGHTNESS] ?: 0.5f,
             fireplaceLit = prefs[Keys.FIREPLACE] ?: false,
             fireVolume = prefs[Keys.FIRE_VOLUME] ?: 0.35f,
-            fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: 0.5f,
+            fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: 0.6f,
         )
     }
 
