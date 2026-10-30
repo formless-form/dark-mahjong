@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,17 +84,29 @@ fun TutorialCard(
                         modifier = Modifier.align(Alignment.End)
                     )
                 } else {
-                    Text(
-                        text = when (current.action) {
-                            TutorialAction.TAP_BLOCKED -> "Tap the blue tile"
-                            TutorialAction.PINCH_ZOOM -> "Pinch the board"
-                            TutorialAction.ZOOM_OUT -> "Tap the magnifying glass"
-                            else -> "Match the blue tiles"
-                        },
-                        style = MaterialTheme.typography.labelLargeEmphasized,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.align(Alignment.End)
-                    )
+                    // The zoom steps can be skipped, for anyone who can't pinch
+                    val skippable = current.action == TutorialAction.PINCH_ZOOM || current.action == TutorialAction.ZOOM_OUT
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = if (skippable) Arrangement.SpaceBetween else Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (skippable) {
+                            TextButton(onClick = { onContinue(current) }) {
+                                Text("Skip", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        Text(
+                            text = when (current.action) {
+                                TutorialAction.TAP_BLOCKED -> "Tap the blue tile"
+                                TutorialAction.PINCH_ZOOM -> "Pinch the board"
+                                TutorialAction.ZOOM_OUT -> "Tap the magnifying glass"
+                                else -> "Match the blue tiles"
+                            },
+                            style = MaterialTheme.typography.labelLargeEmphasized,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
                 }
             }
         }
