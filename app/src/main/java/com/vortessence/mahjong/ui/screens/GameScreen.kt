@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,7 @@ fun GameScreen(
     onTutorialContinue: () -> Unit = {},
     onSettingsChanged: (GameSettings) -> Unit = {},
     onBoardZoom: (Boolean) -> Unit = {},
+    onWinShown: () -> Unit = {},
 ) {
     if (gameState == null) {
         LoadingPage(Modifier.background(MaterialTheme.colorScheme.background))
@@ -80,10 +82,23 @@ fun GameScreen(
         onBoardZoom(boardZoomedIn)
     }
 
+    // The final pair smashes before the celebration and its fanfare begin. Saved, so a recreated
+    // screen doesn't play the fanfare again; leaving the board first means it never plays
+    var celebrating by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(gameState.isWon) {
+        if (!gameState.isWon) {
+            celebrating = false
+        } else if (!celebrating) {
+            delay(WIN_REVEAL)
+            celebrating = true
+            onWinShown()
+        }
+    }
+
     // When the board is cleared it softly blurs behind the celebration, as Android 17 blurs
     // what sits behind its own panels
     val blur by animateDpAsState(
-        targetValue = if (gameState.isWon) 14.dp else 0.dp,
+        targetValue = if (celebrating) 14.dp else 0.dp,
         animationSpec = MaterialTheme.motionScheme.slowEffectsSpec(),
         label = "BoardBlur",
     )
@@ -142,7 +157,7 @@ fun GameScreen(
     }
 
     // Fireworks and a warm message when the board is cleared
-    if (gameState.isWon) {
+    if (gameState.isWon && celebrating) {
         WinCelebration(
             message = winMessage,
             subtitle = listOfNotNull(levelLabel(levelIndex), gameState.constellation.name).distinct().joinToString(" · "),
@@ -164,3 +179,6 @@ fun GameScreen(
         )
     }
 }
+
+// How long the final pair has to smash before the celebration
+private val WIN_REVEAL = 600.milliseconds

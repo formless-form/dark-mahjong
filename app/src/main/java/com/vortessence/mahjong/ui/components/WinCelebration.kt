@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -58,7 +59,9 @@ fun WinCelebration(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.28f)),
+            .background(Color.Black.copy(alpha = 0.28f))
+            // Taps around the card stop here rather than reaching the toolbar under the blur
+            .pointerInput(Unit) {},
     ) {
         if (animationsEnabled) {
             FireworksShow(modifier = Modifier.fillMaxSize())

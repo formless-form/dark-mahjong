@@ -131,6 +131,8 @@ class AudioManager(private val context: Context) {
         isInForeground = false
         musicPlayer.pause()
         fireplace.pause()
+        // The fireworks don't carry on in the background
+        releaseWinPlayer()
     }
 
     fun release() {
@@ -193,6 +195,7 @@ class AudioManager(private val context: Context) {
     }
 
     fun playWin() {
+        if (!isInForeground) return
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
             playWinPhrase(settings.soundVolume)

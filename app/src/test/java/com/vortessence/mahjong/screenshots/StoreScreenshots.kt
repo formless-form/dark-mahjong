@@ -95,7 +95,8 @@ class StoreScreenshots {
         compose.mainClock.autoAdvance = false
         val won = level(5).let { s -> s.copy(tiles = s.tiles.map { it.copy(isRemoved = true) }, isWon = true) }
         game(TableSurface.WALNUT, won, 5, message = "The mist lifts, and so do the tiles.")
-        compose.mainClock.advanceTimeBy(1600)
+        // The 600 ms smash, then the card's 1.1 s, and a little of its fade
+        compose.mainClock.advanceTimeBy(2200)
         shoot("5-celebration")
     }
 

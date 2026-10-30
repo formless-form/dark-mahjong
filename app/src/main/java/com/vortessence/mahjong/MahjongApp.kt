@@ -148,6 +148,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 onMainMenu = toMenu,
                                 onTutorialContinue = { viewModel.advanceTutorial() },
                                 onBoardZoom = { viewModel.onBoardZoom(it) },
+                                onWinShown = { viewModel.playWin() },
                                 onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
                             )
                         }

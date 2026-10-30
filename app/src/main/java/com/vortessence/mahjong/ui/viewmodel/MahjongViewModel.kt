@@ -106,8 +106,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private var winRevealJob: Job? = null
-
     init {
         // Collect settings
         viewModelScope.launch {
@@ -217,9 +215,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private var perfAutoplay: Job? = null
 
     private fun initGame(constellation: Constellation, random: Random? = null) {
-        // A pending win reveal from the previous game must not overwrite the new one
-        winRevealJob?.cancel()
-        winRevealJob = null
         val fresh = MahjongGameEngine.startNewGame(constellation)
         val state = if (random == null) fresh else {
             val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(constellation, random))
@@ -298,15 +293,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                             isTutorial = TutorialScript.isTutorial(current),
                         )
                     }
-                    // Keep isWon false briefly so the final pair has time to animate smashing
-                    _gameState.value = newState.copy(isWon = false)
-                    winRevealJob = viewModelScope.launch {
-                        delay(600.milliseconds)
-                        _gameState.value = newState
-                        audioManager.playWin()
-                    }
                 } else {
-                    _gameState.value = newState
                     saveCurrentGame()
                 }
             }
@@ -315,6 +302,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun playTileMatch() {
         audioManager.playTileMatch()
+    }
+
+    /** The celebration has appeared over a cleared board (not one fading out behind the menu). */
+    fun playWin() {
+        if (_currentScreen.value == Screen.Game) audioManager.playWin()
     }
 
     /** The board was zoomed in or back out: the tutorial's zoom steps wait on this. */
@@ -332,6 +324,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         // Undo and hints would get in the way of the guided tutorial steps
         if (_tutorialStepIndex.value != null) return
         val current = _gameState.value ?: return
+        // A cleared board stays cleared: Replay or Play again deal afresh
+        if (current.isWon) return
         if (current.moveHistory.isNotEmpty()) {
             val updated = MahjongGameEngine.undo(current)
             _gameState.value = updated
