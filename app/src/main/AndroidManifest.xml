@@ -3,7 +3,9 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- A game, so large screens (tablets, unfolded foldables) keep its portrait lock -->
     <application
+        android:appCategory="game"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
