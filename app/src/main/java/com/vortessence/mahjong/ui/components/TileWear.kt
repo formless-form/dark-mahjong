@@ -84,14 +84,15 @@ object TileWear {
     @Suppress("UNUSED_PARAMETER")
     fun ageing(id: Int): Float = 0.065f
 
-    /** Small placement imperfection: offset as fractions of the tile width, rotation in degrees. */
-    fun jitter(id: Int): Triple<Float, Float, Float> {
-        val h = mix(id * 17 + 3)
-        val a = (h % 1000) / 1000f - 0.5f
-        val b = ((h / 1000) % 1000) / 1000f - 0.5f
-        val c = ((h / 1000000) % 1000) / 1000f - 0.5f
-        return Triple(a * 0.016f, b * 0.016f, c * 1.1f)
-    }
+    /*
+     * Small placement imperfection: offset as fractions of the tile width, rotation in degrees.
+     * Three plain functions rather than one returning a triple, as every tile asks every frame.
+     */
+    fun jitterX(id: Int): Float = ((mix(id * 17 + 3) % 1000) / 1000f - 0.5f) * 0.016f
+
+    fun jitterY(id: Int): Float = (((mix(id * 17 + 3) / 1000) % 1000) / 1000f - 0.5f) * 0.016f
+
+    fun jitterTurn(id: Int): Float = (((mix(id * 17 + 3) / 1000000) % 1000) / 1000f - 0.5f) * 1.1f
 
     /** How much the glaze's surface wobbles (0..1), which bends the lamp's reflection in it. */
     fun wobble(look: Int): Float = (mix(look * 53 + 11) % 1000) / 1000f

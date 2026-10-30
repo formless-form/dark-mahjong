@@ -163,12 +163,36 @@ Seed = today's date (`yyyyMMdd`), so the puzzle is the same all day, fully offli
 Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit) with `adb shell dumpsys gfxinfo <pkg> framestats`. The render thread went from 81 ms a frame to 5 ms, the GPU from 26 to 15 ms, and matches run at 60 fps. Side-by-side renders match the unoptimised look.
 
 - **Only what the player can see is drawn** (`TileCulling`): a tile wholly covered by tiles drawn after it is left out, with its shadows, allowing for rounded corners and the slight off-square placement. Worked out only when tiles change.
-- **The tile atlas** (`TileRenderer.TileAtlas`): each tile is stamped from about five shared images (body, artwork with its engraving, each of the 32 looks' wear and fixed glaze, and each look's glare, stamped as strongly as the tile catches the light), made off the main thread at the size tiles are shown. Highlighted tiles are still drawn shape by shape.
+- **The tile atlas** (`TileRenderer.TileAtlas`): each tile is stamped from about five shared images (body, artwork with its engraving, each of the 32 looks' wear and fixed glaze, and each look's glare, stamped as strongly as the tile catches the light), made off the main thread at the size tiles are shown. Highlighted tiles too, since phase 3.
 - **The tabletop's colour is drawn once** into a cached layer, remade only when the zoom, pan or surface changes; only its light is worked out each frame. Table pixels under the tiles skip it.
 - **The fire's long shadows are traced once per pixel**, on the table or on a tile, not both; long shadows are always on (the setting is gone: its painted fallback was twice as slow).
 - **Fireworks:** match bursts on their own layer (a burst never redraws the board), from a pool of three reused shells of 40 sparks; every spark is one stamp of a glow image.
 - **Contact shadows** are one pre-blurred stamp.
 - The fireplace is marked "More GPU-intensive" in Settings; budget phones can keep the lamp alone.
+- **Phase 3 (2026-10-30, from a rendering audit):**
+  - The fire's shadows are traced only where they can fall. The march from each pixel towards
+    the flames takes only its steps over the board's bounds, and stops once a pixel is fully
+    shadowed. That gives the same result, but most of the table needs no steps at all, and a
+    cleared board none.
+  - Highlighted tiles (selected, hinted, blocked, the tutorial's rings) are stamped from the
+    atlas too, which holds a tinted body for each highlight. The gold glow is a pre-blurred stamp.
+    Only the matched pair in flight, shown larger than the atlas's images, is still drawn shape
+    by shape.
+  - During a pinch, pan or spring back, the cached table colour is scaled to follow, and drawn
+    afresh once the view settles. Once zoomed in, it reaches 20% past the screen.
+  - The menu slate is baked once per app run and shared by Settings, Levels and Layouts.
+  - Just after a match, while the new shadow map is made, the tiles' light still skips their
+    layer's empty parts. The map's occlusion is worked out only around the board.
+  - Smaller items: the title photo is decoded once, tiles' nudges no longer allocate, and the
+    fading pair shares one layer.
+  - **Measured** on the Pixel (Quad, fire lit), old and new builds alternated twice:
+    - At rest, the slowest frames are gone: frame time 90th percentile 37–39 → 30–31 ms, GPU
+      90th percentile 28–29 → 20 ms.
+    - At 20 fps the GPU slows its clock to fill the time, so GPU time hides savings. GPU time ×
+      clock shows slate at rest takes about 35% fewer GPU cycles a frame (5.4–6.0 M → 3.6–3.7 M)
+      at a lower clock (240–250 → 181–189 MHz). Walnut's median is unchanged within the noise.
+    - With a hint showing, the median frame is 26 → 21 ms and the 99th percentile 44 → 31 ms.
+    - Matches are unchanged (GPU about 10 ms at full clock).
 - **Test builds** (`tools/deploy-to-phone.sh`, `-PperfHooks=true`) can be told over adb to open a fixed deal, switch drawing stages off, set the fire's rate or play matches by themselves, for measuring; Play builds never can.
 - Still to do: a Baseline Profile for fast cold start; perhaps a cheaper fire-shadow trace for weaker GPUs.
 

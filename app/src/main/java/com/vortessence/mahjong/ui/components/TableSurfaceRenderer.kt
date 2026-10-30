@@ -8,6 +8,8 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.layer.CompositingStrategy
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -127,10 +129,27 @@ half4 main(float2 p) {
 }
 """
 
-    /** The board's cached table colour: a layer and what it was drawn for. */
+    /** The board's cached table colour: a layer, and the table and view it was drawn for. */
     class AlbedoCache(val layer: GraphicsLayer) {
-        internal var key: Any? = null
         internal var shader: RuntimeShader? = null
+        internal var surface: TableSurface? = null
+        internal var width = 0f
+        internal var height = 0f
+        internal var size = IntSize.Zero
+        internal var zoom = 1f
+        internal var pan = Offset.Zero
+        // How far the layer reaches beyond the screen on each side, in pixels
+        internal var margin = IntOffset.Zero
+
+        /** The layer, drawn for its own view, still fills the screen at [zoom] and [pan]. */
+        internal fun covers(zoom: Float, pan: Offset): Boolean {
+            val k = zoom / this.zoom
+            val left = pan.x + k * (-margin.x - this.pan.x)
+            val top = pan.y + k * (-margin.y - this.pan.y)
+            val right = pan.x + k * (size.width + margin.x - this.pan.x)
+            val bottom = pan.y + k * (size.height + margin.y - this.pan.y)
+            return left <= 0.5f && top <= 0.5f && right >= size.width - 0.5f && bottom >= size.height - 0.5f
+        }
     }
 
     private var lightShader: RuntimeShader? = null
@@ -165,6 +184,12 @@ half4 main(float2 p) {
     /**
      * The table's colour in screen pixels, from [cache] if nothing it depends on has changed.
      * Drawn before the zoom is applied.
+     *
+     * While the view is moving (a pinch, a pan, the spring back to the whole board: not
+     * [settled]), the colour drawn for the view before is scaled and shifted to follow it, as the
+     * zoom is a plain scale and shift of the screen, and only drawn afresh when it would no longer
+     * fill the screen. Once the view settles it is drawn again at its sharpest. Some surfaces cost
+     * a great deal to draw (the slate most), so this keeps pinches smooth.
      */
     fun drawTableAlbedo(
         scope: DrawScope,
@@ -175,20 +200,51 @@ half4 main(float2 p) {
         context: Context?,
         zoom: Float,
         pan: Offset,
+        settled: Boolean = true,
     ) {
         val size = IntSize(scope.size.width.roundToInt(), scope.size.height.roundToInt())
-        val key = listOf(surface, width, height, zoom, pan, size)
-        if (cache.key != key) {
-            val s = cache.shader ?: RuntimeShader(ALBEDO_AGSL).also { cache.shader = it }
-            setAlbedoUniforms(s, surface, width, height, context, zoom, pan)
-            cache.layer.compositingStrategy = CompositingStrategy.Offscreen
-            with(scope) {
-                cache.layer.record(size) { drawRect(ShaderBrush(s)) }
+        val sameTable = cache.surface == surface && cache.width == width && cache.height == height && cache.size == size
+        val sameView = cache.zoom == zoom && cache.pan == pan
+        if (!sameTable || (!sameView && (settled || !cache.covers(zoom, pan)))) {
+            // The whole board can't pan, and zooming in from it stays within the view; zoomed in,
+            // the layer reaches past the screen, so a pan or a pinch out can follow it for a while
+            val m = if (zoom > 1.001f) {
+                IntOffset((size.width * ALBEDO_MARGIN).roundToInt(), (size.height * ALBEDO_MARGIN).roundToInt())
+            } else {
+                IntOffset.Zero
             }
-            cache.key = key
+            val s = cache.shader ?: RuntimeShader(ALBEDO_AGSL).also { cache.shader = it }
+            setAlbedoUniforms(s, surface, width, height, context, zoom, pan + Offset(m.x.toFloat(), m.y.toFloat()))
+            cache.layer.compositingStrategy = CompositingStrategy.Offscreen
+            cache.layer.topLeft = IntOffset(-m.x, -m.y)
+            with(scope) {
+                cache.layer.record(IntSize(size.width + 2 * m.x, size.height + 2 * m.y)) { drawRect(ShaderBrush(s)) }
+            }
+            cache.surface = surface
+            cache.width = width
+            cache.height = height
+            cache.size = size
+            cache.zoom = zoom
+            cache.pan = pan
+            cache.margin = m
         }
-        scope.drawLayer(cache.layer)
+        if (cache.zoom == zoom && cache.pan == pan) {
+            scope.drawLayer(cache.layer)
+        } else {
+            // Drawn for another view: screen = scene * zoom + pan, for each
+            val k = zoom / cache.zoom
+            scope.withTransform({
+                translate(pan.x - cache.pan.x * k, pan.y - cache.pan.y * k)
+                scale(k, k, Offset.Zero)
+            }) {
+                drawLayer(cache.layer)
+            }
+        }
     }
+
+    // How far the cached colour reaches past each side of the screen once zoomed in, as a share
+    // of the screen
+    private const val ALBEDO_MARGIN = 0.2f
 
     /**
      * The light on the table, multiplied over its colour, and the reflections of a glossy
@@ -378,17 +434,35 @@ float ambient(float2 q) {
     return 1.0 - aoStrength * aoMap.eval(tablePixel(q) * shade.y).g;
 }
 uniform float cullUnder;    // 1 when the height map matches the board as drawn: the table hidden under tiles is skipped
+uniform float4 boardBox;    // the standing tiles' bounds in map pixels (left, top, right, bottom), with a margin; left > right when none stand
 // Wholly under a tile, a couple of map pixels in from every edge: the tiles drawn over it hide it
 bool underTiles(float2 q) {
     if (cullUnder < 0.5) return false;
     float2 t = tablePixel(q);
+    if (t.x < boardBox.x || t.x > boardBox.z || t.y < boardBox.y || t.y > boardBox.w) return false;
     float lowest = min(min(heightMap.eval(t + float2(-2.0, -2.0)).a, heightMap.eval(t + float2(2.0, -2.0)).a),
                        min(heightMap.eval(t + float2(-2.0, 2.0)).a, heightMap.eval(t + float2(2.0, 2.0)).a));
     return lowest >= 30.5 / 255.0;
 }
+// The share of the line from q to q + d (0 to 1 along it) that crosses the board's bounds: the
+// first and last, the first beyond the last if it misses them
+float2 overBoard(float2 q, float2 d) {
+    if (boardBox.x > boardBox.z) return float2(1.0, 0.0);
+    float2 a = tablePixel(q);
+    float2 e = tablePixel(q + d) - a;
+    // Never quite zero, so a line along an edge still divides
+    e = float2(e.x < 0.0 ? min(e.x, -1e-3) : max(e.x, 1e-3), e.y < 0.0 ? min(e.y, -1e-3) : max(e.y, 1e-3));
+    float2 t0 = (boardBox.xy - a) / e;
+    float2 t1 = (boardBox.zw - a) / e;
+    float2 lo = min(t0, t1);
+    float2 hi = max(t0, t1);
+    return float2(max(max(lo.x, lo.y), 0.0), min(min(hi.x, hi.y), 1.0));
+}
 // How much of the fire reaches q, standing h0 above the table: 1 in its light, 0 in full shadow.
 // Marches from q towards the flames as far as the ray stays below the tallest stack, and takes
 // the deepest occlusion along the way, softened as the ray reaches away (the fire is broad).
+// Only the steps over the board are taken (off it the table is bare, so they would find
+// nothing), and none after one finds full shadow: the result is the same as taking them all.
 float fireShadow(float2 q, float h0) {
     if (shade.x < 0.5 || flame.z <= 0.0 || h0 >= shade.w) return 1.0;
     float2 toFire = flame.xy - q;
@@ -396,11 +470,21 @@ float fireShadow(float2 q, float h0) {
     float rise = (flameHeight - h0) / dist;
     float reach = min(dist, (shade.w - h0) / max(rise, 1e-4));
     float2 dir = toFire / dist;
+    float start = 0.6 * shade.z;
+    float2 span = overBoard(q + dir * start, dir * reach);
+    if (span.x > span.y) return 1.0;
     // A different start for each pixel, so the steps don't show as bands
     float jitter = fract(52.9829189 * fract(dot(q * res.y, float2(0.06711056, 0.00583715))));
+    float stride = reach / float(SHADOW_STEPS);
+    // Step i lies (i + jitter) / SHADOW_STEPS of the way along: the first and last over the board,
+    // a step to spare each side
+    float first = max(ceil(span.x * float(SHADOW_STEPS) - jitter) - 1.0, 0.0);
+    float last = min(span.y * float(SHADOW_STEPS) - jitter + 1.0, float(SHADOW_STEPS) - 1.0);
     float occluded = 0.0;
-    for (int i = 0; i < SHADOW_STEPS; i++) {
-        float s = reach * (float(i) + jitter) / float(SHADOW_STEPS) + 0.6 * shade.z;
+    for (int k = 0; k < SHADOW_STEPS; k++) {
+        float i = first + float(k);
+        if (i > last || occluded >= 1.0) break;
+        float s = stride * (i + jitter) + start;
         // Less a little, so a tile's own softened edge never shades it
         float above = boardHeight(q + dir * s) - (h0 + s * rise) - 0.35 * shade.z;
         float soft = 0.8 * shade.z + 0.12 * s;

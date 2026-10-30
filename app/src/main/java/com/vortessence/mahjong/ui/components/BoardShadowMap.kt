@@ -41,6 +41,9 @@ class BoardShadowMap private constructor(
     private val built: BoardTransform,
     // The number of layers in the tallest stack
     private val layers: Int,
+    // Where tiles stand in the map (left, top, right, bottom, in map pixels), with a margin; left
+    // beyond right when none do. The shaders look for shadows only within it
+    private val box: FloatArray,
     /** The tiles it was made from. */
     val tiles: List<BoardTile>,
 ) {
@@ -63,6 +66,7 @@ class BoardShadowMap private constructor(
             s.setFloatUniform("mapXform", scale, scale, offsetX, offsetY)
             s.setFloatUniform("shade", if (fireShadows) 1f else 0f, AO_SCALE, layer, layers * layer)
             s.setFloatUniform("aoStrength", AMBIENT_OCCLUSION)
+            s.setFloatUniform("boardBox", box)
         }
     }
 
@@ -85,19 +89,44 @@ class BoardShadowMap private constructor(
             s.setFloatUniform("mapXform", 1f, 1f, 0f, 0f)
             s.setFloatUniform("shade", 0f, AO_SCALE, 1f, 1f)
             s.setFloatUniform("aoStrength", 0f)
+            s.setFloatUniform("boardBox", 1f, 1f, 0f, 0f)
         }
 
         fun build(tiles: List<BoardTile>, transform: BoardTransform, w: Float, h: Float): BoardShadowMap? {
             if (w <= 0f || h <= 0f) return null
             val standing = tiles.filter { !it.isRemoved }.sortedBy { it.z }
             val layer = transform.tileWidth * TILE_HEIGHT / h
+            val box = bounds(standing, transform)
             return BoardShadowMap(
                 heightMap(standing, transform, w, h),
-                occlusionMap(standing, transform, w, h, layer),
+                occlusionMap(standing, transform, w, h, layer, box),
                 transform,
                 (standing.maxOfOrNull { it.z } ?: 0) + 1,
+                box,
                 tiles,
             )
+        }
+
+        /**
+         * Where the standing tiles lie, faces and walls, in map pixels: wide enough for each tile's
+         * nudge and turn and the map's smoothing, so nothing of theirs lies outside it.
+         */
+        private fun bounds(standing: List<BoardTile>, transform: BoardTransform): FloatArray {
+            if (standing.isEmpty()) return floatArrayOf(1f, 1f, 0f, 0f)
+            var left = Float.MAX_VALUE
+            var top = Float.MAX_VALUE
+            var right = -Float.MAX_VALUE
+            var bottom = -Float.MAX_VALUE
+            for (tile in standing) {
+                val x = transform.tilePixelX(tile.x, tile.z)
+                val y = transform.tilePixelY(tile.y, tile.z)
+                left = minOf(left, x)
+                top = minOf(top, y)
+                right = maxOf(right, x + transform.tileWidth + transform.depthX)
+                bottom = maxOf(bottom, y + transform.tileHeight + transform.depthY)
+            }
+            val margin = transform.tileWidth * 0.04f + 3f
+            return floatArrayOf(left - margin, top - margin, right + margin, bottom + margin)
         }
 
         /** The full-resolution height map, each tile drawn exactly as on screen. */
@@ -114,7 +143,9 @@ class BoardShadowMap private constructor(
             for (tile in standing) {
                 val x = transform.tilePixelX(tile.x, tile.z)
                 val y = transform.tilePixelY(tile.y, tile.z)
-                val (jx, jy, rotation) = TileWear.jitter(tile.id)
+                val jx = TileWear.jitterX(tile.id)
+                val jy = TileWear.jitterY(tile.id)
+                val rotation = TileWear.jitterTurn(tile.id)
                 paint.alpha = ((tile.z + 1) * PER_LAYER).coerceAtMost(255)
                 canvas.save()
                 canvas.translate(jx * tw, jy * tw)
@@ -134,7 +165,8 @@ class BoardShadowMap private constructor(
 
         /**
          * The table's ambient occlusion at a quarter resolution: two rings of neighbours around each
-         * point, each darkening by how steeply it rises above the table.
+         * point, each darkening by how steeply it rises above the table. Worked out only around
+         * the board ([box]): further out, nothing rises.
          */
         private fun occlusionMap(
             standing: List<BoardTile>,
@@ -142,6 +174,7 @@ class BoardShadowMap private constructor(
             w: Float,
             h: Float,
             layer: Float,
+            box: FloatArray,
         ): BitmapShader {
             val mw = (w * AO_SCALE).toInt().coerceAtLeast(2)
             val mh = (h * AO_SCALE).toInt().coerceAtLeast(2)
@@ -191,7 +224,13 @@ class BoardShadowMap private constructor(
             val ringX = FloatArray(8) { cos(it * 0.785398f + 0.3f) }
             val ringY = FloatArray(8) { sin(it * 0.785398f + 0.3f) }
             val pixels = IntArray(mw * mh)
-            for (j in 0 until mh) for (i in 0 until mw) {
+            // The board's bounds in map cells, out as far as the outer ring reaches
+            val ringReach = tileCells * 0.22f + 2f
+            val i0 = (box[0] * AO_SCALE - ringReach).toInt().coerceIn(0, mw)
+            val i1 = (box[2] * AO_SCALE + ringReach).toInt().coerceIn(0, mw - 1)
+            val j0 = (box[1] * AO_SCALE - ringReach).toInt().coerceIn(0, mh)
+            val j1 = (box[3] * AO_SCALE + ringReach).toInt().coerceIn(0, mh - 1)
+            for (j in j0..j1) for (i in i0..i1) {
                 val px = i + 0.5f
                 val py = j + 0.5f
                 var occ = 0f

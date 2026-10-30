@@ -79,7 +79,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -91,7 +95,11 @@ private class SmashAnimationItem(
     val tile1: BoardTile,
     val tile2: BoardTile,
     val animatable: Animatable<Float, AnimationVector1D>,
-)
+) {
+    // The pair as drawn in flight: standing and free, whatever the board now says of them
+    val flying1 = tile1.copy(isRemoved = false, isFree = true)
+    val flying2 = tile2.copy(isRemoved = false, isFree = true)
+}
 
 private data class SmashFrame(
     val x1: Float,
@@ -120,22 +128,6 @@ fun MahjongBoard(
 ) {
     val density = LocalDensity.current
     val paddingPx = with(density) { 16.dp.toPx() }
-
-    // Hint pulse animation
-    val hintPulse = remember { Animatable(0f) }
-    LaunchedEffect(gameState.hintPair) {
-        if (gameState.hintPair != null) {
-            hintPulse.animateTo(
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(600, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse
-                )
-            )
-        } else {
-            hintPulse.snapTo(0f)
-        }
-    }
 
     // Blocked shake/flash state
     var blockedFlashId by remember { mutableStateOf<Int?>(null) }
@@ -346,11 +338,19 @@ private fun BoardContent(
     // Flat table layout -> screen through the tilted camera, and back again for taps
     val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
     val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
+    // A hint's pair pulses gently in gold for as long as the hint shows (steady with animations
+    // off), timed from when it appeared
+    val hinting = (gameState.hintPair != null) && settings.animationsEnabled
+    var hintShownAt by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(gameState.hintPair) {
+        if (gameState.hintPair != null) hintShownAt = withFrameNanos { it / 1e9f }
+    }
     // Firelight flickers, so the board is redrawn for it, 20 times a second (chosen by eye against
-    // 30: the flicker looks the same); the lamp alone never changes
+    // 30: the flicker looks the same), and as often for a hint's pulse; the lamp alone never changes
     val firelit = settings.fireplaceLit
-    val flameSeconds by produceState(0f, firelit) {
-        if (firelit) {
+    val ticking = firelit || hinting
+    val clockSeconds by produceState(0f, ticking) {
+        if (ticking) {
             var last = Long.MIN_VALUE / 2
             val interval = PerfSwitches.fireFps.takeIf { it > 0 }?.let { 1_000_000_000L / it - 2_000_000L } ?: FIRE_FRAME_NANOS
             while (true) withFrameNanos { now ->
@@ -378,6 +378,17 @@ private fun BoardContent(
     // The map is of the tiles as drawn (not still being remade after a match or an undo), so
     // the shaders may skip what lies under the tiles
     val shadowsFresh = (shadowMap?.tiles === gameState.tiles) && !PerfSwitches.isOff("cullunder")
+    // Or only tiles taken away since the map was made, none put back (as just after a match, while
+    // the new map is made): where the map has no tile there is none now either, so the tiles'
+    // light can still skip the rest of their layer, though the table can't skip what was under them
+    val tilesWithinMap = remember(shadowMap, gameState.tiles) {
+        val then = shadowMap?.tiles
+        (then != null) && (then.size == gameState.tiles.size) && gameState.tiles.indices.all { i ->
+            val tile = gameState.tiles[i]
+            (tile.id == then[i].id) && (tile.position == then[i].position) && (tile.isRemoved || !then[i].isRemoved)
+        }
+    }
+    val tilesCulled = shadowsFresh || (tilesWithinMap && !PerfSwitches.isOff("cullunder"))
     val tableAlbedo = remember(graphicsLayer) { TableSurfaceRenderer.AlbedoCache(graphicsLayer) }
     // Only what the player can see is drawn: tiles wholly covered by others are left out
     val visibleTiles = remember(gameState.tiles) {
@@ -390,6 +401,18 @@ private fun BoardContent(
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     val zoomedIn by remember { derivedStateOf { zoom > 1.01f } }
+    // The view has held still a moment (no pinch, pan or spring back): the table's colour is then
+    // drawn afresh for it, at its sharpest, rather than following it
+    var viewSettled by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { zoom to pan }.collectLatest {
+            viewSettled = false
+            delay(VIEW_SETTLE_MILLIS.milliseconds)
+            viewSettled = true
+        }
+    }
+    // For the layers drawn each frame
+    val layerPaint = remember { Paint() }
     val reportZoom by rememberUpdatedState(onZoomedInChange)
     LaunchedEffect(zoomedIn) { reportZoom(zoomedIn) }
     val scope = rememberCoroutineScope()
@@ -444,15 +467,17 @@ private fun BoardContent(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             // The table's colour never flickers: drawn once, in screen pixels, and kept until the
-            // zoom, pan, size or surface changes
+            // zoom, pan, size or surface changes (a pinch or pan is followed by scaling it, and it
+            // is drawn afresh once the view settles)
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableAlbedo(
-                this, tableAlbedo, settings.tableSurface, canvasW, canvasH, context, zoom, pan,
+                this, tableAlbedo, settings.tableSurface, canvasW, canvasH, context, zoom, pan, viewSettled,
             )
             drawContext.canvas.save()
             drawContext.canvas.translate(pan.x, pan.y)
             drawContext.canvas.scale(zoom, zoom)
 
-            val flame = FlameLight.at(flameSeconds, settings.lampBrightness, settings.fireplaceLit, settings.fireIntensity)
+            val flame = FlameLight.at(clockSeconds, settings.lampBrightness, settings.fireplaceLit, settings.fireIntensity)
+            val hintStrength = if (hinting) hintPulse(clockSeconds - hintShownAt) else 1f
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableLight(
                 scope = this,
                 surface = settings.tableSurface,
@@ -475,7 +500,7 @@ private fun BoardContent(
             // One layer for everything on the table, so the lamp light can be applied to it whole
             drawContext.canvas.saveLayer(
                 Rect(-canvasW * 0.25f, -canvasH * 0.25f, canvasW * 1.25f, canvasH * 1.25f),
-                Paint(),
+                layerPaint,
             )
             var layerShaded = 0
             if (!PerfSwitches.isOff("tiles")) for (tile in sortedTiles) {
@@ -517,13 +542,14 @@ private fun BoardContent(
                         px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight / 2f, tile.z,
                         currentTransform.tileWidth, canvasW, canvasH, flame,
                     ),
+                    hintStrength = hintStrength,
                 )
             }
 
             // Lamp and firelight: multiplies everything drawn on the table (alpha untouched), full and
             // warm under the lamp, falling off towards the dark edges
             if (!PerfSwitches.isOff("tilelight")) drawRect(
-                brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame, placedShadows, tracedShadows, fresh = shadowsFresh),
+                brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame, placedShadows, tracedShadows, fresh = tilesCulled),
                 topLeft = Offset(-canvasW * 0.25f, -canvasH * 0.25f),
                 size = Size(canvasW * 1.5f, canvasH * 1.5f),
                 blendMode = BlendMode.Modulate,
@@ -534,7 +560,7 @@ private fun BoardContent(
             // the board's shadows, which would show the tiles beneath through them
             if (activeSmashes.isNotEmpty()) {
                 val area = smashBounds(activeSmashes, currentTransform, density)
-                drawContext.canvas.saveLayer(area, Paint())
+                drawContext.canvas.saveLayer(area, layerPaint)
                 for (smash in activeSmashes) {
                     drawSmashAnimation(
                         smash = smash,
@@ -662,6 +688,20 @@ private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLigh
 
 private const val SMASH_MILLIS = 840
 
+// A hint's pulse: one slow swell and fade of its gold every HINT_PULSE_SECONDS, never fainter than
+// HINT_PULSE_LOW of its full strength
+private const val HINT_PULSE_SECONDS = 1.6f
+private const val HINT_PULSE_LOW = 0.35f
+
+/** How strongly a hinted pair shows its gold, [seconds] after the hint appeared: full at first. */
+private fun hintPulse(seconds: Float): Float {
+    val wave = 0.5f + 0.5f * cos(2f * PI.toFloat() * seconds.coerceAtLeast(0f) / HINT_PULSE_SECONDS)
+    return HINT_PULSE_LOW + (1f - HINT_PULSE_LOW) * wave
+}
+
+// How long the view must hold still before the table's colour is drawn afresh for it
+private const val VIEW_SETTLE_MILLIS = 150
+
 // The smash's phases, as fractions of its progress: until RUSH_END the pair rises and rushes
 // together in one movement, starting slowly and gathering speed all the way to the clash; then it
 // shrinks into the burst and is gone
@@ -708,7 +748,8 @@ private fun smashBounds(smashes: List<SmashAnimationItem>, transform: BoardTrans
     var top = Float.MAX_VALUE
     var right = -Float.MAX_VALUE
     var bottom = -Float.MAX_VALUE
-    for (smash in smashes) for (tile in listOf(smash.tile1, smash.tile2)) {
+    for (smash in smashes) for (k in 0..1) {
+        val tile = if (k == 0) smash.tile1 else smash.tile2
         val x = transform.tilePixelX(tile.x, tile.z)
         val y = transform.tilePixelY(tile.y, tile.z)
         left = minOf(left, x)
@@ -797,78 +838,54 @@ private fun DrawScope.drawSmashAnimation(
         )
     }
 
-    // 2. Draw colliding raised tiles
+    // 2. Draw colliding raised tiles: the lower first (then the one further left, then further
+    // up); fading out, both together on one layer
     if (frame.alpha > 0.01f) {
-        val sorted = listOf(t1 to (frame.x1 to frame.y1), t2 to (frame.x2 to frame.y2))
-            .sortedWith(
-                compareBy<Pair<BoardTile, Pair<Float, Float>>> { it.first.z }
-                    .thenBy { it.second.first }  // X
-                    .thenBy { it.second.second } // Y
-            )
-
-        for ((tile, pos) in sorted) {
-            drawSingleAnimatingTile(
-                tile = tile,
-                posX = pos.first,
-                posY = pos.second,
-                scale = frame.scale,
-                alpha = frame.alpha,
-                transform = transform
-            )
+        val fading = frame.alpha < 0.99f
+        if (fading) {
+            // They have met by now: one tile's size around them reaches past their glow
+            val w = transform.tileWidth
+            val h = transform.tileHeight
+            fadePaint.alpha = frame.alpha
+            drawContext.canvas.saveLayer(Rect(frame.x1 - w, frame.y1 - h, frame.x1 + 2f * w, frame.y1 + 2f * h), fadePaint)
         }
+        val oneFirst = (t1.z < t2.z) || ((t1.z == t2.z) &&
+            ((frame.x1 < frame.x2) || ((frame.x1 == frame.x2) && (frame.y1 <= frame.y2))))
+        if (oneFirst) {
+            drawSingleAnimatingTile(smash.flying1, frame.x1, frame.y1, frame.scale, transform)
+            drawSingleAnimatingTile(smash.flying2, frame.x2, frame.y2, frame.scale, transform)
+        } else {
+            drawSingleAnimatingTile(smash.flying2, frame.x2, frame.y2, frame.scale, transform)
+            drawSingleAnimatingTile(smash.flying1, frame.x1, frame.y1, frame.scale, transform)
+        }
+        if (fading) drawContext.canvas.restore()
     }
 }
+
+private val fadePaint = Paint()
 
 private fun DrawScope.drawSingleAnimatingTile(
     tile: BoardTile,
     posX: Float,
     posY: Float,
     scale: Float,
-    alpha: Float,
-    transform: BoardTransform
+    transform: BoardTransform,
 ) {
     val pivot = Offset(posX + transform.tileWidth / 2f, posY + transform.tileHeight / 2f)
-    if (alpha < 0.99f) {
-        val bounds = Rect(0f, 0f, size.width, size.height)
-        val paint = Paint().apply { this.alpha = alpha }
-        drawContext.canvas.saveLayer(bounds, paint)
-        try {
-            withTransform({
-                scale(scale, scale, pivot = pivot)
-            }) {
-                TileRenderer.drawTile(
-                    scope = this,
-                    boardTile = tile.copy(isRemoved = false, isFree = true),
-                    x = posX,
-                    y = posY,
-                    width = transform.tileWidth,
-                    height = transform.tileHeight,
-                    isSelected = true,
-                    isHinted = false,
-                    isBlockedHighlight = false,
-                    highlightFreeTiles = false
-                )
-            }
-        } finally {
-            drawContext.canvas.restore()
-        }
-    } else {
-        withTransform({
-            scale(scale, scale, pivot = pivot)
-        }) {
-            TileRenderer.drawTile(
-                scope = this,
-                boardTile = tile.copy(isRemoved = false, isFree = true),
-                x = posX,
-                y = posY,
-                width = transform.tileWidth,
-                height = transform.tileHeight,
-                isSelected = true,
-                isHinted = false,
-                isBlockedHighlight = false,
-                highlightFreeTiles = false
-            )
-        }
+    withTransform({
+        scale(scale, scale, pivot = pivot)
+    }) {
+        // Shape by shape, as the pair grows larger than the atlas's images
+        TileRenderer.drawTile(
+            scope = this,
+            boardTile = tile,
+            x = posX,
+            y = posY,
+            width = transform.tileWidth,
+            height = transform.tileHeight,
+            isSelected = true,
+            live = true,
+        )
     }
 }
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntSize
+import kotlin.math.roundToInt
 
 /**
  * The menu screens' background: dark slate, by the light of a low lamp at the top left and,
@@ -35,6 +36,9 @@ import androidx.compose.ui.unit.IntSize
  * cleavage lines, grit and pits. Each frame only lights those: the lamp, and the fire from where
  * it burns this moment, so ridges facing the hearth catch it and flicker while those facing away
  * stay dark, with a faint glint along the edges. Two image reads a pixel, so cheap.
+ *
+ * The two images are kept for the app's life ([SlateMaps]) and shared by every menu screen, so
+ * only the first visit bakes them.
  */
 @Composable
 fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireIntensity: Float = 0.5f) {
@@ -52,6 +56,8 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
     var maps by remember { mutableStateOf<Pair<Bitmap, Bitmap>?>(null) }
     LaunchedEffect(size) {
         if (size.width == 0 || size.height == 0) return@LaunchedEffect
+        // Already baked on an earlier visit: drawn from the first frame (see below)
+        if (SlateMaps.get(size, density.density) != null) return@LaunchedEffect
         suspend fun bake(layer: GraphicsLayer, shader: RuntimeShader): Bitmap {
             shader.setFloatUniform("res", size.width.toFloat(), size.height.toFloat())
             shader.setFloatUniform("unit", density.density)
@@ -61,6 +67,7 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
         // Baking needs the GPU (shaders can't be drawn in software, as in the JVM previews):
         // without it, the slate is drawn whole each time, by the lamp alone
         maps = runCatching { bake(colourLayer, colourBake) to bake(surfaceLayer, surfaceBake) }.getOrNull()
+        maps?.let { SlateMaps.keep(size, density.density, it) }
         bakeFailed = maps == null
     }
     val flameSeconds by produceState(0f, fire) {
@@ -74,18 +81,21 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
             }
         }
     }
-    val inputs = remember(maps) {
-        maps?.let { (colour, surface) ->
-            light.setInputShader("colour", BitmapShader(colour, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
-            light.setInputShader("surface", BitmapShader(surface, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
-            true
-        } ?: false
-    }
+    // The maps the light shader reads now
+    val bound = remember { arrayOfNulls<Pair<Bitmap, Bitmap>>(1) }
     Spacer(
         modifier
             .onSizeChanged { size = it }
             .drawBehind {
-                if (!inputs) {
+                // Baked on this visit, or kept from an earlier one: that is known from the first
+                // frame, as the screen's size is
+                val current = maps ?: SlateMaps.get(IntSize(this.size.width.roundToInt(), this.size.height.roundToInt()), density.density)
+                if (current != null && current !== bound[0]) {
+                    light.setInputShader("colour", BitmapShader(current.first, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
+                    light.setInputShader("surface", BitmapShader(current.second, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
+                    bound[0] = current
+                }
+                if (current == null) {
                     if (bakeFailed) {
                         direct.setFloatUniform("res", this.size.width, this.size.height)
                         direct.setFloatUniform("unit", density.density)
@@ -116,6 +126,25 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
                 drawRect(ShaderBrush(light))
             },
     )
+}
+
+/**
+ * The slate's baked colour and surface, kept for the app's life once made (some 16 MB for a
+ * phone's screen), for the screen size and density they were made for.
+ */
+private object SlateMaps {
+    private var size = IntSize.Zero
+    private var density = 0f
+    private var maps: Pair<Bitmap, Bitmap>? = null
+
+    fun get(size: IntSize, density: Float): Pair<Bitmap, Bitmap>? =
+        maps?.takeIf { (size == this.size) && (density == this.density) }
+
+    fun keep(size: IntSize, density: Float, maps: Pair<Bitmap, Bitmap>) {
+        this.size = size
+        this.density = density
+        this.maps = maps
+    }
 }
 
 /** Whether the menu firelight flickers: always in the app; held still in JVM renders, which wait for the screen to settle. */

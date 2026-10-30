@@ -68,26 +68,31 @@ object TileRenderer {
         highlightFreeTiles: Boolean = false,
         glare: Float = 0f,
         shadows: TileShadows = TileShadows.NONE,
+        // How strongly a hinted tile shows its gold this frame, 0..1: the hint pulses
+        hintStrength: Float = 1f,
+        // Drawn shape by shape, never stamped from the atlas: for tiles shown much larger than
+        // the board's (the matched pair in flight), which the atlas's images would soften
+        live: Boolean = false,
     ) {
         if (boardTile.isRemoved) return
         if (PerfSwitches.isOff("jitter")) {
             drawTileBody(
                 scope, boardTile, x, y, width, height, isSelected, isHinted, isBlockedHighlight,
-                isTutorialHighlight, highlightFreeTiles, glare, shadows,
+                isTutorialHighlight, highlightFreeTiles, glare, shadows, hintStrength, live,
             )
             return
         }
         // Real tiles never sit perfectly square: a fraction of a degree and a pixel or two off
-        val (jx, jy, rotation) = TileWear.jitter(boardTile.id)
+        val id = boardTile.id
         scope.withTransform(
             transformBlock = {
-                translate(jx * width, jy * width)
-                rotate(rotation, Offset(x + width / 2f, y + height / 2f))
+                translate(TileWear.jitterX(id) * width, TileWear.jitterY(id) * width)
+                rotate(TileWear.jitterTurn(id), Offset(x + width / 2f, y + height / 2f))
             },
             drawBlock = {
                 drawTileBody(
                     scope, boardTile, x, y, width, height, isSelected, isHinted, isBlockedHighlight,
-                isTutorialHighlight, highlightFreeTiles, glare, shadows,
+                    isTutorialHighlight, highlightFreeTiles, glare, shadows, hintStrength, live,
                 )
             },
         )
@@ -148,6 +153,8 @@ object TileRenderer {
         highlightFreeTiles: Boolean = false,
         glare: Float = 0f,
         shadows: TileShadows = TileShadows.NONE,
+        hintStrength: Float = 1f,
+        live: Boolean = false,
     ) {
         if (boardTile.isRemoved) return
 
@@ -155,24 +162,31 @@ object TileRenderer {
         val isImportantHighlight = isSelected || isHinted || isBlockedHighlight || isTutorialHighlight
         val freeTint = highlightFreeTiles && boardTile.isFree
         // The selected tile is drawn plain, then marked in polished gold (drawGoldSelection)
-        val highlightColor = when {
-            isSelected -> null
-            isHinted -> GoldHighlight
-            isBlockedHighlight -> Color(0xFFDC2626)
-            isTutorialHighlight -> TutorialHighlight
-            freeTint -> FreeTint
-            else -> null
+        val highlight = when {
+            isSelected -> Highlight.NONE
+            isHinted -> Highlight.HINT
+            isBlockedHighlight -> Highlight.BLOCKED
+            isTutorialHighlight -> Highlight.TUTORIAL
+            else -> Highlight.NONE
         }
-        val tintAlpha = if (isImportantHighlight) 0.5f else 0.15f
+        val highlightColor = highlight.colour ?: if (freeTint && !isImportantHighlight) FreeTint else null
+        // A hinted tile's gold pulses
+        val strength = if (highlight == Highlight.HINT) hintStrength.coerceIn(0f, 1f) else 1f
+        val tintAlpha = if (isImportantHighlight) 0.5f * strength else 0.15f
 
         // 1. Physically Grounded 3D Shadows
         drawRestingShadows(scope, boardTile.z, x, y, width, height, shadows)
         if (isSelected) drawGoldGlow(scope, x, y, width, height)
 
-        // Most tiles are stamped from the atlas; a highlighted one (at most a few) is drawn whole
-        if (!isImportantHighlight && !PerfSwitches.isOff("atlas")) {
+        // Tiles are stamped from the atlas, highlighted ones too: their bodies come tinted
+        if (!live && !PerfSwitches.isOff("atlas")) {
             val atlas = TileAtlas.ready(width)
-            if (atlas != null && atlas.stamp(scope, boardTile, x, y, width, height, freeTint, glare)) return
+            if (atlas != null &&
+                atlas.stamp(scope, boardTile, x, y, width, height, highlight, freeTint && !isSelected, strength, glare, goldFace = isSelected)
+            ) {
+                if (isSelected) drawGoldRim(scope, x, y, width, height)
+                return
+            }
         }
 
         // 2. Solid 3D Body Extrusion (Backing -> Sides -> Face)
@@ -237,10 +251,33 @@ object TileRenderer {
     }
 
     private fun drawGoldGlow(scope: DrawScope, x: Float, y: Float, w: Float, h: Float) {
-        val grow = w * 0.07f
-        goldGlowPaint.maskFilter = BlurMaskFilter(w * 0.12f, BlurMaskFilter.Blur.NORMAL)
-        goldGlowPaint.color = android.graphics.Color.argb(230, 0xF5, 0xB8, 0x2E)
-        scope.drawContext.canvas.nativeCanvas.drawRoundRect(x - grow, y - grow, x + w + grow, y + h * 1.13f + grow, w * 0.15f, w * 0.15f, goldGlowPaint)
+        val stamp = glowStamp(w, h)
+        // The stamp holds the glow's shape and its blur's reach all round, for tiles glowWidth wide
+        val k = w / glowWidth
+        val reach = glowWidth * (GLOW_GROW + GLOW_BLUR * GLOW_PAD) * k
+        glowRect.set(x - reach, y - reach, x - reach + stamp.width * k, y - reach + stamp.height * k)
+        scope.drawContext.canvas.nativeCanvas.drawBitmap(stamp, null, glowRect, goldGlowPaint)
+    }
+
+    /**
+     * The gold glow's soft rounded shape, blurred once into an alpha image for tiles about [w]
+     * wide (made again only when tiles are shown a good deal larger or smaller), as the contact
+     * shadow is: a stamp rather than a blur every frame.
+     */
+    private fun glowStamp(w: Float, h: Float): Bitmap {
+        val made = glowBitmap
+        if (made != null && w < glowWidth * 1.15f && w > glowWidth * 0.85f) return made
+        val tw = w.coerceAtLeast(8f)
+        val th = tw * h / w
+        val grow = tw * GLOW_GROW
+        val blur = tw * GLOW_BLUR
+        val reach = grow + blur * GLOW_PAD
+        val bitmap = Bitmap.createBitmap(ceil(tw + 2f * reach).toInt(), ceil(th * 1.13f + 2f * reach).toInt(), Bitmap.Config.ALPHA_8)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { maskFilter = BlurMaskFilter(blur, BlurMaskFilter.Blur.NORMAL) }
+        android.graphics.Canvas(bitmap).drawRoundRect(reach - grow, reach - grow, reach + tw + grow, reach + th * 1.13f + grow, tw * 0.15f, tw * 0.15f, paint)
+        glowBitmap = bitmap
+        glowWidth = tw
+        return bitmap
     }
 
 
@@ -256,7 +293,28 @@ object TileRenderer {
     }
 
 
-    private val goldGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val goldGlowPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { color = android.graphics.Color.argb(230, 0xF5, 0xB8, 0x2E) }
+    private val glowRect = RectF()
+    private var glowBitmap: Bitmap? = null
+    private var glowWidth = 0f
+
+    // The glow reaches this far beyond the tile, and is blurred by this much, in tile widths; the
+    // blur fades out within GLOW_PAD of its radius
+    private const val GLOW_GROW = 0.07f
+    private const val GLOW_BLUR = 0.12f
+    private const val GLOW_PAD = 2.2f
+
+    /**
+     * A highlight's tint over a tile's walls and face: the hinted pair's gold, a blocked tile's
+     * red flash, the tutorial's blue. The atlas holds a body for each, with and without free
+     * tiles' green.
+     */
+    internal enum class Highlight(val colour: Color?) {
+        NONE(null),
+        HINT(GoldHighlight),
+        BLOCKED(Color(0xFFDC2626)),
+        TUTORIAL(TutorialHighlight),
+    }
 
     /** The shadows under a tile: its resting shadow, cast from the lamp, and on the table a soft base. */
     private fun drawRestingShadows(scope: DrawScope, layerZ: Int, x: Float, y: Float, width: Float, height: Float, shadows: TileShadows) {
@@ -446,8 +504,8 @@ object TileRenderer {
      * Each tile drawn from a few images made once, rather than from some fifty shapes, gradients
      * and paths a frame (most of a frame's work, through the tilted camera). Tiles share them:
      *
-     * - **body:** walls, outline, face and the ivory's age, the same for every tile (and a second,
-     *   tinted, for free tiles when they are highlighted);
+     * - **body:** walls, outline, face and the ivory's age, the same for every tile, and again
+     *   tinted for each highlight, each with and without free tiles' green;
      * - **artwork:** each face's, engraving and all;
      * - **surface:** each of the [TileWear.LOOKS] looks' wear and the glaze's fixed parts;
      * - **glare:** each look's reflections of the lamp and the fire, stamped as strongly as the
@@ -456,7 +514,7 @@ object TileRenderer {
      * The images are made at the size the tiles are shown, off the main thread: again only when
      * they are shown much larger (zoomed in, or the board grown as it empties) or much smaller,
      * the current ones being stamped scaled meanwhile. Until the first are ready, tiles are drawn
-     * shape by shape, as are highlighted tiles always.
+     * shape by shape, as are the matched pair in flight, shown larger than the images.
      */
     object TileAtlas {
         /** On-screen pixels per flat table pixel: the zoom times the camera's nearest magnification. */
@@ -470,20 +528,45 @@ object TileRenderer {
         class Baked internal constructor(
             internal val width: Int,
             private val pad: Int,
-            private val body: Bitmap,
-            private val freeBody: Bitmap,
+            // Each Highlight's, untinted first, each followed by the same with free tiles' green
+            private val bodies: Array<Bitmap>,
             private val art: Map<Tile, Bitmap>,
             private val surfaces: Array<Bitmap>,
             private val glares: Array<Bitmap>,
         ) {
-            /** Stamps [tile] at ([x], [y]); false if this atlas lacks its artwork. */
-            internal fun stamp(scope: DrawScope, tile: BoardTile, x: Float, y: Float, width: Float, height: Float, free: Boolean, glare: Float): Boolean {
+            /**
+             * Stamps [tile] at ([x], [y]), its body tinted by [highlight] as strongly as
+             * [strength] (and with free tiles' green if [free]), the selection's gold over its
+             * face if [goldFace]; false if this atlas lacks its artwork.
+             */
+            internal fun stamp(
+                scope: DrawScope,
+                tile: BoardTile,
+                x: Float,
+                y: Float,
+                width: Float,
+                height: Float,
+                highlight: Highlight,
+                free: Boolean,
+                strength: Float,
+                glare: Float,
+                goldFace: Boolean,
+            ): Boolean {
                 val art = art[tile.tile] ?: return false
                 val canvas = scope.drawContext.canvas.nativeCanvas
                 val k = width / this.width
-                val body = if (free) freeBody else body
+                val freeIndex = if (free) 1 else 0
+                val body = bodies[highlight.ordinal * 2 + freeIndex]
                 stampRect.set(x - pad * k, y - pad * k, x - pad * k + body.width * k, y - pad * k + body.height * k)
-                canvas.drawBitmap(body, null, stampRect, stampPaint)
+                if (highlight != Highlight.NONE && strength < 0.995f) {
+                    // A tint only partly shown: the untinted body, with the tinted one over it
+                    canvas.drawBitmap(bodies[freeIndex], null, stampRect, stampPaint)
+                    tintPaint.alpha = (strength * 255f).roundToInt()
+                    canvas.drawBitmap(body, null, stampRect, tintPaint)
+                } else {
+                    canvas.drawBitmap(body, null, stampRect, stampPaint)
+                }
+                if (goldFace) drawGoldFace(scope, x, y, width, height)
                 stampRect.set(x, y, x + width, y + height)
                 canvas.drawBitmap(art, null, stampRect, stampPaint)
                 val look = TileWear.look(tile.id)
@@ -536,11 +619,15 @@ object TileRenderer {
             }
             val bodyW = ceil(w + depthX).toInt() + 2 * pad
             val bodyH = ceil(h + depthY).toInt() + 2 * pad
-            fun body(free: Boolean) = image(bodyW, bodyH) {
+            // As drawTileBody tints them: free tiles' faint green alone, or a highlight's stronger tint
+            fun body(highlight: Highlight, free: Boolean) = image(bodyW, bodyH) {
                 val p = pad.toFloat()
-                drawWalls(this, p, p, w, h, if (free) FreeTint else null, 0.15f)
-                drawFace(this, p, p, w, h, if (free) FreeTint else null, 0.15f, free)
+                val colour = highlight.colour ?: if (free) FreeTint else null
+                val alpha = if (highlight == Highlight.NONE) 0.15f else 0.5f
+                drawWalls(this, p, p, w, h, colour, alpha)
+                drawFace(this, p, p, w, h, colour, alpha, free)
             }
+            val bodies = Array(Highlight.entries.size * 2) { body(Highlight.entries[it / 2], it % 2 == 1) }
             val ih = h.toInt()
             val face = faceRect(0f, 0f, w, h)
             val art = allTiles.associateWith { tile ->
@@ -557,7 +644,7 @@ object TileRenderer {
             val glares = Array(TileWear.LOOKS) { look ->
                 image(width, ih) { drawGlaze(this, look, face.topLeft, face.size, w, 1f, GlazePart.GLARE) }
             }
-            baked = Baked(width, pad, body(false), body(true), art, surfaces, glares)
+            baked = Baked(width, pad, bodies, art, surfaces, glares)
         }
 
         // Every face once: a Season or Flower of each kind, a dragon of each colour, and so on
@@ -567,6 +654,7 @@ object TileRenderer {
 
         private val stampRect = RectF()
         private val stampPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+        private val tintPaint = Paint(Paint.FILTER_BITMAP_FLAG)
         private val glarePaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
         private const val STEP = 16

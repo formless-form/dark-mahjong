@@ -1,5 +1,6 @@
 package com.vortessence.mahjong.ui.components
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapShader
 import android.graphics.RuntimeShader
@@ -28,7 +29,10 @@ import androidx.compose.ui.platform.LocalContext
 fun TitleBackdrop(@DrawableRes photo: Int, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val image = remember(photo) {
-        val bitmap = BitmapFactory.decodeResource(context.resources, photo, BitmapFactory.Options().apply { inScaled = false })
+        // Decoded once for the app's life, not on every return to the title screen
+        val bitmap = decoded.getOrPut(photo) {
+            BitmapFactory.decodeResource(context.resources, photo, BitmapFactory.Options().apply { inScaled = false })
+        }
         Triple(
             BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply { filterMode = BitmapShader.FILTER_MODE_LINEAR },
             bitmap.width.toFloat(),
@@ -43,6 +47,9 @@ fun TitleBackdrop(@DrawableRes photo: Int, modifier: Modifier = Modifier) {
         drawRect(ShaderBrush(shader))
     }
 }
+
+// The photos, once decoded (only ever touched on the main thread)
+private val decoded = HashMap<Int, Bitmap>()
 
 // The grain's amplitude in the midtones, as a fraction of full scale
 private const val GRAIN = 0.035f
