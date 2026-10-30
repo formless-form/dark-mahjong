@@ -83,7 +83,8 @@ fun GameToolbar(
     modifier: Modifier = Modifier,
     hintAndUndoEnabled: Boolean = true,
 ) {
-    val canHint = hintAndUndoEnabled && gameState.availablePairsCount > 0
+    // Stuck, Hint brings back the "no moves" dialog
+    val canHint = hintAndUndoEnabled && (gameState.availablePairsCount > 0 || gameState.isStalemate)
     val canUndo = hintAndUndoEnabled && gameState.moveHistory.isNotEmpty()
 
     Box(contentAlignment = Alignment.Center, modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)) {

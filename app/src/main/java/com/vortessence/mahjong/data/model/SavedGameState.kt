@@ -25,6 +25,9 @@ data class SavedGameState(
     val tutorialStep: Int? = null,
     // The order hints follow (GameState.plan); empty in saves from before plans were kept
     val plan: List<Move> = emptyList(),
+    // The deal as first laid out (GameState.dealt, dealtPlan); empty in older saves
+    val dealt: List<Tile> = emptyList(),
+    val dealtPlan: List<Move> = emptyList(),
 ) {
     // deserialize only accepts saves on a layout that exists
     fun toGameState(): GameState {
@@ -39,6 +42,7 @@ data class SavedGameState(
             )
         }
         return MahjongGameEngine.stateOf(constellation, boardTiles, moveHistory, plan)
+            .copy(dealt = dealt.takeIf { it.size == boardTiles.size } ?: emptyList(), dealtPlan = dealtPlan)
     }
 
     fun serialize(): String {
@@ -49,7 +53,7 @@ data class SavedGameState(
         val movesStr = moveHistory.joinToString(";") { m ->
             "${m.tileId1},${m.tileId2}"
         }
-        val planStr = plan.joinToString(";") { m -> "${m.tileId1},${m.tileId2}" }
+        fun movesOf(moves: List<Move>) = moves.joinToString(";") { m -> "${m.tileId1},${m.tileId2}" }
         return listOf(
             constellationId,
             levelStr,
@@ -58,7 +62,9 @@ data class SavedGameState(
             tilesStr,
             movesStr,
             tutorialStep?.toString() ?: "",
-            planStr,
+            movesOf(plan),
+            dealt.joinToString(";") { "${it.suit.name},${it.value}" },
+            movesOf(dealtPlan),
         ).joinToString("|")
     }
 
@@ -81,6 +87,8 @@ data class SavedGameState(
                 moveHistory = state.moveHistory,
                 tutorialStep = tutorialStep,
                 plan = state.plan,
+                dealt = state.dealt,
+                dealtPlan = state.dealtPlan,
             )
         }
 
@@ -142,6 +150,12 @@ data class SavedGameState(
                     moveHistory = moves,
                     tutorialStep = parts.getOrNull(6)?.toIntOrNull(),
                     plan = moves(parts.getOrNull(7)),
+                    dealt = parts.getOrNull(8).orEmpty().split(";").mapNotNull { f ->
+                        val (suit, value) = f.split(",").takeIf { it.size == 2 } ?: return@mapNotNull null
+                        val s = TileSuit.entries.firstOrNull { it.name == suit } ?: return@mapNotNull null
+                        Tile(s, value.toIntOrNull() ?: return@mapNotNull null)
+                    },
+                    dealtPlan = moves(parts.getOrNull(9)),
                 )
             } catch (_: Exception) {
                 return null

@@ -23,7 +23,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +64,9 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -447,6 +451,15 @@ private fun BoardContent(
             canvasW, canvasH, zoom, pan,
         )?.let { slateSurface = it }
     }
+    val tapAt = { offset: Offset ->
+        // Back through the zoom and the camera to the flat layout
+        val p = floatArrayOf((offset.x - pan.x) / zoom, (offset.y - pan.y) / zoom)
+        latestScreenToPlane.mapPoints(p)
+        val tappedId = findTappedTileId(p[0], p[1], latestTiles, latestTransform)
+        if (tappedId != null) {
+            latestOnTileClick(tappedId)
+        }
+    }
     val reportZoom by rememberUpdatedState(onZoomedInChange)
     LaunchedEffect(zoomedIn) { reportZoom(zoomedIn) }
     val scope = rememberCoroutineScope()
@@ -454,6 +467,7 @@ private fun BoardContent(
     val clampPan = { p: Offset, z: Float ->
         Offset(p.x.coerceIn(canvasW * (1f - z), 0f), p.y.coerceIn(canvasH * (1f - z), 0f))
     }
+    val latestClampPan by rememberUpdatedState(clampPan)
     val zoomOut = {
         val fromZoom = zoom
         val fromPan = pan
@@ -477,24 +491,40 @@ private fun BoardContent(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    // Back through the zoom and the camera to the flat layout
-                    val p = floatArrayOf((offset.x - pan.x) / zoom, (offset.y - pan.y) / zoom)
-                    latestScreenToPlane.mapPoints(p)
-                    val tappedId = findTappedTileId(p[0], p[1], latestTiles, latestTransform)
-                    if (tappedId != null) {
-                        latestOnTileClick(tappedId)
+                // Every finger is a tap of its own, so two thumbs can take a pair at once (the
+                // standard tap detector keeps only the last finger up)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val pressed = mutableSetOf(down.id)
+                    while (pressed.isNotEmpty()) {
+                        val event = awaitPointerEvent()
+                        for (change in event.changes) {
+                            if (change.changedToDownIgnoreConsumed()) {
+                                pressed.add(change.id)
+                            } else if (change.id in pressed) {
+                                // A pinch or a drag past the touch slop is consumed by the
+                                // transform detector, and isn't a tap
+                                if (change.isConsumed || change.isOutOfBounds(size, extendedTouchPadding)) {
+                                    pressed.remove(change.id)
+                                } else if (change.changedToUpIgnoreConsumed()) {
+                                    pressed.remove(change.id)
+                                    tapAt(change.position)
+                                }
+                            }
+                        }
+                        if (event.changes.none { it.pressed }) break
                     }
                 }
             }
-            // Inside the tap detector, so a pinch or a drag past the touch slop cancels the tap
-            .pointerInput(canvasW, canvasH) {
+            // Inside the tap detector, so a pinch or a drag past the touch slop cancels the tap.
+            // Keyed on nothing, so a change of size (the tutorial card) doesn't drop a pinch
+            .pointerInput(Unit) {
                 detectTransformGestures { centroid, panChange, zoomChange, _ ->
                     zoomOutJob?.cancel()
                     val newZoom = (zoom * zoomChange).coerceIn(1f, TableCamera.MAX_ZOOM)
                     // Keep the spot under the fingers where it is, then follow the fingers
                     val scenePoint = (centroid - pan) / zoom
-                    pan = clampPan(centroid - scenePoint * newZoom + panChange, newZoom)
+                    pan = latestClampPan(centroid - scenePoint * newZoom + panChange, newZoom)
                     zoom = newZoom
                 }
             }

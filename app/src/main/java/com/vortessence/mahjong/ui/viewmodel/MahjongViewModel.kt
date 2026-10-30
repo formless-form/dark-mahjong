@@ -376,6 +376,18 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         initGame(current.constellation)
     }
 
+    /** Restart with the same deal: the tiles back as they were first laid out. */
+    fun replayDeal() {
+        val current = _gameState.value ?: return
+        hintSearch?.cancel()
+        perfAutoplay?.cancel()
+        _winMessage.value = null
+        val state = MahjongGameEngine.replay(current)
+        _gameState.value = state
+        _tutorialStepIndex.value = if (TutorialScript.isTutorial(state)) 0 else null
+        saveCurrentGame()
+    }
+
     fun reshuffle() {
         val current = _gameState.value ?: return
         val updated = MahjongGameEngine.reshuffleRemaining(current)

@@ -143,6 +143,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 onUndo = { viewModel.undo() },
                                 onRestart = { viewModel.restartGame() },
                                 onReshuffle = { viewModel.reshuffle() },
+                                onReplay = { viewModel.replayDeal() },
                                 onNextLevel = { viewModel.playNextLevel() },
                                 onMainMenu = toMenu,
                                 onTutorialContinue = { step -> viewModel.continueTutorial(step) },

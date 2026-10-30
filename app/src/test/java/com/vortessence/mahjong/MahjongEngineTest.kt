@@ -472,4 +472,23 @@ class MahjongEngineTest {
         assertEquals(4, reshuffled.remainingTilesCount)
         assertTrue(reshuffled.moveHistory.isEmpty())
     }
+
+    // Restart's "Same deal": every tile back with the face it was dealt, even after a reshuffle,
+    // and it survives a save
+    @Test
+    fun testReplayRestoresTheOriginalDeal() {
+        val start = MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(5), kotlin.random.Random(9))
+        var state = start
+        repeat(4) {
+            val (a, b) = MahjongGameEngine.findAvailablePairs(state.tiles).first()
+            state = MahjongGameEngine.handleTileTap(MahjongGameEngine.handleTileTap(state, a).first, b).first
+        }
+        state = MahjongGameEngine.reshuffleRemaining(state)
+        val saved = SavedGameState.deserialize(SavedGameState.fromGameState(state, 5).serialize())!!.toGameState()
+        val replayed = MahjongGameEngine.replay(saved)
+        assertEquals(start.tiles.map { it.tile }, replayed.tiles.map { it.tile })
+        assertTrue(replayed.tiles.none { it.isRemoved })
+        assertTrue(replayed.moveHistory.isEmpty())
+        assertTrue(MahjongGameEngine.planHolds(replayed.tiles, replayed.plan))
+    }
 }

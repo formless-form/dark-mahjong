@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Box
@@ -34,6 +36,7 @@ import com.vortessence.mahjong.ui.components.LoadingPage
 import com.vortessence.mahjong.data.repository.levelLabel
 import com.vortessence.mahjong.ui.components.WinCelebration
 import com.vortessence.mahjong.ui.components.MahjongBoard
+import com.vortessence.mahjong.ui.components.RestartDialog
 import com.vortessence.mahjong.ui.components.StalemateDialog
 import com.vortessence.mahjong.ui.components.TutorialCard
 
@@ -52,6 +55,7 @@ fun GameScreen(
     onUndo: () -> Unit,
     onRestart: () -> Unit,
     onReshuffle: () -> Unit,
+    onReplay: () -> Unit = onRestart,
     onNextLevel: () -> Unit,
     onMainMenu: () -> Unit,
     onTutorialContinue: (TutorialStep) -> Unit = {},
@@ -94,6 +98,14 @@ fun GameScreen(
         }
     }
 
+    // Restart asks first (the tutorial always deals the same tiles, so it just starts again);
+    // the "no moves" dialog can be closed to look over the board, and Hint brings it back
+    var askRestart by remember { mutableStateOf(false) }
+    val restart = {
+        if (ConstellationRepository.TUTORIAL_ID == gameState.constellation.id) onRestart() else askRestart = true
+    }
+    var stalemateClosed by remember(gameState.tiles) { mutableStateOf(false) }
+
     // When the board is cleared it softly blurs behind the celebration, as Android 17 blurs
     // what sits behind its own panels
     val blur by animateDpAsState(
@@ -119,6 +131,16 @@ fun GameScreen(
         Box(modifier = Modifier.weight(1f)) {
             val density = LocalDensity.current
             var overlay by remember { mutableIntStateOf(0) }
+            // The board refits to the card or toolbar once it has settled, not on every frame of
+            // the card growing or shrinking (each refit rebuilds the shadow map); the first
+            // measured size is taken at once
+            var boardOverlay by remember { mutableIntStateOf(0) }
+            LaunchedEffect(Unit) {
+                snapshotFlow { overlay }.collectLatest { h ->
+                    if (boardOverlay > 0) delay(OVERLAY_SETTLE)
+                    boardOverlay = h
+                }
+            }
             MahjongBoard(
                 gameState = gameState,
                 settings = settings,
@@ -127,7 +149,7 @@ fun GameScreen(
                 onZoomedInChange = { boardZoomedIn = it },
                 onTileClick = onTileClick,
                 onTileMatch = onTileMatch,
-                bottomOverlap = with(density) { overlay.toDp() },
+                bottomOverlap = with(density) { boardOverlay.toDp() },
                 modifier = Modifier.fillMaxSize()
             )
             Box(
@@ -146,9 +168,11 @@ fun GameScreen(
                 } else {
                     GameToolbar(
                         gameState = gameState,
-                        onHintClick = onHint,
+                        onHintClick = { if (gameState.isStalemate) stalemateClosed = false else onHint() },
                         onUndoClick = onUndo,
-                        onRestartClick = onRestart,
+                        onRestartClick = restart,
+                        // Nothing to hint or undo once the board is cleared
+                        hintAndUndoEnabled = !gameState.isWon,
                     )
                 }
             }
@@ -169,15 +193,27 @@ fun GameScreen(
     }
 
     // Stalemate / no more moves dialog
-    if (gameState.isStalemate && !gameState.isWon) {
+    if (gameState.isStalemate && !gameState.isWon && !stalemateClosed) {
         StalemateDialog(
             canUndo = gameState.moveHistory.isNotEmpty(),
             onReshuffle = onReshuffle,
             onUndo = onUndo,
-            onRestart = onRestart
+            onRestart = restart,
+            onDismiss = { stalemateClosed = true },
+        )
+    }
+
+    if (askRestart) {
+        RestartDialog(
+            onSameDeal = { askRestart = false; onReplay() },
+            onNewDeal = { askRestart = false; onRestart() },
+            onDismiss = { askRestart = false },
         )
     }
 }
 
 // How long the final pair has to smash before the celebration
 private val WIN_REVEAL = 600.milliseconds
+
+// How long the tutorial card's size has to hold before the board refits to it
+private val OVERLAY_SETTLE = 120.milliseconds

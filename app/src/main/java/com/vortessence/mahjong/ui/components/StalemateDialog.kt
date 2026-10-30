@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 
 @Composable
@@ -34,8 +36,10 @@ fun StalemateDialog(
     onReshuffle: () -> Unit,
     onUndo: () -> Unit,
     onRestart: () -> Unit,
+    // Back closes it, to look over the board; the Hint button brings it back
+    onDismiss: () -> Unit = {},
 ) {
-    Dialog(onDismissRequest = {}) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(dismissOnClickOutside = false)) {
         BlurBehindDialog()
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
@@ -73,6 +77,57 @@ fun StalemateDialog(
                         BigButton("Undo last move", onClick = onUndo, icon = Icons.AutoMirrored.Rounded.Undo, modifier = Modifier.fillMaxWidth())
                     }
                     BigButton("Restart", onClick = onRestart, icon = Icons.Rounded.RestartAlt, modifier = Modifier.fillMaxWidth())
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Restart asks first: the same deal again from the start, or new tiles on the same layout. Back
+ * or a tap outside keeps the game as it is.
+ */
+@Composable
+fun RestartDialog(
+    onSameDeal: () -> Unit,
+    onNewDeal: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        BlurBehindDialog()
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(24.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.RestartAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Start again",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Play these same tiles again from the start, or deal new ones on this layout.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(24.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    BigButton("Same deal", onClick = onSameDeal, primary = true, icon = Icons.Rounded.Replay, modifier = Modifier.fillMaxWidth())
+                    BigButton("New deal", onClick = onNewDeal, icon = Icons.Rounded.Shuffle, modifier = Modifier.fillMaxWidth())
                 }
             }
         }

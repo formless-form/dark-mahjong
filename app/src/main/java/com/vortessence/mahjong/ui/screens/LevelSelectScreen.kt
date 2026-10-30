@@ -61,10 +61,12 @@ fun LevelSelectScreen(
                 val isTutorial = levelIndex == ConstellationRepository.TUTORIAL_LEVEL
                 val unlocked = isTutorial || levelIndex <= highestUnlocked
                 val cleared = progress.completedConstellations.contains(constellation.id)
+                // Locked and current come first: a layout cleared under Layouts may be a level
+                // not reached yet, or the one being played now
                 val state = when {
-                    cleared -> BadgeState.CLEARED
                     !unlocked -> BadgeState.LOCKED
                     levelIndex == highestUnlocked -> BadgeState.CURRENT
+                    cleared -> BadgeState.CLEARED
                     else -> BadgeState.OPEN
                 }
                 SegmentedListItem(

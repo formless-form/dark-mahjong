@@ -18,6 +18,10 @@ data class GameState(
     // An order the pairs can be taken in to clear the board, which hints follow: from the deal or
     // the reshuffle, or found by the hint solver. Not saved; a restored game finds one again
     val plan: List<Move> = emptyList(),
+    // The deal as it was first laid out, for replaying it: each tile's face (by tile id) and the
+    // deal's plan. Empty for a game restored from a save made before deals were kept
+    val dealt: List<Tile> = emptyList(),
+    val dealtPlan: List<Move> = emptyList(),
 ) {
     val remainingTilesCount: Int get() = tiles.count { !it.isRemoved }
     val totalTilesCount: Int get() = tiles.size

@@ -32,6 +32,7 @@ import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.ui.components.PredictiveBackState
+import com.vortessence.mahjong.ui.components.RestartDialog
 import com.vortessence.mahjong.ui.components.StalemateDialog
 import com.vortessence.mahjong.ui.components.TableSurfaceRenderer
 import com.vortessence.mahjong.ui.components.TileWear
@@ -251,6 +252,18 @@ class ScreenshotTour {
         }
         compose.waitForIdle()
         captureScreenRoboImage("build/screenshots/no_moves.png")
+    }
+
+    @Test
+    fun restartDialog() {
+        compose.setContent {
+            MahjongTheme {
+                Box(Modifier.fillMaxSize().background(Color(0xFF0C1110)))
+                RestartDialog(onSameDeal = {}, onNewDeal = {}, onDismiss = {})
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage("build/screenshots/restart.png")
     }
 
     // Settings part-way through a back swipe from the left edge, the title screen behind it

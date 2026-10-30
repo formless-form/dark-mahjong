@@ -23,6 +23,19 @@ object MahjongGameEngine {
     fun startNewGame(constellation: Constellation, random: Random = Random): GameState {
         val deal = BoardSolvabilityGenerator.deal(constellation, random)
         return stateOf(constellation, deal.tiles, plan = deal.plan)
+            .copy(dealt = deal.tiles.sortedBy { it.id }.map { it.tile }, dealtPlan = deal.plan)
+    }
+
+    /**
+     * The same deal again, from the start: every tile back where it was dealt, with the face it
+     * was dealt (a reshuffle changes them). A game from an older save, which didn't keep its deal,
+     * gets its tiles back as they are now.
+     */
+    fun replay(state: GameState): GameState {
+        val faces = state.dealt.takeIf { it.size == state.tiles.size }
+        val tiles = state.tiles.map { t -> t.copy(isRemoved = false, tile = faces?.getOrNull(t.id) ?: t.tile) }
+        return stateOf(state.constellation, tiles, plan = if (faces != null) state.dealtPlan else emptyList())
+            .copy(dealt = state.dealt, dealtPlan = state.dealtPlan)
     }
 
     /** A game in play on [tiles], nothing selected: a new deal, or one restored from a save. */
