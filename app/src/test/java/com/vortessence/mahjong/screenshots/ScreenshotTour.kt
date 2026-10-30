@@ -92,7 +92,7 @@ class ScreenshotTour {
 
     @Composable
     private fun TitleScreen(style: TitleMenuStyle = TitleMenuStyle.SANS) = MainMenuScreen(
-        continueInfo = ContinueInfo("Level 3: Celestial Lantern", "40 tiles remaining"),
+        continueInfo = ContinueInfo("Level 3: Celestial Lantern"),
         menuStyle = style,
         onPlayLevels = {},
         onChooseConstellation = {},
@@ -110,7 +110,7 @@ class ScreenshotTour {
         compose.setContent {
             MahjongTheme {
                 MainMenuScreen(
-                    continueInfo = ContinueInfo("Level 3: Celestial Lantern", "40 tiles remaining"),
+                    continueInfo = ContinueInfo("Level 3: Celestial Lantern"),
                     onPlayLevels = {},
                     onChooseConstellation = {},
                     onSettings = {},

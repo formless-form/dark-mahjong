@@ -66,7 +66,7 @@ class StoreScreenshots {
         compose.setContent {
             MahjongTheme {
                 MainMenuScreen(
-                    continueInfo = ContinueInfo("Level 9: Heart", "96 tiles remaining"),
+                    continueInfo = ContinueInfo("Level 9: Heart"),
                     onPlayLevels = {}, onChooseConstellation = {}, onSettings = {},
                 )
             }

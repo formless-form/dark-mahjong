@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameState
-import com.vortessence.mahjong.data.repository.ConstellationRepository
+import com.vortessence.mahjong.data.repository.levelLabel
 
 /** Above the board: a round back button, then which level and layout this is. */
 @Composable
@@ -70,12 +70,6 @@ fun GameHeader(
 }
 
 /** "Level 8", or "Tutorial" for the tutorial (level 0); null outside the journey. */
-fun levelLabel(levelIndex: Int?): String? = when (levelIndex) {
-    null -> null
-    ConstellationRepository.TUTORIAL_LEVEL -> "Tutorial"
-    else -> "Level $levelIndex"
-}
-
 /**
  * Below the board: Material 3 Expressive's floating toolbar holding big labelled buttons, within
  * easy reach of the thumb.

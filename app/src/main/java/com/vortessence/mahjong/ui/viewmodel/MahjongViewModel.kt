@@ -13,6 +13,7 @@ import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.data.repository.PreferencesRepository
+import com.vortessence.mahjong.data.repository.levelLabel
 import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TileTapResult
@@ -91,20 +92,18 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _currentLevelIndex,
     ) { state, saved, levelIdx ->
         if (state != null && !state.isWon && (state.remainingTilesCount > 0)) {
-            val title = if (levelIdx != null) "Level $levelIdx: ${state.constellation.name}" else state.constellation.name
-            val subtitle = "${state.remainingTilesCount} tiles remaining"
-            ContinueInfo(title = title, subtitle = subtitle)
+            ContinueInfo(title = continueTitle(levelIdx, state.constellation.name))
         } else if (saved != null && saved.tiles.any { !it.isRemoved }) {
             val constellation = ConstellationRepository.getById(saved.constellationId)
-            val level = savedLevelIndex(saved)
-            val title = if (level != null) "Level $level: ${constellation.name}" else constellation.name
-            val remaining = saved.tiles.count { !it.isRemoved }
-            val subtitle = "$remaining tiles remaining"
-            ContinueInfo(title = title, subtitle = subtitle)
+            ContinueInfo(title = continueTitle(savedLevelIndex(saved), constellation.name))
         } else {
             null
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    // "Level 9: Heart", or just "Tutorial"
+    private fun continueTitle(level: Int?, name: String): String =
+        listOfNotNull(levelLabel(level), name).distinct().joinToString(": ")
 
     init {
         // Collect settings. While the player's own changes are still being written, what's read
@@ -144,6 +143,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun navigateTo(screen: Screen) {
+        perfAutoplay?.cancel()
         if (screen != Screen.Game) {
             saveCurrentGame()
         }
@@ -155,6 +155,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         saved.levelIndex?.let { ConstellationRepository.levelIndexOf(saved.constellationId, useWideLayouts) ?: it }
 
     fun continueGame() {
+        perfAutoplay?.cancel()
         val current = _gameState.value
         if (current != null && !current.isWon && current.remainingTilesCount > 0) {
             _currentScreen.value = Screen.Game
@@ -200,7 +201,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _currentLevelIndex.value = null
         initGame(constellation, Random(7))
         _currentScreen.value = Screen.Game
-        perfAutoplay?.cancel()
         // Matches a free pair every two seconds, so match animations can be timed alike
         if (autoplay) perfAutoplay = viewModelScope.launch {
             delay(3000.milliseconds)
@@ -218,6 +218,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private var perfAutoplay: Job? = null
 
     private fun initGame(constellation: Constellation, random: Random? = null) {
+        perfAutoplay?.cancel()
         val fresh = MahjongGameEngine.startNewGame(constellation)
         val state = if (random == null) fresh else {
             val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(constellation, random))
@@ -264,7 +265,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         when (result) {
             is TileTapResult.Blocked -> {
                 audioManager.playTileBlocked()
-                viewModelScope.launch {
+                // One clear at a time, so an earlier tap's can't cut this flash short
+                blockedClear?.cancel()
+                blockedClear = viewModelScope.launch {
                     delay(350.milliseconds)
                     if (_gameState.value?.blockedTileId == result.tileId) {
                         _gameState.value = _gameState.value?.copy(blockedTileId = null)
@@ -303,6 +306,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
+
+    private var blockedClear: Job? = null
 
     fun playTileMatch() {
         audioManager.playTileMatch()

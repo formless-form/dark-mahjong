@@ -31,7 +31,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import com.vortessence.mahjong.ui.components.GameHeader
 import com.vortessence.mahjong.ui.components.GameToolbar
 import com.vortessence.mahjong.ui.components.LoadingPage
-import com.vortessence.mahjong.ui.components.levelLabel
+import com.vortessence.mahjong.data.repository.levelLabel
 import com.vortessence.mahjong.ui.components.WinCelebration
 import com.vortessence.mahjong.ui.components.MahjongBoard
 import com.vortessence.mahjong.ui.components.StalemateDialog

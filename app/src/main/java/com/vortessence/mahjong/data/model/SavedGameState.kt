@@ -13,7 +13,6 @@ data class SavedTile(
 
 data class ContinueInfo(
     val title: String,
-    val subtitle: String,
 )
 
 data class SavedGameState(

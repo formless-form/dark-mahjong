@@ -148,7 +148,8 @@ class PreferencesRepository(private val context: Context) {
     suspend fun nextCongratsMessage(isTutorial: Boolean, now: LocalDateTime = LocalDateTime.now()): String {
         var message = CongratsPool.GENERAL.messages.first()
         write { prefs ->
-            val today = now.toLocalDate().toEpochDay()
+            // A day runs from 4 am, so a win just after midnight belongs to the night before
+            val today = now.minusHours(4).toLocalDate().toEpochDay()
             val firstToday = (prefs[Keys.LAST_WIN_DAY] ?: Long.MIN_VALUE) != today
             prefs[Keys.LAST_WIN_DAY] = today
             val hour = now.hour

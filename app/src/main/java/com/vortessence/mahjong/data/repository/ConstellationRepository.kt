@@ -6,6 +6,14 @@ import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TilePosition
 import com.vortessence.mahjong.data.model.TileSuit
 import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
+import java.util.concurrent.ConcurrentHashMap
+
+/** "Level 3", "Tutorial", or null for a board that isn't a level. */
+fun levelLabel(levelIndex: Int?): String? = when (levelIndex) {
+    null -> null
+    ConstellationRepository.TUTORIAL_LEVEL -> "Tutorial"
+    else -> "Level $levelIndex"
+}
 
 object ConstellationRepository {
 
@@ -18,6 +26,14 @@ object ConstellationRepository {
      * Small scripted board that teaches the rules. It is Level 0 in both phone and tablet mode.
      */
     val tutorialConstellation: Constellation by lazy { createTutorial() }
+
+    /** Builds and sorts the catalog in the background at launch, so the first screens don't wait. */
+    fun prepareAsync() {
+        Thread({
+            constellations
+            levelConstellations
+        }, "layouts").apply { isDaemon = true }.start()
+    }
 
     /**
      * Vertical, phone-optimized constellations designed specifically for smartphones.
@@ -87,7 +103,8 @@ object ConstellationRepository {
      * more tiles free (more choices, fewer dead ends).
      */
     private val easyToHard: Comparator<Constellation> by lazy {
-        val openness = HashMap<String, Float>()
+        // Concurrent: the catalog is built off the main thread, and a screen may want it meanwhile
+        val openness = ConcurrentHashMap<String, Float>()
         fun open(c: Constellation) = openness.getOrPut(c.id) {
             c.positions.count { BoardSolvabilityGenerator.isTileFree(it, c.positions) }.toFloat() / c.tileCount
         }

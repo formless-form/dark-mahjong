@@ -19,6 +19,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.ui.components.PerfSwitches
 import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         TileWear.prepareAsync()
+        ConstellationRepository.prepareAsync()
         // Play builds ask Google Play for newer versions; the open-source build never does
         updates = AppUpdates(this)
         enableEdgeToEdge()
@@ -53,7 +55,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             MahjongApp(viewModel = viewModel, updates = updates)
         }
-        openPerfScene(intent)
+        // Only on a fresh start: a recreated activity (a dark-mode switch) keeps the game in play
+        if (savedInstanceState == null) openPerfScene(intent)
     }
 
     override fun onNewIntent(intent: Intent) {

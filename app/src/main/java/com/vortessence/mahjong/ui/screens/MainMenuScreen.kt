@@ -269,7 +269,7 @@ private fun MenuItem(
 fun MainMenuPreview() {
     MahjongTheme {
         MainMenuScreen(
-            continueInfo = ContinueInfo("Level 3: Mini Turtle", "40 tiles remaining"),
+            continueInfo = ContinueInfo("Level 3: Mini Turtle"),
             onPlayLevels = {},
             onChooseConstellation = {},
             onSettings = {},
