@@ -367,7 +367,8 @@ private fun BoardContent(
     }
     // Firelight flickers, so the board is redrawn for it, 20 times a second (chosen by eye against
     // 30: the flicker looks the same), and as often for a hint's pulse; the lamp alone never changes
-    val firelit = settings.fireplaceLit
+    // The fire goes out with the phone's Remove animations, whatever the setting
+    val firelit = settings.fireplaceLit && settings.animationsEnabled
     val ticking = firelit || hinting
     val clockSeconds by produceState(0f, ticking) {
         if (ticking) {
@@ -540,7 +541,7 @@ private fun BoardContent(
             drawContext.canvas.translate(pan.x, pan.y)
             drawContext.canvas.scale(zoom, zoom)
 
-            val flame = FlameLight.at(clockSeconds, settings.lampBrightness, settings.fireplaceLit, settings.fireIntensity)
+            val flame = FlameLight.at(clockSeconds, settings.lampBrightness, firelit, settings.fireIntensity)
             val hintStrength = if (hinting) hintPulse(FrameClock.since(clockSeconds, hintShownAt)) else 1f
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableLight(
                 scope = this,

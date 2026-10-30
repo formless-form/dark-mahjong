@@ -1,6 +1,10 @@
 package com.vortessence.mahjong.ui.viewmodel
 
 import android.app.Application
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vortessence.mahjong.audio.AudioManager
@@ -99,6 +103,22 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             null
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    // The phone's Remove animations (Settings > Accessibility) sets its animator scale to 0; the
+    // game's own motion (match bursts, fireworks, the hint pulse, zoom glides) follows it, and
+    // changes with it while the game is open
+    private val resolver = application.contentResolver
+    private fun readPhoneAnimates() =
+        Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+    private var phoneAnimates = readPhoneAnimates()
+    private val animationScaleObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            phoneAnimates = readPhoneAnimates()
+            showSettings(_settings.value)
+        }
+    }.also {
+        resolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, it)
+    }
 
     // "Level 9: Heart", or just "Tutorial"
     private fun continueTitle(level: Int?, name: String): String =
@@ -411,8 +431,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private var settingsWrites = 0
 
     private fun showSettings(s: GameSettings) {
-        _settings.value = s
-        audioManager.updateSettings(s)
+        val shown = s.copy(animationsEnabled = phoneAnimates)
+        _settings.value = shown
+        audioManager.updateSettings(shown)
     }
 
     /** A setting changed: shown and heard at once, and only what changed is saved. */
@@ -456,6 +477,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onCleared() {
         super.onCleared()
+        resolver.unregisterContentObserver(animationScaleObserver)
         audioManager.release()
     }
 }

@@ -68,7 +68,7 @@ fun SettingsScreen(
     ExpressiveScreen(
         title = "Settings",
         onBack = onBack,
-        backdrop = { MenuBackdrop(settings.fireIntensity) },
+        backdrop = { MenuBackdrop(settings.fireIntensity, fire = settings.animationsEnabled) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -149,7 +149,9 @@ fun SettingsScreen(
                     },
                     { shapes ->
                         ToggleRow(
-                            shapes, Icons.Rounded.Fireplace, "Fireplace", "Firelight from a hearth beside the table. More GPU-intensive",
+                            shapes, Icons.Rounded.Fireplace, "Fireplace",
+                            if (settings.animationsEnabled) "Firelight from a hearth beside the table. More GPU-intensive"
+                            else "Out while the phone's Remove animations is on",
                             settings.fireplaceLit,
                         ) { onSettingsChanged(settings.copy(fireplaceLit = it)) }
                     },

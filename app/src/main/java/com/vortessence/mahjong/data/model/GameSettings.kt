@@ -16,6 +16,8 @@ data class GameSettings(
     val musicVolume: Float = 0.6f,
     val autoZoomEnabled: Boolean = true,
     val highlightFreeTiles: Boolean = false,
+    // Not a setting of the game's own: it follows the phone's Remove animations (accessibility),
+    // and is never saved
     val animationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val tableSurface: TableSurface = TableSurface.GREEN_MAT,

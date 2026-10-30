@@ -128,6 +128,8 @@ class AudioManager(private val context: Context) {
     private fun fireLevel(settings: GameSettings): Float {
         val level = loudness(settings.fireVolume) * 0.45f * (0.8f + 0.4f * settings.fireIntensity)
         if (auditioningFire) return level
+        // The fire is out, crackle and all, while the phone's Remove animations is on
+        if (!settings.animationsEnabled) return 0f
         return when (room) {
             FireRoom.TABLE -> if (settings.fireplaceLit) level else 0f
             FireRoom.MENU -> level * MENU_FIRE_SHARE

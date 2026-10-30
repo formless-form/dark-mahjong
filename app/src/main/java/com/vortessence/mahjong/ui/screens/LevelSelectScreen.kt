@@ -35,6 +35,8 @@ fun LevelSelectScreen(
     onLevelSelected: (Int) -> Unit,
     onBack: () -> Unit,
     fireIntensity: Float = 0.5f,
+    // The menus' fire goes out with the phone's Remove animations
+    fire: Boolean = true,
 ) {
     val highestUnlocked = progress.highestLevelReached.coerceAtLeast(1)
     // The tutorial first (always open), then the levels in order
@@ -42,7 +44,7 @@ fun LevelSelectScreen(
     // Open near the level you're up to rather than at level 1
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (highestUnlocked - 1).coerceIn(0, rows.lastIndex))
 
-    ExpressiveScreen(title = "Levels", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity) }) { padding ->
+    ExpressiveScreen(title = "Levels", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity, fire) }) { padding ->
         // Below the title bar, as on Layouts, so the list never shows through it
         LazyColumn(
             state = listState,

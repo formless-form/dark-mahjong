@@ -43,7 +43,6 @@ class PreferencesRepository(private val context: Context) {
         val MUSIC_VOLUME = floatPreferencesKey("music_volume")
         val AUTO_ZOOM = booleanPreferencesKey("auto_zoom")
         val HIGHLIGHT_FREE_TILES = booleanPreferencesKey("highlight_free_tiles")
-        val ANIMATIONS = booleanPreferencesKey("animations")
         val VIBRATION = booleanPreferencesKey("vibration")
 
         val HIGHEST_LEVEL = intPreferencesKey("highest_level")
@@ -84,7 +83,6 @@ class PreferencesRepository(private val context: Context) {
             musicVolume = prefs[Keys.MUSIC_VOLUME] ?: d.musicVolume,
             autoZoomEnabled = prefs[Keys.AUTO_ZOOM] ?: d.autoZoomEnabled,
             highlightFreeTiles = prefs[Keys.HIGHLIGHT_FREE_TILES] ?: d.highlightFreeTiles,
-            animationsEnabled = prefs[Keys.ANIMATIONS] ?: d.animationsEnabled,
             vibrationEnabled = prefs[Keys.VIBRATION] ?: d.vibrationEnabled,
             tableSurface = prefs[Keys.TABLE_SURFACE]
                 ?.let { name -> TableSurface.entries.firstOrNull { it.name == name } }
@@ -119,7 +117,6 @@ class PreferencesRepository(private val context: Context) {
             put(Keys.MUSIC_VOLUME) { it.musicVolume }
             put(Keys.AUTO_ZOOM) { it.autoZoomEnabled }
             put(Keys.HIGHLIGHT_FREE_TILES) { it.highlightFreeTiles }
-            put(Keys.ANIMATIONS) { it.animationsEnabled }
             put(Keys.VIBRATION) { it.vibrationEnabled }
             put(Keys.TABLE_SURFACE) { it.tableSurface.name }
             put(Keys.LAMP_BRIGHTNESS) { it.lampBrightness }

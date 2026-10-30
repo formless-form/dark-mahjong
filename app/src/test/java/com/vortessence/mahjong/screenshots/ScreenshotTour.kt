@@ -358,6 +358,18 @@ class ScreenshotTour {
         shoot("settings")
     }
 
+    // With the phone's Remove animations on: the fire is out, and the Fireplace row says why
+    @Test
+    fun settingsWithoutAnimations() {
+        compose.setContent {
+            MahjongTheme {
+                SettingsScreen(settings = GameSettings(fireplaceLit = true, animationsEnabled = false), onSettingsChanged = {}, onBack = {})
+            }
+        }
+        compose.onNodeWithText("Fire sound").performScrollTo()
+        shoot("settings_no_animations")
+    }
+
     // The whole settings list on one tall page, down to the credits at its foot
     @Test @Config(qualifiers = "w427dp-h3400dp-port-360dpi")
     fun settingsFullLength() {

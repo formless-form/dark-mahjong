@@ -154,8 +154,8 @@ object MenuFire {
 
 /** The menu screens' background: the slate, by the faint firelight. */
 @Composable
-fun MenuBackdrop(fireIntensity: Float) {
-    SlateBackdrop(Modifier.fillMaxSize(), fireIntensity = fireIntensity)
+fun MenuBackdrop(fireIntensity: Float, fire: Boolean = true) {
+    SlateBackdrop(Modifier.fillMaxSize(), fire = fire, fireIntensity = fireIntensity)
 }
 
 // The bamboo in its pot stands between the hearth and the stone (PROPS_AGSL; chosen 2026-10-30

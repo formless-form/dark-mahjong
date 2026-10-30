@@ -116,6 +116,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 onLevelSelected = { level -> viewModel.startLevel(level) },
                                 onBack = toMenu,
                                 fireIntensity = settings.fireIntensity,
+                                fire = settings.animationsEnabled,
                             )
                         }
 
@@ -125,6 +126,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 onConstellationSelected = { constellation -> viewModel.startConstellation(constellation) },
                                 onBack = toMenu,
                                 fireIntensity = settings.fireIntensity,
+                                fire = settings.animationsEnabled,
                             )
                         }
 

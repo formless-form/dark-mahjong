@@ -92,7 +92,8 @@ fun GameScreen(
         if (!gameState.isWon) {
             celebrating = false
         } else if (!celebrating) {
-            delay(WIN_REVEAL)
+            // Without animations there's no smash to wait for
+            if (settings.animationsEnabled) delay(WIN_REVEAL)
             celebrating = true
             onWinShown()
         }

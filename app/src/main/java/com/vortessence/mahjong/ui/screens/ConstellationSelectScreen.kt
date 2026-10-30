@@ -46,6 +46,8 @@ fun ConstellationSelectScreen(
     onConstellationSelected: (Constellation) -> Unit,
     onBack: () -> Unit,
     fireIntensity: Float = 0.5f,
+    // The menus' fire goes out with the phone's Remove animations
+    fire: Boolean = true,
 ) {
     var selectedDifficultyFilter by remember { mutableStateOf<Difficulty?>(null) }
 
@@ -55,7 +57,7 @@ fun ConstellationSelectScreen(
         }
     }
 
-    ExpressiveScreen(title = "Layouts", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity) }) { padding ->
+    ExpressiveScreen(title = "Layouts", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity, fire) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
