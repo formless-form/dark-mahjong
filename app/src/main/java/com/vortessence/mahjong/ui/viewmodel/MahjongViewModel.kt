@@ -107,11 +107,14 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {
-        // Collect settings
+        // Collect settings. While the player's own changes are still being written, what's read
+        // back is older than what they see, so it waits until the writes are done
         viewModelScope.launch {
             prefsRepo.settingsFlow.distinctUntilChanged().collect { s ->
-                _settings.value = s
-                audioManager.updateSettings(s)
+                if (settingsWrites == 0) {
+                    savedSettings = s
+                    showSettings(s)
+                }
             }
         }
         // The fireplace is heard at the table, and softly on the menu screens
@@ -192,7 +195,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         // that only the fire and the table change
         viewModelScope.launch {
             val saved = prefsRepo.settingsFlow.first()
-            prefsRepo.updateSettings(saved.copy(fireplaceLit = fireplace, tableSurface = surface ?: saved.tableSurface))
+            prefsRepo.updateSettings(saved, saved.copy(fireplaceLit = fireplace, tableSurface = surface ?: saved.tableSurface))
         }
         _currentLevelIndex.value = null
         initGame(constellation, Random(7))
@@ -374,10 +377,39 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // The settings as last written (or read), which each change is told apart from; and how many
+    // writes are on their way
+    private var savedSettings = GameSettings()
+    private var settingsWrites = 0
+
+    private fun showSettings(s: GameSettings) {
+        _settings.value = s
+        audioManager.updateSettings(s)
+    }
+
+    /** A setting changed: shown and heard at once, and only what changed is saved. */
     fun updateSettings(newSettings: GameSettings) {
+        showSettings(newSettings)
+        val from = savedSettings
+        savedSettings = newSettings
+        settingsWrites++
         viewModelScope.launch {
-            prefsRepo.updateSettings(newSettings)
+            try {
+                prefsRepo.updateSettings(from, newSettings)
+            } finally {
+                settingsWrites--
+            }
         }
+    }
+
+    /** A slider being dragged: shown and heard as it moves, saved when it's let go. */
+    fun previewSettings(newSettings: GameSettings) {
+        showSettings(newSettings)
+    }
+
+    /** The slider is let go: what it shows is saved. */
+    fun commitSettings() {
+        updateSettings(_settings.value)
     }
 
     fun onResume() {

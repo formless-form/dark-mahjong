@@ -9,9 +9,6 @@ enum class TableSurface(val displayName: String, val shortName: String) {
     SLATE("Slate", "Slate"),
 }
 
-@Suppress("unused")
-typealias AppTheme = TableSurface
-
 data class GameSettings(
     val soundEnabled: Boolean = true,
     val soundVolume: Float = 0.7f,
@@ -29,6 +26,4 @@ data class GameSettings(
     val fireIntensity: Float = 0.6f,
     // The fire's crackle, on its own volume (subtle by default)
     val fireVolume: Float = 0.3f,
-) {
-    val theme: TableSurface get() = tableSurface
-}
+)

@@ -42,7 +42,6 @@ class PreferencesRepository(private val context: Context) {
         val HIGHLIGHT_FREE_TILES = booleanPreferencesKey("highlight_free_tiles")
         val ANIMATIONS = booleanPreferencesKey("animations")
         val VIBRATION = booleanPreferencesKey("vibration")
-        val THEME = stringPreferencesKey("theme")
 
         val HIGHEST_LEVEL = intPreferencesKey("highest_level")
         val COMPLETED_CONSTELLATIONS = stringSetPreferencesKey("completed_constellations")
@@ -69,32 +68,25 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
+    // A setting never changed reads as GameSettings' own default, so a new default reaches it
     val settingsFlow: Flow<GameSettings> = data.map { prefs ->
-        val surfaceStr = prefs[Keys.TABLE_SURFACE] ?: prefs[Keys.THEME] ?: TableSurface.GREEN_MAT.name
-        val surface = when (surfaceStr) {
-            "WOOD" -> TableSurface.WALNUT
-            "DARK" -> TableSurface.GREEN_MAT
-            else -> try {
-                TableSurface.valueOf(surfaceStr)
-            } catch (_: Exception) {
-                TableSurface.GREEN_MAT
-            }
-        }
-
+        val d = GameSettings()
         GameSettings(
-            soundEnabled = prefs[Keys.SOUND_ENABLED] ?: true,
-            soundVolume = prefs[Keys.SOUND_VOLUME] ?: 0.7f,
-            musicEnabled = prefs[Keys.MUSIC_ENABLED] ?: true,
-            musicVolume = prefs[Keys.MUSIC_VOLUME] ?: 0.6f,
-            autoZoomEnabled = prefs[Keys.AUTO_ZOOM] ?: true,
-            highlightFreeTiles = prefs[Keys.HIGHLIGHT_FREE_TILES] ?: false,
-            animationsEnabled = prefs[Keys.ANIMATIONS] ?: true,
-            vibrationEnabled = prefs[Keys.VIBRATION] ?: true,
-            tableSurface = surface,
-            lampBrightness = prefs[Keys.LAMP_BRIGHTNESS] ?: 0.5f,
-            fireplaceLit = prefs[Keys.FIREPLACE] ?: false,
-            fireVolume = prefs[Keys.FIRE_VOLUME] ?: 0.3f,
-            fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: 0.6f,
+            soundEnabled = prefs[Keys.SOUND_ENABLED] ?: d.soundEnabled,
+            soundVolume = prefs[Keys.SOUND_VOLUME] ?: d.soundVolume,
+            musicEnabled = prefs[Keys.MUSIC_ENABLED] ?: d.musicEnabled,
+            musicVolume = prefs[Keys.MUSIC_VOLUME] ?: d.musicVolume,
+            autoZoomEnabled = prefs[Keys.AUTO_ZOOM] ?: d.autoZoomEnabled,
+            highlightFreeTiles = prefs[Keys.HIGHLIGHT_FREE_TILES] ?: d.highlightFreeTiles,
+            animationsEnabled = prefs[Keys.ANIMATIONS] ?: d.animationsEnabled,
+            vibrationEnabled = prefs[Keys.VIBRATION] ?: d.vibrationEnabled,
+            tableSurface = prefs[Keys.TABLE_SURFACE]
+                ?.let { name -> TableSurface.entries.firstOrNull { it.name == name } }
+                ?: d.tableSurface,
+            lampBrightness = prefs[Keys.LAMP_BRIGHTNESS] ?: d.lampBrightness,
+            fireplaceLit = prefs[Keys.FIREPLACE] ?: d.fireplaceLit,
+            fireVolume = prefs[Keys.FIRE_VOLUME] ?: d.fireVolume,
+            fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: d.fireIntensity,
         )
     }
 
@@ -105,22 +97,29 @@ class PreferencesRepository(private val context: Context) {
         )
     }
 
-    suspend fun updateSettings(settings: GameSettings) {
+    /**
+     * Writes the settings that differ between [from] and [to], and only those: the others keep
+     * following their defaults, and a write can't put back a value changed in the meantime.
+     */
+    suspend fun updateSettings(from: GameSettings, to: GameSettings) {
+        if (from == to) return
         write { prefs ->
-            prefs[Keys.SOUND_ENABLED] = settings.soundEnabled
-            prefs[Keys.SOUND_VOLUME] = settings.soundVolume
-            prefs[Keys.MUSIC_ENABLED] = settings.musicEnabled
-            prefs[Keys.MUSIC_VOLUME] = settings.musicVolume
-            prefs[Keys.AUTO_ZOOM] = settings.autoZoomEnabled
-            prefs[Keys.HIGHLIGHT_FREE_TILES] = settings.highlightFreeTiles
-            prefs[Keys.ANIMATIONS] = settings.animationsEnabled
-            prefs[Keys.VIBRATION] = settings.vibrationEnabled
-            prefs[Keys.TABLE_SURFACE] = settings.tableSurface.name
-            prefs[Keys.THEME] = settings.tableSurface.name
-            prefs[Keys.LAMP_BRIGHTNESS] = settings.lampBrightness
-            prefs[Keys.FIREPLACE] = settings.fireplaceLit
-            prefs[Keys.FIRE_VOLUME] = settings.fireVolume
-            prefs[Keys.FIRE_INTENSITY] = settings.fireIntensity
+            fun <T> put(key: Preferences.Key<T>, value: (GameSettings) -> T) {
+                if (value(to) != value(from)) prefs[key] = value(to)
+            }
+            put(Keys.SOUND_ENABLED) { it.soundEnabled }
+            put(Keys.SOUND_VOLUME) { it.soundVolume }
+            put(Keys.MUSIC_ENABLED) { it.musicEnabled }
+            put(Keys.MUSIC_VOLUME) { it.musicVolume }
+            put(Keys.AUTO_ZOOM) { it.autoZoomEnabled }
+            put(Keys.HIGHLIGHT_FREE_TILES) { it.highlightFreeTiles }
+            put(Keys.ANIMATIONS) { it.animationsEnabled }
+            put(Keys.VIBRATION) { it.vibrationEnabled }
+            put(Keys.TABLE_SURFACE) { it.tableSurface.name }
+            put(Keys.LAMP_BRIGHTNESS) { it.lampBrightness }
+            put(Keys.FIREPLACE) { it.fireplaceLit }
+            put(Keys.FIRE_VOLUME) { it.fireVolume }
+            put(Keys.FIRE_INTENSITY) { it.fireIntensity }
         }
     }
 

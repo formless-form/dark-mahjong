@@ -370,7 +370,6 @@ class MahjongEngineTest {
     fun testTableSurfaceSettings() {
         val defaultSettings = GameSettings()
         assertEquals(TableSurface.GREEN_MAT, defaultSettings.tableSurface)
-        assertEquals(TableSurface.GREEN_MAT, defaultSettings.theme)
 
         val walnutSettings = defaultSettings.copy(tableSurface = TableSurface.WALNUT)
         assertEquals(TableSurface.WALNUT, walnutSettings.tableSurface)

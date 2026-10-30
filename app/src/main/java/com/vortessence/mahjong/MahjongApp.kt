@@ -158,6 +158,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                                 settings = settings,
                                 onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
                                 onBack = toMenu,
+                                onSettingsPreview = { updated -> viewModel.previewSettings(updated) },
+                                onSettingsCommit = { viewModel.commitSettings() },
                             )
                         }
                     }

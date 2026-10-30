@@ -60,6 +60,9 @@ fun SettingsScreen(
     settings: GameSettings,
     onSettingsChanged: (GameSettings) -> Unit,
     onBack: () -> Unit,
+    // A slider moving shows its value without saving it; it's saved when let go
+    onSettingsPreview: (GameSettings) -> Unit = onSettingsChanged,
+    onSettingsCommit: () -> Unit = {},
 ) {
     ExpressiveScreen(
         title = "Settings",
@@ -84,8 +87,8 @@ fun SettingsScreen(
                     }
                     if (settings.soundEnabled) {
                         add { shapes ->
-                            SliderRow(shapes, "Sound volume", settings.soundVolume) {
-                                onSettingsChanged(settings.copy(soundVolume = it))
+                            SliderRow(shapes, "Sound volume", settings.soundVolume, onSettingsCommit) {
+                                onSettingsPreview(settings.copy(soundVolume = it))
                             }
                         }
                     }
@@ -97,8 +100,8 @@ fun SettingsScreen(
                     }
                     if (settings.musicEnabled) {
                         add { shapes ->
-                            SliderRow(shapes, "Music volume", settings.musicVolume) {
-                                onSettingsChanged(settings.copy(musicVolume = it))
+                            SliderRow(shapes, "Music volume", settings.musicVolume, onSettingsCommit) {
+                                onSettingsPreview(settings.copy(musicVolume = it))
                             }
                         }
                     }
@@ -139,8 +142,8 @@ fun SettingsScreen(
                         ) { onSettingsChanged(settings.copy(tableSurface = it)) }
                     },
                     { shapes ->
-                        SliderRow(shapes, "Lamp brightness", settings.lampBrightness) {
-                            onSettingsChanged(settings.copy(lampBrightness = it))
+                        SliderRow(shapes, "Lamp brightness", settings.lampBrightness, onSettingsCommit) {
+                            onSettingsPreview(settings.copy(lampBrightness = it))
                         }
                     },
                     { shapes ->
@@ -152,13 +155,13 @@ fun SettingsScreen(
                 ) + if (settings.fireplaceLit) {
                     listOf<@Composable (ListItemShapes) -> Unit>(
                         { shapes ->
-                            SliderRow(shapes, "Fire intensity", settings.fireIntensity) {
-                                onSettingsChanged(settings.copy(fireIntensity = it))
+                            SliderRow(shapes, "Fire intensity", settings.fireIntensity, onSettingsCommit) {
+                                onSettingsPreview(settings.copy(fireIntensity = it))
                             }
                         },
                         { shapes ->
-                            SliderRow(shapes, "Fire sound", settings.fireVolume) {
-                                onSettingsChanged(settings.copy(fireVolume = it))
+                            SliderRow(shapes, "Fire sound", settings.fireVolume, onSettingsCommit) {
+                                onSettingsPreview(settings.copy(fireVolume = it))
                             }
                         },
                     )
@@ -311,7 +314,13 @@ private fun ToggleRow(
 }
 
 @Composable
-private fun SliderRow(shapes: ListItemShapes, title: String, value: Float, onValueChange: (Float) -> Unit) {
+private fun SliderRow(
+    shapes: ListItemShapes,
+    title: String,
+    value: Float,
+    onValueChangeFinished: () -> Unit,
+    onValueChange: (Float) -> Unit,
+) {
     SegmentedListItem(
         shapes = shapes,
         colors = segmentColors(),
@@ -328,6 +337,7 @@ private fun SliderRow(shapes: ListItemShapes, title: String, value: Float, onVal
             Slider(
                 value = value,
                 onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
                 colors = SliderDefaults.colors(
                     inactiveTrackColor = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.5f),
                     inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant,
