@@ -43,6 +43,9 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
     val colourBake = remember { RuntimeShader(SLATE_AGSL).apply { setFloatUniform("bakeMap", 0f) } }
     val surfaceBake = remember { RuntimeShader(SLATE_AGSL).apply { setFloatUniform("bakeMap", 1f) } }
     val light = remember { RuntimeShader(LIGHT_AGSL) }
+    // Without a GPU to bake on (the JVM renders), the slate lit by the lamp alone, worked out whole
+    val direct = remember { RuntimeShader(SLATE_AGSL).apply { setFloatUniform("bakeMap", 2f) } }
+    var bakeFailed by remember { mutableStateOf(false) }
     val colourLayer = rememberGraphicsLayer()
     val surfaceLayer = rememberGraphicsLayer()
     var size by remember { mutableStateOf(IntSize.Zero) }
@@ -56,8 +59,9 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
             return layer.toImageBitmap().asAndroidBitmap()
         }
         // Baking needs the GPU (shaders can't be drawn in software, as in the JVM previews):
-        // without it, the page stays plain dark
+        // without it, the slate is drawn whole each time, by the lamp alone
         maps = runCatching { bake(colourLayer, colourBake) to bake(surfaceLayer, surfaceBake) }.getOrNull()
+        bakeFailed = maps == null
     }
     val flameSeconds by produceState(0f, fire) {
         if (fire && MenuFire.flickers) {
@@ -82,7 +86,13 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
             .onSizeChanged { size = it }
             .drawBehind {
                 if (!inputs) {
-                    drawRect(Color(0xFF07090A))
+                    if (bakeFailed) {
+                        direct.setFloatUniform("res", this.size.width, this.size.height)
+                        direct.setFloatUniform("unit", density.density)
+                        drawRect(ShaderBrush(direct))
+                    } else {
+                        drawRect(Color(0xFF07090A))
+                    }
                     return@drawBehind
                 }
                 light.setFloatUniform("res", this.size.width, this.size.height)
@@ -129,7 +139,8 @@ private const val MENU_FIRE_FRAME_NANOS = 1_000_000_000L / 20 - 2_000_000L
 
 /**
  * The slate, baked once: its colour (bakeMap 0), or its surface (bakeMap 1: the normal, as
- * 0.5 + 0.5 n, in rgb).
+ * 0.5 + 0.5 n, in rgb). bakeMap 2: both at once, lit by the lamp alone as LIGHT_AGSL lights them,
+ * for where nothing can be baked.
  */
 private const val SLATE_AGSL = """
 uniform float2 res;
@@ -215,7 +226,14 @@ half4 main(float2 p) {
     float e = 1.0 / (unit * scale);
     float h = height(u);
     float3 n = normalize(float3(h - height(u + float2(e, 0.0)), h - height(u + float2(0.0, e)), e * 3.5));
-    return half4(half3(n * 0.5 + 0.5), 1.0);
+    if (bakeMap < 1.5) return half4(half3(n * 0.5 + 0.5), 1.0);
+    float3 l = normalize(float3(-0.55, -0.7, 0.45));
+    float3 c = colour(u) * (0.5 + 0.7 * max(dot(n, l), 0.0));
+    c += pow(max(dot(n, normalize(l + float3(0.0, 0.0, 1.0))), 0.0), 40.0) * 0.05 * 0.72;
+    float2 q = p / res;
+    c += exp(-dot(q - float2(0.25, 0.15), q - float2(0.25, 0.15)) * 3.0) * 0.03 * 0.72;
+    c *= 1.0 - 0.35 * dot(q - 0.5, q - 0.5);
+    return half4(half3(clamp(c, 0.0, 1.0)), 1.0);
 }
 """
 

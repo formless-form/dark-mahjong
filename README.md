@@ -15,7 +15,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="240" alt="A board on the green mat"/>
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="240" alt="Winning: fireworks seen from above and a warm message"/>
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="The levels list, easy to hard"/>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="The levels list, easy to hard, on dark slate"/>
 </p>
 
 ## Ad-free, offline and open, for good

@@ -35,6 +35,12 @@ class StoreScreenshots {
     @get:Rule
     val compose = createComposeRule()
 
+    // The menu firelight's clock never lets the screen settle
+    @org.junit.Before
+    fun holdMenuFireStill() {
+        com.vortessence.mahjong.ui.components.MenuFire.flickers = false
+    }
+
     private fun shoot(name: String) = compose.onRoot().captureRoboImage("build/store-screenshots/$name.png")
 
     private fun game(surface: TableSurface, state: GameState, levelIndex: Int?, message: String? = null) {
