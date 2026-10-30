@@ -23,6 +23,8 @@ data class SavedGameState(
     // The tutorial's step: an index into TutorialScript.steps, FREE_PLAY once the guided part is
     // over, or null (any other board, or a save from before steps were kept)
     val tutorialStep: Int? = null,
+    // The order hints follow (GameState.plan); empty in saves from before plans were kept
+    val plan: List<Move> = emptyList(),
 ) {
     // deserialize only accepts saves on a layout that exists
     fun toGameState(): GameState {
@@ -36,7 +38,7 @@ data class SavedGameState(
                 isFree = false,
             )
         }
-        return MahjongGameEngine.stateOf(constellation, boardTiles, moveHistory)
+        return MahjongGameEngine.stateOf(constellation, boardTiles, moveHistory, plan)
     }
 
     fun serialize(): String {
@@ -47,6 +49,7 @@ data class SavedGameState(
         val movesStr = moveHistory.joinToString(";") { m ->
             "${m.tileId1},${m.tileId2}"
         }
+        val planStr = plan.joinToString(";") { m -> "${m.tileId1},${m.tileId2}" }
         return listOf(
             constellationId,
             levelStr,
@@ -55,6 +58,7 @@ data class SavedGameState(
             tilesStr,
             movesStr,
             tutorialStep?.toString() ?: "",
+            planStr,
         ).joinToString("|")
     }
 
@@ -76,6 +80,7 @@ data class SavedGameState(
                 },
                 moveHistory = state.moveHistory,
                 tutorialStep = tutorialStep,
+                plan = state.plan,
             )
         }
 
@@ -113,21 +118,22 @@ data class SavedGameState(
                 }
                 if (tiles.isEmpty()) return null
 
-                val movesRaw = parts[5]
-                val moves = if (movesRaw.isNotBlank()) {
-                    movesRaw.split(";").mapNotNull { mStr ->
-                        val mParts = mStr.split(",")
-                        if (mParts.size >= 2) {
-                            val t1 = mParts[0].toIntOrNull() ?: return@mapNotNull null
-                            val t2 = mParts[1].toIntOrNull() ?: return@mapNotNull null
-                            Move(t1, t2)
-                        } else {
-                            null
+                fun moves(raw: String?): List<Move> =
+                    if (!raw.isNullOrBlank()) {
+                        raw.split(";").mapNotNull { mStr ->
+                            val mParts = mStr.split(",")
+                            if (mParts.size >= 2) {
+                                val t1 = mParts[0].toIntOrNull() ?: return@mapNotNull null
+                                val t2 = mParts[1].toIntOrNull() ?: return@mapNotNull null
+                                Move(t1, t2)
+                            } else {
+                                null
+                            }
                         }
+                    } else {
+                        emptyList()
                     }
-                } else {
-                    emptyList()
-                }
+                val moves = moves(parts[5])
 
                 return SavedGameState(
                     constellationId = constellationId,
@@ -135,6 +141,7 @@ data class SavedGameState(
                     tiles = tiles,
                     moveHistory = moves,
                     tutorialStep = parts.getOrNull(6)?.toIntOrNull(),
+                    plan = moves(parts.getOrNull(7)),
                 )
             } catch (_: Exception) {
                 return null

@@ -72,7 +72,7 @@ class MahLayoutsTest {
             repeat(3) { seed ->
                 val dealt = BoardSolvabilityGenerator.reassignSolvable(layout.positions, Tile.createStandard144Set(), Random(seed))
                 assertNotNull("${layout.name} (seed $seed) found no solvable deal", dealt)
-                assertEquals(layout.name, fullSet, dealt!!.values.groupingBy { it }.eachCount())
+                assertEquals(layout.name, fullSet, dealt!!.tiles.values.groupingBy { it }.eachCount())
             }
         }
     }

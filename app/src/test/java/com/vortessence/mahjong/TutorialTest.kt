@@ -121,7 +121,7 @@ class TutorialTest {
     fun testSavesWithoutAStepWorkItOutFromTheTiles() {
         val state = boardAtStep(4)
         // A save from before steps were kept has six parts
-        val old = SavedGameState.fromGameState(state, 0).serialize().substringBeforeLast("|")
+        val old = SavedGameState.fromGameState(state, 0).serialize().split("|").take(6).joinToString("|")
         val saved = SavedGameState.deserialize(old)!!
         assertNull(saved.tutorialStep)
         assertEquals(TutorialScript.resumeStepFor(state), TutorialScript.resumeStep(saved.toGameState(), null))

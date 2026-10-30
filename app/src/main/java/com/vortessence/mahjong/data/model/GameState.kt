@@ -15,6 +15,9 @@ data class GameState(
     val isStalemate: Boolean = false,
     val availablePairsCount: Int = 0,
     val blockedTileId: Int? = null,
+    // An order the pairs can be taken in to clear the board, which hints follow: from the deal or
+    // the reshuffle, or found by the hint solver. Not saved; a restored game finds one again
+    val plan: List<Move> = emptyList(),
 ) {
     val remainingTilesCount: Int get() = tiles.count { !it.isRemoved }
     val totalTilesCount: Int get() = tiles.size

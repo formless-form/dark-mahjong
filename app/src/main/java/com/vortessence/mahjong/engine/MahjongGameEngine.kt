@@ -4,8 +4,6 @@ import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.model.Move
-import com.vortessence.mahjong.data.model.Tile
-import com.vortessence.mahjong.data.model.TilePosition
 import kotlin.random.Random
 
 sealed class TileTapResult {
@@ -22,11 +20,18 @@ object MahjongGameEngine {
     /**
      * Initializes a new game state with a solvable board layout.
      */
-    fun startNewGame(constellation: Constellation, random: Random = Random): GameState =
-        stateOf(constellation, BoardSolvabilityGenerator.generateSolvableBoard(constellation, random))
+    fun startNewGame(constellation: Constellation, random: Random = Random): GameState {
+        val deal = BoardSolvabilityGenerator.deal(constellation, random)
+        return stateOf(constellation, deal.tiles, plan = deal.plan)
+    }
 
     /** A game in play on [tiles], nothing selected: a new deal, or one restored from a save. */
-    fun stateOf(constellation: Constellation, tiles: List<BoardTile>, moveHistory: List<Move> = emptyList()): GameState {
+    fun stateOf(
+        constellation: Constellation,
+        tiles: List<BoardTile>,
+        moveHistory: List<Move> = emptyList(),
+        plan: List<Move> = emptyList(),
+    ): GameState {
         val tilesWithFreedom = recalculateFreedom(tiles)
         val availablePairs = findAvailablePairs(tilesWithFreedom)
         return GameState(
@@ -36,6 +41,7 @@ object MahjongGameEngine {
             isWon = tilesWithFreedom.none { !it.isRemoved },
             isStalemate = isStuck(tilesWithFreedom, availablePairs),
             availablePairsCount = availablePairs.size,
+            plan = plan,
         )
     }
 
@@ -60,11 +66,15 @@ object MahjongGameEngine {
 
         val currentSelectedId = currentState.selectedTileId
 
+        // The hinted pair stays lit while one of its own tiles is picked, so its partner is easy
+        // to find again
+        val hintKept = currentState.hintPair?.takeIf { tileId == it.first || tileId == it.second }
+
         // 2. No tile currently selected: select this one
         if (currentSelectedId == null) {
             val updatedState = currentState.copy(
                 selectedTileId = tileId,
-                hintPair = null,
+                hintPair = hintKept,
                 blockedTileId = null
             )
             return updatedState to TileTapResult.Selected(tileId)
@@ -74,7 +84,7 @@ object MahjongGameEngine {
         if (currentSelectedId == tileId) {
             val updatedState = currentState.copy(
                 selectedTileId = null,
-                hintPair = null,
+                hintPair = hintKept,
                 blockedTileId = null
             )
             return updatedState to TileTapResult.Deselected
@@ -117,7 +127,7 @@ object MahjongGameEngine {
         // 5. Does not match: switch selection to the new free tile
         val updatedState = currentState.copy(
             selectedTileId = tileId,
-            hintPair = null,
+            hintPair = hintKept,
             blockedTileId = null
         )
         return updatedState to TileTapResult.SelectionChanged(tileId)
@@ -155,21 +165,52 @@ object MahjongGameEngine {
         )
     }
 
+    /** A pair to hint, and the plan it was taken from (empty if none was found). */
+    data class Hint(val pair: Pair<Int, Int>, val plan: List<Move>)
+
     /**
-     * Finds and marks a hint pair.
+     * Picks a pair to hint that keeps the board clearable: one of the free pairs of a plan that
+     * still holds (the deal's, or one the solver finds), taking the next of them on each repeated
+     * hint. If no plan is found in time, the most promising free pair. Null if no pair is free.
+     * It can take a moment on a big board, so it's for a background thread.
      */
-    fun requestHint(currentState: GameState): GameState {
-        val pairs = findAvailablePairs(currentState.tiles)
-        return if (pairs.isNotEmpty()) {
-            val hint = pairs.first()
-            currentState.copy(
-                hintPair = hint,
-                blockedTileId = null
-            )
+    fun findHint(state: GameState): Hint? {
+        if (findAvailablePairs(state.tiles).isEmpty()) return null
+        val plan = state.plan.takeIf { planHolds(state.tiles, it) } ?: HintSolver.solve(state.tiles, hint = state.plan)
+        val candidates = if (plan != null) {
+            val free = state.tiles.filter { it.isFree }.map { it.id }.toSet()
+            plan.filter { it.tileId1 in free && it.tileId2 in free }.map { it.tileId1 to it.tileId2 }
         } else {
-            currentState
+            HintSolver.rank(state.tiles)
         }
+        if (candidates.isEmpty()) return null
+        val shown = candidates.indexOfFirst { samePair(it, state.hintPair) }
+        return Hint(candidates[(shown + 1) % candidates.size], plan ?: emptyList())
     }
+
+    /**
+     * Whether [plan] still clears what's left of [tiles]: every tile left is in one of its pairs
+     * with its planned partner, and the pairs still match. Taking pairs early never blocks a tile,
+     * so the pairs left can be taken in the plan's order, and any of them that's free can go now.
+     */
+    fun planHolds(tiles: List<BoardTile>, plan: List<Move>): Boolean {
+        if (plan.isEmpty()) return false
+        val byId = tiles.associateBy { it.id }
+        val covered = HashSet<Int>()
+        for (move in plan) {
+            val a = byId[move.tileId1] ?: return false
+            val b = byId[move.tileId2] ?: return false
+            if (a.isRemoved != b.isRemoved) return false
+            if (a.isRemoved) continue
+            if (!a.tile.matches(b.tile)) return false
+            covered.add(a.id)
+            covered.add(b.id)
+        }
+        return tiles.all { it.isRemoved || it.id in covered }
+    }
+
+    private fun samePair(a: Pair<Int, Int>, b: Pair<Int, Int>?) =
+        b != null && ((a.first == b.first && a.second == b.second) || (a.first == b.second && a.second == b.first))
 
     /**
      * Reshuffles remaining unremoved tiles in case of stalemate.
@@ -178,7 +219,7 @@ object MahjongGameEngine {
         // Some layouts cannot be solved by any arrangement (e.g. the last two tiles stacked on
         // top of each other), so take back matched pairs until a solvable redistribution exists.
         var state = currentState
-        var solvable: Map<TilePosition, Tile>?
+        var solvable: Assignment?
         while (true) {
             val activeTiles = state.tiles.filter { !it.isRemoved }
             if (activeTiles.isEmpty()) return currentState
@@ -194,7 +235,7 @@ object MahjongGameEngine {
         val activeTiles = state.tiles.filter { !it.isRemoved }
         val solvableMap = solvable
         val activeMap = if (solvableMap != null) {
-            activeTiles.associate { it.id to solvableMap.getValue(it.position) }
+            activeTiles.associate { it.id to solvableMap.tiles.getValue(it.position) }
         } else {
             val activeTilesValues = activeTiles.map { it.tile }.shuffled()
             activeTiles.indices.associate { i ->
@@ -213,13 +254,18 @@ object MahjongGameEngine {
         val refreshedTiles = recalculateFreedom(updatedTiles)
         val availablePairs = findAvailablePairs(refreshedTiles)
 
+        // The new arrangement comes with the order it can be cleared in
+        val ids = activeTiles.associate { it.position to it.id }
+        val plan = solvableMap?.order?.map { (p, q) -> Move(ids.getValue(p), ids.getValue(q)) } ?: emptyList()
+
         return state.copy(
             tiles = refreshedTiles,
             selectedTileId = null,
             hintPair = null,
             blockedTileId = null,
             isStalemate = isStuck(refreshedTiles, availablePairs),
-            availablePairsCount = availablePairs.size
+            availablePairsCount = availablePairs.size,
+            plan = plan,
         )
     }
 

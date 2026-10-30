@@ -19,6 +19,7 @@ import com.vortessence.mahjong.engine.TileTapResult
 import com.vortessence.mahjong.audio.FireRoom
 import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.engine.TutorialStep
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +31,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -346,12 +349,26 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var hintSearch: Job? = null
+
     fun requestHint() {
         if (_tutorialStepIndex.value != null) return
         val current = _gameState.value ?: return
-        val updated = MahjongGameEngine.requestHint(current)
-        _gameState.value = updated
+        if (current.isWon) return
         audioManager.playTileSelect()
+        // Finding a plan can take a moment on a big board, so it's done in the background, and
+        // shown only if the board hasn't changed meanwhile
+        hintSearch?.cancel()
+        hintSearch = viewModelScope.launch {
+            val hint = withContext(Dispatchers.Default) { MahjongGameEngine.findHint(current) } ?: return@launch
+            _gameState.update { state ->
+                if (state?.tiles === current.tiles) {
+                    state.copy(hintPair = hint.pair, plan = hint.plan.ifEmpty { state.plan }, blockedTileId = null)
+                } else {
+                    state
+                }
+            }
+        }
     }
 
     fun restartGame() {

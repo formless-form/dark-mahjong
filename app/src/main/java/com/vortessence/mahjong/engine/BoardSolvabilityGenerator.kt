@@ -2,12 +2,22 @@ package com.vortessence.mahjong.engine
 
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.Constellation
+import com.vortessence.mahjong.data.model.Move
 import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TilePosition
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
+
+/**
+ * Tiles placed on positions, and an order their pairs can be taken in to clear the board: the
+ * order they were lifted off the full board while dealing.
+ */
+class Assignment(val tiles: Map<TilePosition, Tile>, val order: List<Pair<TilePosition, TilePosition>>)
+
+/** A new deal, and an order its pairs can be taken in to clear it (empty if none is known). */
+class Deal(val tiles: List<BoardTile>, val plan: List<Move>)
 
 object BoardSolvabilityGenerator {
 
@@ -83,16 +93,24 @@ object BoardSolvabilityGenerator {
     /**
      * Generates a board for [constellation] guaranteed to be solvable.
      */
-    fun generateSolvableBoard(constellation: Constellation, random: Random = Random): List<BoardTile> {
+    fun generateSolvableBoard(constellation: Constellation, random: Random = Random): List<BoardTile> =
+        deal(constellation, random).tiles
+
+    /**
+     * Deals a solvable board for [constellation], with the order its pairs were lifted in, which
+     * hints follow.
+     */
+    fun deal(constellation: Constellation, random: Random = Random): Deal {
         val totalCount = constellation.positions.size
         require(totalCount % 2 == 0) { "Constellation tile count must be even" }
 
         // Scripted layouts (e.g. the tutorial) deal the same tiles every time
         constellation.fixedTiles?.let { fixed ->
             require(fixed.size == totalCount) { "Fixed tiles must match the constellation tile count" }
-            return constellation.positions.mapIndexed { index, pos ->
-                BoardTile(id = index, tile = fixed[index], position = pos)
-            }
+            return Deal(
+                constellation.positions.mapIndexed { index, pos -> BoardTile(id = index, tile = fixed[index], position = pos) },
+                plan = emptyList(),
+            )
         }
 
         val pairCount = totalCount / 2
@@ -103,19 +121,23 @@ object BoardSolvabilityGenerator {
         // Try reverse simulation to guarantee a valid solution path
         val assigned = assignSolvable(constellation.positions, tilePairs, random)
         if (assigned != null) {
-            return constellation.positions.mapIndexed { index, pos ->
-                BoardTile(
-                    id = index,
-                    tile = assigned.getValue(pos),
-                    position = pos,
-                    isRemoved = false,
-                    isFree = false
-                )
-            }
+            val ids = constellation.positions.withIndex().associate { (index, pos) -> pos to index }
+            return Deal(
+                constellation.positions.mapIndexed { index, pos ->
+                    BoardTile(
+                        id = index,
+                        tile = assigned.tiles.getValue(pos),
+                        position = pos,
+                        isRemoved = false,
+                        isFree = false
+                    )
+                },
+                plan = assigned.order.map { (a, b) -> Move(ids.getValue(a), ids.getValue(b)) },
+            )
         }
 
         // Fallback: direct pairing if constellation is unusually constrained
-        return fallbackAssignment(constellation.positions, tilePairs, random)
+        return Deal(fallbackAssignment(constellation.positions, tilePairs, random), plan = emptyList())
     }
 
     /**
@@ -126,7 +148,7 @@ object BoardSolvabilityGenerator {
         positions: List<TilePosition>,
         tiles: List<Tile>,
         random: Random = Random,
-    ): Map<TilePosition, Tile>? {
+    ): Assignment? {
         val pairs = pairUp(tiles) ?: return null
         return assignSolvable(positions, pairs.shuffled(random), random)
     }
@@ -135,7 +157,7 @@ object BoardSolvabilityGenerator {
         positions: List<TilePosition>,
         pairs: List<Pair<Tile, Tile>>,
         random: Random,
-    ): Map<TilePosition, Tile>? {
+    ): Assignment? {
         for (@Suppress("UNUSED_VARIABLE") attempt in 0 until 50) {
             val assigned = tryReverseSimulation(positions, pairs, random)
             if (assigned != null) {
@@ -164,9 +186,10 @@ object BoardSolvabilityGenerator {
         allPositions: List<TilePosition>,
         pairs: List<Pair<Tile, Tile>>,
         random: Random,
-    ): Map<TilePosition, Tile>? {
+    ): Assignment? {
         val remaining = allPositions.toMutableList()
         val assignedTiles = mutableMapOf<TilePosition, Tile>()
+        val order = mutableListOf<Pair<TilePosition, TilePosition>>()
 
         // In reverse generation:
         // We start with all tiles present. At each step, we find free tiles,
@@ -183,12 +206,13 @@ object BoardSolvabilityGenerator {
 
             assignedTiles[pos1] = pair.first
             assignedTiles[pos2] = pair.second
+            order.add(pos1 to pos2)
 
             remaining.remove(pos1)
             remaining.remove(pos2)
         }
 
-        return assignedTiles
+        return Assignment(assignedTiles, order)
     }
 
     private fun fallbackAssignment(
