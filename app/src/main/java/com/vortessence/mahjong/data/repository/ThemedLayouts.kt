@@ -5,7 +5,7 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.TilePosition
 
 /**
- * Themed layouts (2026-10-31), for Layouts (not the levels): eight wide boards and three to play
+ * Themed layouts (2026-10-31), for Layouts (not the levels): eight wide boards and nine to play
  * upright. Each raised layer sits half a tile off the one below, which is why their x and y run
  * odd and even by turn; so stacks always leave tiles in pairs, and every deal works first time.
  * Each row is a layer ([z]), a row of the board ([y]) and the tiles along it ([x]), in the
@@ -26,6 +26,12 @@ internal object ThemedLayouts {
             standingOwl(),
             mountainPass(),
             stoneArch(),
+            paperLantern(),
+            templeBell(),
+            teapot(),
+            bonsaiTree(),
+            hotAirBalloon(),
+            treasureChest(),
         )
     }
 
@@ -232,57 +238,201 @@ internal object ThemedLayouts {
         row(z = 2, y = 13, 6, 8, 10)
     }
 
-    // 128 tiles
+    // 108 tiles
     private fun mountainPass() = layout(
         "mountain_pass", "Mountain Pass",
         "Two rugged peaks stand either side of a high pass above broad foothills.",
     ) {
-        row(z = 0, y = 0, 6, 8)
-        row(z = 0, y = 2, 4, 6, 8, 10, 18, 20)
-        row(z = 0, y = 4, 2, 4, 6, 8, 10, 12, 16, 18, 20, 22)
-        row(z = 0, y = 6, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24)
-        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24)
-        row(z = 0, y = 10, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24)
-        row(z = 0, y = 12, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24)
-        row(z = 0, y = 14, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
-        row(z = 1, y = 1, 7)
-        row(z = 1, y = 3, 5, 7, 9, 19)
-        row(z = 1, y = 5, 3, 5, 7, 9, 11, 17, 19, 21)
-        row(z = 1, y = 7, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23)
-        row(z = 2, y = 3, 6, 8)
-        row(z = 2, y = 5, 4, 6, 8, 10, 18, 20)
-        row(z = 2, y = 7, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
-        row(z = 3, y = 4, 7)
-        row(z = 3, y = 6, 5, 7)
+        row(z = 0, y = 0, 4, 6)
+        row(z = 0, y = 2, 2, 4, 6, 8)
+        row(z = 0, y = 4, 0, 2, 4, 6, 8, 10, 14, 16)
+        row(z = 0, y = 6, 0, 2, 4, 6, 8, 10, 14, 16, 18)
+        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 10, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 12, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 14, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 16, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 18, 4, 6, 8, 10, 12, 14)
+        row(z = 1, y = 1, 5)
+        row(z = 1, y = 3, 3, 5, 7)
+        row(z = 1, y = 5, 1, 3, 5, 7, 9, 15)
+        row(z = 1, y = 7, 1, 3, 5, 7, 9, 15, 17)
+        row(z = 2, y = 3, 4, 6)
+        row(z = 2, y = 5, 2, 4, 6, 8)
+        row(z = 2, y = 7, 2, 4, 6, 8, 16)
+        row(z = 3, y = 4, 5)
+        row(z = 3, y = 6, 3, 5)
     }
 
-    // 100 tiles
+    // 102 tiles
     private fun stoneArch() = layout(
         "stone_arch", "Stone Arch",
         "A stone arch spans an open passage on two sturdy piers.",
     ) {
-        row(z = 0, y = 0, 6, 8, 10, 12, 14, 16, 18)
-        row(z = 0, y = 2, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
-        row(z = 0, y = 4, 0, 2, 4, 6, 18, 20, 22, 24)
-        row(z = 0, y = 6, 0, 2, 4, 20, 22, 24)
-        row(z = 0, y = 8, 0, 2, 4, 20, 22, 24)
-        row(z = 0, y = 10, 0, 2, 4, 20, 22, 24)
-        row(z = 0, y = 12, 0, 2, 4, 20, 22, 24)
-        row(z = 0, y = 14, 0, 2, 4, 6, 18, 20, 22, 24)
-        row(z = 0, y = 16, 0, 2, 4, 6, 18, 20, 22, 24)
-        row(z = 1, y = 1, 9, 11, 13)
-        row(z = 1, y = 5, 1, 3, 21, 23)
-        row(z = 1, y = 7, 1, 3, 21, 23)
-        row(z = 1, y = 9, 1, 3, 21, 23)
-        row(z = 1, y = 11, 1, 3, 21, 23)
-        row(z = 1, y = 13, 1, 3, 21, 23)
-        row(z = 1, y = 15, 1, 3, 21, 23)
-        row(z = 2, y = 1, 12)
-        row(z = 2, y = 5, 2, 22)
-        row(z = 2, y = 7, 2, 22)
-        row(z = 2, y = 9, 2, 22)
+        row(z = 0, y = 0, 6, 8, 10, 12)
+        row(z = 0, y = 2, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 4, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 6, 0, 2, 4, 6, 12, 14, 16, 18)
+        row(z = 0, y = 8, 0, 2, 4, 14, 16, 18)
+        row(z = 0, y = 10, 0, 2, 4, 14, 16, 18)
+        row(z = 0, y = 12, 0, 2, 4, 14, 16, 18)
+        row(z = 0, y = 14, 0, 2, 4, 14, 16, 18)
+        row(z = 0, y = 16, 0, 2, 4, 14, 16, 18)
+        row(z = 0, y = 18, 0, 2, 4, 14, 16, 18)
+        row(z = 0, y = 20, 0, 2, 4, 14, 16, 18)
+        row(z = 1, y = 1, 7, 9, 11)
+        row(z = 1, y = 3, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 15, 1, 3, 15, 17)
+        row(z = 1, y = 17, 1, 3, 15, 17)
+        row(z = 1, y = 19, 1, 3, 15, 17)
+        row(z = 2, y = 1, 8, 10)
+        row(z = 2, y = 3, 4, 6, 8, 10, 12, 14)
     }
 
+    // 54 tiles
+    private fun paperLantern() = layout(
+        "paper_lantern", "Paper Lantern",
+        "A round paper lantern glows beneath its cap, with a tassel hanging below.",
+    ) {
+        row(z = 0, y = 0, 4, 6, 8)
+        row(z = 0, y = 2, 2, 4, 6, 8, 10)
+        row(z = 0, y = 4, 0, 2, 4, 6, 8, 10, 12)
+        row(z = 0, y = 6, 0, 2, 4, 6, 8, 10, 12)
+        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12)
+        row(z = 0, y = 10, 2, 4, 6, 8, 10)
+        row(z = 0, y = 12, 4, 6, 8)
+        row(z = 0, y = 14, 4, 6, 8)
+        row(z = 1, y = 5, 3, 5, 7, 9)
+        row(z = 1, y = 7, 3, 5, 7, 9)
+        row(z = 2, y = 5, 4, 6, 8)
+        row(z = 2, y = 7, 4, 6, 8)
+    }
+
+    // 50 tiles
+    private fun templeBell() = layout(
+        "temple_bell", "Temple Bell",
+        "A bronze temple bell hangs from its loop, broadening to a heavy rim.",
+    ) {
+        row(z = 0, y = 0, 6, 8)
+        row(z = 0, y = 2, 4, 6, 8, 10)
+        row(z = 0, y = 4, 2, 4, 6, 8, 10, 12)
+        row(z = 0, y = 6, 2, 4, 6, 8, 10, 12)
+        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12, 14)
+        row(z = 0, y = 10, 0, 2, 4, 6, 8, 10, 12, 14)
+        row(z = 1, y = 3, 5, 7, 9)
+        row(z = 1, y = 5, 3, 5, 7, 9, 11)
+        row(z = 1, y = 7, 3, 5, 7, 9, 11)
+        row(z = 1, y = 9, 5, 7, 9)
+    }
+
+    // 76 tiles
+    private fun teapot() = layout(
+        "teapot", "Teapot",
+        "A round teapot with a knobbed lid has its spout to one side and a looped handle to the other.",
+    ) {
+        row(z = 0, y = 0, 8, 10)
+        row(z = 0, y = 2, 6, 8, 10, 12)
+        row(z = 0, y = 4, 0, 2, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 6, 0, 2, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 8, 2, 4, 6, 8, 10, 12, 14, 18)
+        row(z = 0, y = 10, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 12, 4, 6, 8, 10, 12, 14)
+        row(z = 0, y = 14, 6, 8, 10, 12)
+        row(z = 1, y = 1, 9)
+        row(z = 1, y = 3, 9)
+        row(z = 1, y = 5, 7, 9, 11)
+        row(z = 1, y = 7, 7, 9, 11, 13)
+        row(z = 1, y = 9, 7, 9, 11, 13)
+        row(z = 1, y = 11, 7, 9, 11)
+        row(z = 2, y = 5, 8, 10)
+        row(z = 2, y = 7, 8, 10, 12)
+        row(z = 2, y = 9, 8, 10, 12)
+        row(z = 3, y = 8, 9, 11)
+    }
+
+    // 94 tiles
+    private fun bonsaiTree() = layout(
+        "bonsai_tree", "Bonsai Tree",
+        "A bonsai tree spreads three cloud-shaped pads over a twisting trunk in a shallow pot.",
+    ) {
+        row(z = 0, y = 0, 4, 6, 8, 10)
+        row(z = 0, y = 2, 2, 4, 6, 8, 10, 12)
+        row(z = 0, y = 4, 2, 4, 6, 8, 10, 12)
+        row(z = 0, y = 6, 6, 8, 14, 16, 18)
+        row(z = 0, y = 8, 6, 8, 12, 14, 16, 18)
+        row(z = 0, y = 10, 0, 2, 4, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 12, 0, 2, 4, 6, 10, 12)
+        row(z = 0, y = 14, 0, 2, 4, 6, 10, 12)
+        row(z = 0, y = 16, 10, 12)
+        row(z = 0, y = 18, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 20, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 1, y = 1, 5, 7, 9)
+        row(z = 1, y = 3, 3, 5, 7, 9, 11)
+        row(z = 1, y = 7, 17)
+        row(z = 1, y = 9, 15, 17)
+        row(z = 1, y = 11, 1, 3)
+        row(z = 1, y = 13, 1, 3, 5)
+        row(z = 1, y = 19, 5, 7, 9)
+        row(z = 2, y = 1, 6, 8)
+        row(z = 2, y = 3, 4, 6, 8, 10)
+        row(z = 2, y = 11, 2)
+        row(z = 2, y = 13, 2, 4)
+    }
+
+    // 132 tiles
+    private fun hotAirBalloon() = layout(
+        "hot_air_balloon", "Hot-Air Balloon",
+        "A hot-air balloon rises with its great round envelope above a hanging basket.",
+    ) {
+        row(z = 0, y = 0, 4, 6, 8, 10, 12, 14)
+        row(z = 0, y = 2, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 4, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 6, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 10, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 12, 4, 6, 8, 10, 12, 14)
+        row(z = 0, y = 14, 8, 10)
+        row(z = 0, y = 16, 6, 8, 10, 12)
+        row(z = 0, y = 18, 6, 8, 10, 12)
+        row(z = 1, y = 1, 5, 7, 9, 11, 13)
+        row(z = 1, y = 3, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 5, 1, 3, 5, 7, 9, 11, 13, 15, 17)
+        row(z = 1, y = 7, 1, 3, 5, 7, 9, 11, 13, 15, 17)
+        row(z = 1, y = 9, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 11, 5, 7, 9, 11, 13)
+        row(z = 1, y = 13, 9)
+        row(z = 1, y = 15, 9)
+        row(z = 1, y = 17, 9)
+        row(z = 2, y = 3, 6, 8, 10, 12)
+        row(z = 2, y = 5, 6, 8, 10, 12, 14)
+        row(z = 2, y = 7, 4, 6, 8, 10, 12, 14)
+        row(z = 2, y = 9, 6, 8, 10, 12)
+    }
+
+    // 138 tiles
+    private fun treasureChest() = layout(
+        "treasure_chest", "Treasure Chest",
+        "A treasure chest sits shut under its curved lid, held fast by a heavy lock.",
+    ) {
+        row(z = 0, y = 0, 2, 4, 6, 8, 10, 12, 14)
+        row(z = 0, y = 2, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 4, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 6, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 10, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 12, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 14, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 1, y = 1, 3, 5, 7, 9, 11, 13)
+        row(z = 1, y = 3, 1, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 5, 1, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 7, 1, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 9, 1, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 11, 1, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 1, y = 13, 1, 3, 5, 7, 9, 11, 13, 15)
+        row(z = 2, y = 5, 4, 6, 8, 10, 12)
+        row(z = 2, y = 7, 4, 6, 8, 10, 12)
+        row(z = 2, y = 9, 4, 6, 8, 10)
+    }
     private fun layout(id: String, name: String, description: String, rows: MutableList<TilePosition>.() -> Unit) =
         Constellation(
             id = id,

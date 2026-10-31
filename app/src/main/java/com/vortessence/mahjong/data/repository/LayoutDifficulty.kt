@@ -18,6 +18,8 @@ internal object LayoutDifficulty {
         "dragon_saber" to 0.9820f, // Dragon Saber
         "celestial_lantern" to 0.9515f, // Celestial Lantern
         "torii_arch" to 0.9440f, // Torii Arch
+        "paper_lantern" to 0.9405f, // Paper Lantern
+        "temple_bell" to 0.9395f, // Temple Bell
         "cross" to 0.9370f, // Four Winds Cross
         "diamond" to 0.9285f, // Imperial Diamond
         "celadon_hourglass" to 0.9275f, // Celadon Hourglass
@@ -27,11 +29,13 @@ internal object LayoutDifficulty {
         "phoenix_tower" to 0.8410f, // Phoenix Tower
         "heart" to 0.8120f, // Jade Heart
         "imperial_monolith" to 0.8085f, // Imperial Monolith
+        "teapot" to 0.7985f, // Teapot
         "ruyi_scepter" to 0.7900f, // Ruyi Scepter
         "pillar_of_heaven" to 0.7785f, // Pillar of Heaven
         "twin_peaks" to 0.7780f, // Twin Peaks
+        "bonsai_tree" to 0.7355f, // Bonsai Tree
+        "stone_arch" to 0.7270f, // Stone Arch
         "crab" to 0.7145f, // Golden Crab
-        "stone_arch" to 0.6935f, // Stone Arch
         "red_fox" to 0.6810f, // Red Fox
         "butterfly" to 0.6725f, // Emerald Butterfly
         "crane_in_flight" to 0.6475f, // Crane in Flight
@@ -40,6 +44,7 @@ internal object LayoutDifficulty {
         "fortress" to 0.5745f, // Iron Fortress
         "mah_1088330854" to 0.5655f, // Steps
         "junk_ship" to 0.5590f, // Junk Ship
+        "mountain_pass" to 0.5565f, // Mountain Pass
         "great_wall" to 0.5415f, // Great Wall
         "mah_3101065593" to 0.5380f, // White Dragon
         "mah_2232624362" to 0.5195f, // Flower
@@ -50,6 +55,7 @@ internal object LayoutDifficulty {
         "comet" to 0.4335f, // Comet
         "mah_2036373485" to 0.4210f, // Abstract Garden
         "mah_2005925237" to 0.4150f, // Block
+        "hot_air_balloon" to 0.4090f, // Hot-Air Balloon
         "feast_table" to 0.4055f, // Feast Table
         "mah_979337589" to 0.3775f, // Tree
         "steam_train" to 0.3765f, // Steam Train
@@ -59,10 +65,10 @@ internal object LayoutDifficulty {
         "mah_2283982827" to 0.3575f, // Heart
         "mah_2788427354" to 0.3420f, // Pyramid
         "mah_1048565772" to 0.3295f, // Invader
+        "treasure_chest" to 0.3230f, // Treasure Chest
         "mah_179167734" to 0.3150f, // Elephant
         "mah_130253071" to 0.3070f, // Fortress
         "mah_773823936" to 0.3055f, // Quad
-        "mountain_pass" to 0.3030f, // Mountain Pass
         "blue_whale" to 0.2980f, // Blue Whale
         "mah_1593808196" to 0.2890f, // Blossom
         "mah_2756835802" to 0.2885f, // Stairs
