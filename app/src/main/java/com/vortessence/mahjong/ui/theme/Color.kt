@@ -9,14 +9,6 @@ val FeltTableCenter = Color(0xFF09584D)
 val FeltTableDeep = Color(0xFF042B25)
 val FeltTableVignette = Color(0xFF021714)
 
-// Traditional Jade UI Colors
-val JadeDeep = Color(0xFF042B25)
-val JadeDark = Color(0xFF0D473D)
-val JadePrimary = Color(0xFF136859)
-val JadeMedium = Color(0xFF1F8A77)
-val JadeLight = Color(0xFF48B6A3)
-val JadePale = Color(0xFFD4EFEA)
-
 // Tile 3D Natural Ivory & Bamboo Backing (matching physical tiles in reference photo)
 val TileIvoryTop = Color(0xFFFFFDF9)
 val TileIvoryBottom = Color(0xFFF4EDE2)
