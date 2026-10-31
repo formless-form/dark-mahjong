@@ -48,6 +48,8 @@ class PreferencesRepository(private val context: Context) {
 
         val HIGHEST_LEVEL = intPreferencesKey("highest_level")
         val COMPLETED_CONSTELLATIONS = stringSetPreferencesKey("completed_constellations")
+        // The epoch days whose Today's Puzzle was solved
+        val PUZZLE_DAYS_SOLVED = stringSetPreferencesKey("puzzle_days_solved")
         val SAVED_GAME = stringPreferencesKey("saved_game")
         val TABLE_SURFACE = stringPreferencesKey("table_surface")
         val LAMP_BRIGHTNESS = floatPreferencesKey("lamp_brightness")
@@ -103,6 +105,7 @@ class PreferencesRepository(private val context: Context) {
         Progress(
             highestLevelReached = prefs[Keys.HIGHEST_LEVEL] ?: 1,
             completedConstellations = prefs[Keys.COMPLETED_CONSTELLATIONS] ?: emptySet(),
+            puzzleDaysSolved = prefs[Keys.PUZZLE_DAYS_SOLVED]?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet(),
         )
     }.distinctUntilChanged()
 
@@ -142,6 +145,13 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.LEVEL_ORDER] = MEASURED_LEVEL_ORDER
             val highest = prefs[Keys.HIGHEST_LEVEL] ?: return@write
             prefs[Keys.HIGHEST_LEVEL] = LayoutDifficulty.highestAfterReorder(highest) { ConstellationRepository.levelIndexOf(it) }
+        }
+    }
+
+    /** Today's Puzzle for [day] (an epoch day) solved: ticked on the calendar. */
+    suspend fun recordPuzzleSolved(day: Long) {
+        write { prefs ->
+            prefs[Keys.PUZZLE_DAYS_SOLVED] = (prefs[Keys.PUZZLE_DAYS_SOLVED] ?: emptySet()) + day.toString()
         }
     }
 

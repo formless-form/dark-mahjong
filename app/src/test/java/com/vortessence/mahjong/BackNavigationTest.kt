@@ -48,4 +48,10 @@ class BackNavigationTest {
         val screen = backFromGame { it.navigateTo(Screen.LevelSelect); it.startLevel(3) }
         assertEquals(Screen.LevelSelect, screen)
     }
+
+    @Test
+    fun fromTodaysPuzzle() {
+        val screen = backFromGame { it.navigateTo(Screen.TodaysPuzzle); it.startTodaysPuzzle() }
+        assertEquals(Screen.TodaysPuzzle, screen)
+    }
 }

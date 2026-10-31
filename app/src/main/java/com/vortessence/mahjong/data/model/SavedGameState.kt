@@ -28,6 +28,8 @@ data class SavedGameState(
     // The deal as first laid out (GameState.dealt, dealtPlan); empty in older saves
     val dealt: List<Tile> = emptyList(),
     val dealtPlan: List<Move> = emptyList(),
+    // Today's Puzzle's day (an epoch day) for that puzzle, null for any other board
+    val puzzleDay: Long? = null,
 ) {
     // deserialize only accepts saves on a layout that exists
     fun toGameState(): GameState {
@@ -65,13 +67,14 @@ data class SavedGameState(
             movesOf(plan),
             dealt.joinToString(";") { "${it.suit.name},${it.value}" },
             movesOf(dealtPlan),
+            puzzleDay?.toString() ?: "",
         ).joinToString("|")
     }
 
     companion object {
         const val FREE_PLAY = -1
 
-        fun fromGameState(state: GameState, levelIndex: Int?, tutorialStep: Int? = null): SavedGameState {
+        fun fromGameState(state: GameState, levelIndex: Int?, tutorialStep: Int? = null, puzzleDay: Long? = null): SavedGameState {
             return SavedGameState(
                 constellationId = state.constellation.id,
                 levelIndex = levelIndex,
@@ -89,6 +92,7 @@ data class SavedGameState(
                 plan = state.plan,
                 dealt = state.dealt,
                 dealtPlan = state.dealtPlan,
+                puzzleDay = puzzleDay,
             )
         }
 
@@ -156,6 +160,7 @@ data class SavedGameState(
                         Tile(s, value.toIntOrNull() ?: return@mapNotNull null)
                     },
                     dealtPlan = moves(parts.getOrNull(9)),
+                    puzzleDay = parts.getOrNull(10)?.toLongOrNull(),
                 )
             } catch (_: Exception) {
                 return null

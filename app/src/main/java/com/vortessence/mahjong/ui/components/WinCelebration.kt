@@ -46,6 +46,8 @@ fun WinCelebration(
     onNextLevel: () -> Unit,
     onPlayAgain: () -> Unit,
     onMainMenu: () -> Unit,
+    // Where the last button goes: the title, or for Today's Puzzle its calendar
+    menuLabel: String = "Menu",
 ) {
     var showCard by remember { mutableStateOf(!animationsEnabled) }
     LaunchedEffect(Unit) {
@@ -106,7 +108,7 @@ fun WinCelebration(
                         } else {
                             BigButton("Play again", onClick = onPlayAgain, primary = true, compact = true, modifier = Modifier.weight(1.4f))
                         }
-                        BigButton("Menu", onClick = onMainMenu, compact = true, modifier = Modifier.weight(1f))
+                        BigButton(menuLabel, onClick = onMainMenu, compact = true, modifier = Modifier.weight(1f))
                     }
                 }
             }

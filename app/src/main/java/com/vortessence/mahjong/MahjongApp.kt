@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vortessence.mahjong.engine.TodaysPuzzle
 import com.vortessence.mahjong.ui.components.PredictiveBackHandling
 import com.vortessence.mahjong.ui.components.PredictiveBackState
 import com.vortessence.mahjong.ui.components.predictiveBack
@@ -30,10 +31,14 @@ import com.vortessence.mahjong.ui.screens.GameScreen
 import com.vortessence.mahjong.ui.screens.LevelSelectScreen
 import com.vortessence.mahjong.ui.screens.MainMenuScreen
 import com.vortessence.mahjong.ui.screens.SettingsScreen
+import com.vortessence.mahjong.ui.screens.TodaysPuzzleScreen
 import com.vortessence.mahjong.ui.theme.MahjongTheme
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
 import com.vortessence.mahjong.ui.viewmodel.Screen
 import com.vortessence.mahjong.update.AppUpdates
+import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
@@ -47,6 +52,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
     val winMessage by viewModel.winMessage.collectAsStateWithLifecycle()
     val update by updates.notice.collectAsStateWithLifecycle()
     val gameOrigin by viewModel.gameOrigin.collectAsStateWithLifecycle()
+    val puzzleDay by viewModel.puzzleDay.collectAsStateWithLifecycle()
+    val puzzleStarted by viewModel.todaysPuzzleStarted.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
@@ -63,6 +70,9 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
         MainMenuScreen(
             continueInfo = continueInfo,
             onContinue = { viewModel.continueGame() },
+            todaysPuzzle = remember(currentScreen) { todaysPuzzleLine() },
+            todaysPuzzleSolved = TodaysPuzzle.today() in progress.puzzleDaysSolved,
+            onTodaysPuzzle = { viewModel.navigateTo(Screen.TodaysPuzzle) },
             onPlayLevels = { viewModel.navigateTo(Screen.LevelSelect) },
             onChooseConstellation = { viewModel.navigateTo(Screen.ConstellationSelect) },
             onSettings = { viewModel.navigateTo(Screen.Settings) },
@@ -112,11 +122,23 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                     )
                 }
 
+                is Screen.TodaysPuzzle -> {
+                    TodaysPuzzleScreen(
+                        progress = progress,
+                        inProgress = puzzleStarted,
+                        onPlay = { viewModel.startTodaysPuzzle() },
+                        onBack = toMenu,
+                        fireIntensity = settings.fireIntensity,
+                        fire = settings.animationsEnabled,
+                    )
+                }
+
                 is Screen.Game -> {
                     GameScreen(
                         gameState = gameState,
                         levelIndex = levelIndex,
                         settings = settings,
+                        todaysPuzzle = puzzleDay != null,
                         tutorialStep = tutorialStep,
                         winMessage = winMessage,
                         totalLevels = viewModel.currentLevelConstellations.size,
@@ -129,7 +151,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                         onReshuffle = { viewModel.reshuffle() },
                         onReplay = { viewModel.replayDeal() },
                         onNextLevel = { viewModel.playNextLevel() },
-                        onMainMenu = toMenu,
+                        // From Today's Puzzle, its Calendar button
+                        onMainMenu = { viewModel.navigateTo(if (puzzleDay != null) Screen.TodaysPuzzle else Screen.MainMenu) },
                         onTutorialContinue = { step -> viewModel.continueTutorial(step) },
                         onBoardZoom = { viewModel.onBoardZoom(it) },
                         onWinShown = { viewModel.playWin() },
@@ -179,4 +202,11 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
             ) { screen -> screenContent(screen) }
         }
     }
+}
+
+// Today's Puzzle's line on the title screen: "Saturday · Expert"
+private fun todaysPuzzleLine(): String {
+    val today = TodaysPuzzle.today()
+    val weekday = LocalDate.ofEpochDay(today).dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    return "$weekday · ${TodaysPuzzle.layoutOn(today).difficulty.displayName}"
 }

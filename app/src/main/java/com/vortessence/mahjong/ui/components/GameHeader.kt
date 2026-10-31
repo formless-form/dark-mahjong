@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,29 +26,28 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vortessence.mahjong.data.model.GameState
-import com.vortessence.mahjong.data.repository.levelLabel
 
 /** Above the board: a round back button, then which level and layout this is. */
 @Composable
 fun GameHeader(
     gameState: GameState,
-    levelIndex: Int?,
+    // "Level 12", "Today's Puzzle", or null for a layout chosen from Layouts
+    label: String?,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -63,7 +63,7 @@ fun GameHeader(
         Column(Modifier.weight(1f)) {
             Text(
                 text = listOfNotNull(
-                    levelLabel(levelIndex)?.takeIf { it != gameState.constellation.name },
+                    label?.takeIf { it != gameState.constellation.name },
                     gameState.constellation.difficulty.displayName,
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.labelLarge,
@@ -115,7 +115,8 @@ fun GameToolbar(
 @Composable
 fun GameRail(
     gameState: GameState,
-    levelIndex: Int?,
+    // "Level 12", "Today's Puzzle", or null for a layout chosen from Layouts
+    label: String?,
     onBackClick: () -> Unit,
     onHintClick: () -> Unit,
     onUndoClick: () -> Unit,
@@ -134,7 +135,7 @@ fun GameRail(
         // A line each: "Level 12", "Hard"
         Text(
             text = listOfNotNull(
-                levelLabel(levelIndex)?.takeIf { it != gameState.constellation.name },
+                label?.takeIf { it != gameState.constellation.name },
                 gameState.constellation.difficulty.displayName,
             ).joinToString("\n"),
             style = MaterialTheme.typography.labelLarge,

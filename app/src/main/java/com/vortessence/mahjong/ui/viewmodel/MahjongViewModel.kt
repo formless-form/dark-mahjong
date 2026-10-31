@@ -21,6 +21,7 @@ import com.vortessence.mahjong.data.repository.levelLabel
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TileTapResult
 import com.vortessence.mahjong.audio.FireRoom
+import com.vortessence.mahjong.engine.TodaysPuzzle
 import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.engine.TutorialStep
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,7 @@ sealed class Screen {
     data object MainMenu : Screen()
     data object LevelSelect : Screen()
     data object ConstellationSelect : Screen()
+    data object TodaysPuzzle : Screen()
     data object Game : Screen()
     data object Settings : Screen()
 }
@@ -68,6 +70,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _currentLevelIndex = MutableStateFlow<Int?>(null)
     val currentLevelIndex: StateFlow<Int?> = _currentLevelIndex.asStateFlow()
 
+    // The day (an epoch day) whose Today's Puzzle is on the table, null for any other board
+    private val _puzzleDay = MutableStateFlow<Long?>(null)
+    val puzzleDay: StateFlow<Long?> = _puzzleDay.asStateFlow()
+
     // Index into TutorialScript.steps while the guided tutorial runs, null otherwise
     private val _tutorialStepIndex = MutableStateFlow<Int?>(null)
     val tutorialStep: StateFlow<TutorialStep?> = _tutorialStepIndex
@@ -88,16 +94,27 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     private val _savedGame = MutableStateFlow<SavedGameState?>(null)
 
+    /** Today's Puzzle started (a move made) and not yet solved: Continue rather than Play. */
+    val todaysPuzzleStarted: StateFlow<Boolean> = combine(_gameState, _puzzleDay, _savedGame) { state, day, saved ->
+        val today = TodaysPuzzle.today()
+        (day == today && state != null && !state.isWon && state.moveHistory.isNotEmpty()) ||
+            (state == null && saved?.puzzleDay == today && saved.moveHistory.isNotEmpty())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    // A day's puzzle left unfinished is gone once its day is over
+    private fun puzzleGone(day: Long?) = day != null && day != TodaysPuzzle.today()
+
     val continueInfo: StateFlow<ContinueInfo?> = combine(
         _gameState,
         _savedGame,
         _currentLevelIndex,
-    ) { state, saved, levelIdx ->
-        if (state != null && !state.isWon && (state.remainingTilesCount > 0)) {
-            ContinueInfo(title = continueTitle(levelIdx, state.constellation.name))
-        } else if (saved != null && saved.tiles.any { !it.isRemoved }) {
+        _puzzleDay,
+    ) { state, saved, levelIdx, day ->
+        if (state != null && !state.isWon && (state.remainingTilesCount > 0) && !puzzleGone(day)) {
+            ContinueInfo(title = if (day != null) TODAYS_PUZZLE else continueTitle(levelIdx, state.constellation.name))
+        } else if (saved != null && saved.tiles.any { !it.isRemoved } && !puzzleGone(saved.puzzleDay)) {
             ConstellationRepository.getById(saved.constellationId)?.let { constellation ->
-                ContinueInfo(title = continueTitle(savedLevelIndex(saved), constellation.name))
+                ContinueInfo(title = if (saved.puzzleDay != null) TODAYS_PUZZLE else continueTitle(savedLevelIndex(saved), constellation.name))
             }
         } else {
             null
@@ -143,7 +160,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 audioManager.setFireRoom(
                     when (screen) {
                         is Screen.Game -> FireRoom.TABLE
-                        is Screen.Settings, is Screen.LevelSelect, is Screen.ConstellationSelect -> FireRoom.MENU
+                        is Screen.Settings, is Screen.LevelSelect, is Screen.ConstellationSelect, is Screen.TodaysPuzzle -> FireRoom.MENU
                         else -> FireRoom.NONE
                     },
                 )
@@ -183,16 +200,17 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     fun continueGame() {
         perfAutoplay?.cancel()
         val current = _gameState.value
-        if (current != null && !current.isWon && current.remainingTilesCount > 0) {
+        if (current != null && !current.isWon && current.remainingTilesCount > 0 && !puzzleGone(_puzzleDay.value)) {
             _gameOrigin.value = Screen.MainMenu
             _currentScreen.value = Screen.Game
             return
         }
         val saved = _savedGame.value
-        if (saved != null) {
+        if (saved != null && !puzzleGone(saved.puzzleDay)) {
             val restored = saved.toGameState()
             if (!restored.isWon && restored.remainingTilesCount > 0) {
                 _currentLevelIndex.value = savedLevelIndex(saved)
+                _puzzleDay.value = saved.puzzleDay
                 _gameState.value = restored
                 _tutorialStepIndex.value = TutorialScript.resumeStep(restored, saved.tutorialStep)
                 _gameOrigin.value = Screen.MainMenu
@@ -211,6 +229,35 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _currentLevelIndex.value = levelIndex
         val constellation = ConstellationRepository.getLevel(levelIndex)
         initGame(constellation)
+        _currentScreen.value = Screen.Game
+    }
+
+    /**
+     * Today's Puzzle: carried on if it's on the table or saved unfinished, otherwise dealt (again,
+     * once solved: the same deal, ticked only once).
+     */
+    fun startTodaysPuzzle() {
+        perfAutoplay?.cancel()
+        val today = TodaysPuzzle.today()
+        _gameOrigin.value = Screen.TodaysPuzzle
+        val current = _gameState.value
+        val saved = _savedGame.value
+        when {
+            current != null && _puzzleDay.value == today && !current.isWon && current.remainingTilesCount > 0 -> Unit
+            saved != null && saved.puzzleDay == today && saved.tiles.any { !it.isRemoved } -> {
+                _gameState.value = saved.toGameState()
+                _winMessage.value = null
+                _tutorialStepIndex.value = null
+            }
+            else -> {
+                _gameState.value = TodaysPuzzle.dealOn(today)
+                _winMessage.value = null
+                _tutorialStepIndex.value = null
+            }
+        }
+        _currentLevelIndex.value = null
+        _puzzleDay.value = today
+        saveCurrentGame()
         _currentScreen.value = Screen.Game
     }
 
@@ -256,6 +303,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private fun initGame(constellation: Constellation, random: Random = Random) {
         perfAutoplay?.cancel()
         val state = MahjongGameEngine.startNewGame(constellation, random)
+        _puzzleDay.value = null
         _winMessage.value = null
         _gameState.value = state
         _tutorialStepIndex.value = if (TutorialScript.isTutorial(state)) 0 else null
@@ -266,7 +314,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val current = _gameState.value ?: return
         if (current.isWon || current.remainingTilesCount == 0) return
         val step = if (TutorialScript.isTutorial(current)) _tutorialStepIndex.value ?: SavedGameState.FREE_PLAY else null
-        val saved = SavedGameState.fromGameState(current, _currentLevelIndex.value, step)
+        val saved = SavedGameState.fromGameState(current, _currentLevelIndex.value, step, _puzzleDay.value)
         _savedGame.value = saved
         viewModelScope.launch {
             prefsRepo.saveGame(saved)
@@ -323,7 +371,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 if (result.isWon) {
                     clearSavedGame()
                     val levelIndex = _currentLevelIndex.value
+                    val day = _puzzleDay.value
                     viewModelScope.launch {
+                        if (day != null) prefsRepo.recordPuzzleSolved(day)
                         prefsRepo.recordGameWon(
                             constellationId = current.constellation.id,
                             levelIndex = levelIndex,
@@ -410,7 +460,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun restartGame() {
         val current = _gameState.value ?: return
-        initGame(current.constellation)
+        // Today's Puzzle is one deal: starting again is that deal again
+        if (_puzzleDay.value != null) replayDeal() else initGame(current.constellation)
     }
 
     /** Restart with the same deal: the tiles back as they were first laid out. */
@@ -496,3 +547,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         audioManager.release()
     }
 }
+
+/** What Today's Puzzle is called wherever it's named. */
+const val TODAYS_PUZZLE = "Today's Puzzle"

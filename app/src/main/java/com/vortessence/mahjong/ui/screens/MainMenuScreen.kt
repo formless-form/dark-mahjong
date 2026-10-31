@@ -10,14 +10,21 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,14 +35,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -47,10 +55,11 @@ import com.vortessence.mahjong.data.model.UpdateNotice
 import com.vortessence.mahjong.ui.components.NameSeal
 import com.vortessence.mahjong.ui.components.TitleBackdrop
 import com.vortessence.mahjong.ui.theme.Cinzel
-import androidx.compose.ui.platform.LocalContext
+import com.vortessence.mahjong.ui.theme.JadeAccent
 import com.vortessence.mahjong.ui.theme.MahjongTheme
 import com.vortessence.mahjong.ui.theme.SansText
 import com.vortessence.mahjong.ui.theme.SansTitle
+import com.vortessence.mahjong.ui.viewmodel.TODAYS_PUZZLE
 
 private val TitleText = Color(0xFFE6DFD1)
 private val TitleTextBright = Color(0xFFFFF7E8)
@@ -69,6 +78,10 @@ fun MainMenuScreen(
     continueInfo: ContinueInfo? = null,
     menuStyle: TitleMenuStyle = TitleMenuStyle.SANS,
     onContinue: () -> Unit = {},
+    // Today's Puzzle's line under its name ("Saturday · Expert"), and whether it's solved
+    todaysPuzzle: String? = null,
+    todaysPuzzleSolved: Boolean = false,
+    onTodaysPuzzle: () -> Unit = {},
     onPlayLevels: () -> Unit,
     onChooseConstellation: () -> Unit,
     onSettings: () -> Unit,
@@ -124,6 +137,12 @@ fun MainMenuScreen(
         ) {
             if (continueInfo != null) {
                 MenuItem("Continue", menuStyle, subtitle = continueInfo.title, onMenuClick = onMenuClick, onClick = onContinue)
+            }
+            if (todaysPuzzle != null) {
+                MenuItem(
+                    TODAYS_PUZZLE, menuStyle, subtitle = todaysPuzzle, ticked = todaysPuzzleSolved,
+                    onMenuClick = onMenuClick, onClick = onTodaysPuzzle,
+                )
             }
             MenuItem("Play", menuStyle, onMenuClick = onMenuClick, onClick = onPlayLevels)
             MenuItem("Layouts", menuStyle, onMenuClick = onMenuClick, onClick = onChooseConstellation)
@@ -194,8 +213,11 @@ private fun titleStyle(color: Color, size: TextUnit = 17.sp) = TextStyle(
     color = color,
 )
 
-// An update's mention: the app's jade, softened for the photograph
-private val UpdateTint = Color(0xFF7FB8B0)
+// How far a menu row's line under its name sits up from where the line heights put it
+private val SUBTITLE_LIFT = (-6).dp
+
+// An update's mention and Today's Puzzle's tick: the app's jade, as everywhere
+private val UpdateTint = JadeAccent
 
 // How far the update's tap strip reaches above and below its line
 private val UPDATE_TAP_PAD = 14.dp
@@ -218,6 +240,8 @@ private fun MenuItem(
     onClick: () -> Unit,
     onMenuClick: () -> Unit,
     subtitle: String? = null,
+    // A tick after the name: done for today
+    ticked: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -235,7 +259,10 @@ private fun MenuItem(
     ) {
         when (style) {
             TitleMenuStyle.SERIF -> {
-                Text(text = text, style = titleStyle(textColor))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = text, style = titleStyle(textColor))
+                    if (ticked) Tick()
+                }
                 subtitle?.let {
                     Text(
                         text = it,
@@ -244,11 +271,16 @@ private fun MenuItem(
                         letterSpacing = 0.12.em,
                         color = TitleText.copy(alpha = 0.55f),
                         maxLines = 1,
+                        // A little closer under its name than the line heights alone would set it
+                        modifier = Modifier.offset(y = SUBTITLE_LIFT),
                     )
                 }
             }
             TitleMenuStyle.SANS -> {
-                Text(text = text, fontFamily = SansTitle, fontSize = 20.sp, letterSpacing = 0.03.em, color = textColor)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = text, fontFamily = SansTitle, fontSize = 20.sp, letterSpacing = 0.03.em, color = textColor)
+                    if (ticked) Tick()
+                }
                 subtitle?.let {
                     Text(
                         text = it,
@@ -257,11 +289,19 @@ private fun MenuItem(
                         letterSpacing = 0.02.em,
                         color = TitleText.copy(alpha = 0.6f),
                         maxLines = 1,
+                        // A little closer under its name than the line heights alone would set it
+                        modifier = Modifier.offset(y = SUBTITLE_LIFT),
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun Tick() {
+    Spacer(Modifier.width(8.dp))
+    Icon(Icons.Rounded.CheckCircle, contentDescription = "Solved", tint = UpdateTint, modifier = Modifier.size(18.dp))
 }
 
 @Preview(widthDp = 427, heightDp = 952)

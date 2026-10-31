@@ -33,6 +33,7 @@ import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.TutorialAction
 import com.vortessence.mahjong.engine.TutorialStep
+import com.vortessence.mahjong.ui.viewmodel.TODAYS_PUZZLE
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 import com.vortessence.mahjong.ui.components.GameHeader
@@ -54,6 +55,8 @@ fun GameScreen(
     gameState: GameState?,
     levelIndex: Int?,
     settings: GameSettings = GameSettings(),
+    // Today's Puzzle: named so, one deal (Restart replays it), and the win leads to its calendar
+    todaysPuzzle: Boolean = false,
     tutorialStep: TutorialStep? = null,
     winMessage: String? = null,
     totalLevels: Int = ConstellationRepository.totalLevels,
@@ -78,6 +81,7 @@ fun GameScreen(
     }
 
     val hasNextLevel = (levelIndex != null) && (levelIndex < totalLevels)
+    val place = if (todaysPuzzle) TODAYS_PUZZLE else levelLabel(levelIndex)
 
     val tutorialHighlights = when {
         tutorialStep == null -> emptySet()
@@ -112,7 +116,7 @@ fun GameScreen(
     // the "no moves" dialog can be closed to look over the board, and Hint brings it back
     var askRestart by remember { mutableStateOf(false) }
     val restart = {
-        if (ConstellationRepository.TUTORIAL_ID == gameState.constellation.id) onRestart() else askRestart = true
+        if (ConstellationRepository.TUTORIAL_ID == gameState.constellation.id || todaysPuzzle) onRestart() else askRestart = true
     }
     var stalemateClosed by remember(gameState.tiles) { mutableStateOf(false) }
     val hint = { if (gameState.isStalemate) stalemateClosed = false else onHint() }
@@ -141,7 +145,7 @@ fun GameScreen(
         ) {
             GameRail(
                 gameState = gameState,
-                levelIndex = levelIndex,
+                label = place,
                 onBackClick = onBack,
                 onHintClick = hint,
                 onUndoClick = onUndo,
@@ -166,7 +170,7 @@ fun GameScreen(
     ) {
         GameHeader(
             gameState = gameState,
-            levelIndex = levelIndex,
+            label = place,
             onBackClick = onBack,
         )
 
@@ -227,12 +231,13 @@ fun GameScreen(
     if (gameState.isWon && celebrating) {
         WinCelebration(
             message = winMessage,
-            subtitle = listOfNotNull(levelLabel(levelIndex), gameState.constellation.name).distinct().joinToString(" · "),
+            subtitle = listOfNotNull(place, gameState.constellation.name).distinct().joinToString(" · "),
             hasNextLevel = hasNextLevel,
             animationsEnabled = settings.animationsEnabled,
             onNextLevel = onNextLevel,
             onPlayAgain = onRestart,
             onMainMenu = onMainMenu,
+            menuLabel = if (todaysPuzzle) "Calendar" else "Menu",
         )
     }
 

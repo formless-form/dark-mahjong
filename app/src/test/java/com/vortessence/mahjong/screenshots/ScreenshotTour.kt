@@ -45,6 +45,7 @@ import com.vortessence.mahjong.ui.screens.LevelSelectScreen
 import com.vortessence.mahjong.ui.screens.MainMenuScreen
 import com.vortessence.mahjong.data.model.UpdateNotice
 import com.vortessence.mahjong.ui.screens.SettingsScreen
+import com.vortessence.mahjong.ui.screens.TodaysPuzzleScreen
 import com.vortessence.mahjong.ui.screens.TitleMenuStyle
 import com.vortessence.mahjong.ui.theme.MahjongTheme
 import org.junit.Rule
@@ -363,6 +364,36 @@ class ScreenshotTour {
         }
         compose.waitForIdle()
         captureScreenRoboImage("build/screenshots/no_moves_landscape.png")
+    }
+
+    // Today's Puzzle on Saturday 31 October 2026, most of the month's puzzles solved
+    @Test
+    fun todaysPuzzle() {
+        val today = java.time.LocalDate.of(2026, 10, 31).toEpochDay()
+        val solved = (1L..30L).filter { it % 7 != 3L && it % 11 != 0L }.map { today - 31 + it }.toSet()
+        compose.setContent {
+            MahjongTheme {
+                TodaysPuzzleScreen(
+                    progress = Progress(puzzleDaysSolved = solved), inProgress = false,
+                    onPlay = {}, onBack = {}, today = today,
+                )
+            }
+        }
+        shoot("todays_puzzle")
+    }
+
+    @Test
+    fun titleWithTodaysPuzzle() {
+        compose.setContent {
+            MahjongTheme {
+                MainMenuScreen(
+                    continueInfo = ContinueInfo("Level 22: Heart"),
+                    todaysPuzzle = "Saturday · Expert", todaysPuzzleSolved = true,
+                    onPlayLevels = {}, onChooseConstellation = {}, onSettings = {},
+                )
+            }
+        }
+        shoot("title_todays_puzzle")
     }
 
     private fun level(index: Int): GameState =
