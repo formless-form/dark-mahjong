@@ -61,12 +61,21 @@ class StoreScreenshots {
 
     private fun level(index: Int) = MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(index))
 
+    // Layouts are picked by id, so their level numbers follow the current order
+    private fun numberOf(id: String) = ConstellationRepository.levelIndexOf(id)!!
+
+    private fun game(surface: TableSurface, id: String, message: String? = null, won: Boolean = false) {
+        val n = numberOf(id)
+        val state = level(n).let { s -> if (won) s.copy(tiles = s.tiles.map { it.copy(isRemoved = true) }, isWon = true) else s }
+        game(surface, state, n, message)
+    }
+
     @Test
     fun s1Title() {
         compose.setContent {
             MahjongTheme {
                 MainMenuScreen(
-                    continueInfo = ContinueInfo("Level 22: Heart"),
+                    continueInfo = ContinueInfo("Level ${numberOf("mah_2283982827")}: Heart"),
                     onPlayLevels = {}, onChooseConstellation = {}, onSettings = {},
                 )
             }
@@ -74,11 +83,11 @@ class StoreScreenshots {
         shoot("1-title")
     }
 
-    @Test fun s2Walnut() { game(TableSurface.WALNUT, level(18), 18); shoot("2-walnut") }
+    @Test fun s2Walnut() { game(TableSurface.WALNUT, "pillar_of_heaven"); shoot("2-walnut") }
 
     @Test
     fun s3Zoomed() {
-        game(TableSurface.THAI_STRAW, level(12), 12)
+        game(TableSurface.THAI_STRAW, "mah_1088330854")
         compose.waitForIdle()
         compose.onRoot().performTouchInput {
             val c = Offset(centerX, height * 0.4f)
@@ -88,13 +97,12 @@ class StoreScreenshots {
         shoot("3-zoomed-thai-straw")
     }
 
-    @Test fun s4GreenMat() { game(TableSurface.GREEN_MAT, level(7), 7); shoot("4-green-mat") }
+    @Test fun s4GreenMat() { game(TableSurface.GREEN_MAT, "cascading_falls"); shoot("4-green-mat") }
 
     @Test
     fun s5Celebration() {
         compose.mainClock.autoAdvance = false
-        val won = level(5).let { s -> s.copy(tiles = s.tiles.map { it.copy(isRemoved = true) }, isWon = true) }
-        game(TableSurface.WALNUT, won, 5, message = "The mist lifts, and so do the tiles.")
+        game(TableSurface.WALNUT, "torii_arch", message = "The mist lifts, and so do the tiles.", won = true)
         // The 600 ms smash, then the card's 1.1 s, and a little of its fade
         compose.mainClock.advanceTimeBy(2200)
         shoot("5-celebration")
