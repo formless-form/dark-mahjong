@@ -46,11 +46,17 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
     val tutorialStep by viewModel.tutorialStep.collectAsStateWithLifecycle()
     val winMessage by viewModel.winMessage.collectAsStateWithLifecycle()
     val update by updates.notice.collectAsStateWithLifecycle()
+    val gameOrigin by viewModel.gameOrigin.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
-    // Every screen but the title goes back to the title, with the predictive back animation
-    PredictiveBackHandling(enabled = currentScreen !is Screen.MainMenu, state = back, onBack = toMenu)
+    // Back steps out of a game to where it was started from (Levels, Layouts, or the title), and
+    // from every other screen to the title, with the predictive back animation
+    val backTarget = if (currentScreen is Screen.Game) gameOrigin else Screen.MainMenu
+    val stepBack = {
+        viewModel.navigateTo(if (viewModel.currentScreen.value is Screen.Game) viewModel.gameOrigin.value else Screen.MainMenu)
+    }
+    PredictiveBackHandling(enabled = currentScreen !is Screen.MainMenu, state = back, onBack = stepBack)
     LaunchedEffect(currentScreen) { back.reset() }
 
     val mainMenu = @Composable {
@@ -69,12 +75,88 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
         )
     }
 
+    // One screen's content, as shown and as revealed behind a back swipe
+    val screenContent: @Composable (Screen) -> Unit = { screen ->
+        // Every screen but the title (whose scenery runs full-bleed) keeps its content clear
+        // of the camera cutout
+        val contentModifier = if (screen is Screen.MainMenu) {
+            Modifier.fillMaxSize()
+        } else {
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .windowInsetsPadding(WindowInsets.displayCutout)
+        }
+        Box(modifier = contentModifier) {
+            when (screen) {
+                is Screen.MainMenu -> mainMenu()
+
+                is Screen.LevelSelect -> {
+                    LevelSelectScreen(
+                        progress = progress,
+                        levels = viewModel.currentLevelConstellations,
+                        onLevelSelected = { level -> viewModel.startLevel(level) },
+                        onBack = toMenu,
+                        fireIntensity = settings.fireIntensity,
+                        fire = settings.animationsEnabled,
+                    )
+                }
+
+                is Screen.ConstellationSelect -> {
+                    ConstellationSelectScreen(
+                        progress = progress,
+                        onConstellationSelected = { constellation -> viewModel.startConstellation(constellation) },
+                        onBack = toMenu,
+                        fireIntensity = settings.fireIntensity,
+                        fire = settings.animationsEnabled,
+                    )
+                }
+
+                is Screen.Game -> {
+                    GameScreen(
+                        gameState = gameState,
+                        levelIndex = levelIndex,
+                        settings = settings,
+                        tutorialStep = tutorialStep,
+                        winMessage = winMessage,
+                        totalLevels = viewModel.currentLevelConstellations.size,
+                        onBack = stepBack,
+                        onTileClick = { tileId -> viewModel.onTileTapped(tileId) },
+                        onTileMatch = { viewModel.playTileMatch() },
+                        onHint = { viewModel.requestHint() },
+                        onUndo = { viewModel.undo() },
+                        onRestart = { viewModel.restartGame() },
+                        onReshuffle = { viewModel.reshuffle() },
+                        onReplay = { viewModel.replayDeal() },
+                        onNextLevel = { viewModel.playNextLevel() },
+                        onMainMenu = toMenu,
+                        onTutorialContinue = { step -> viewModel.continueTutorial(step) },
+                        onBoardZoom = { viewModel.onBoardZoom(it) },
+                        onWinShown = { viewModel.playWin() },
+                        onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
+                    )
+                }
+
+                is Screen.Settings -> {
+                    SettingsScreen(
+                        settings = settings,
+                        onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
+                        onBack = toMenu,
+                        onSettingsPreview = { updated -> viewModel.previewSettings(updated) },
+                        onSettingsCommit = { viewModel.commitSettings() },
+                        onFireAudition = { viewModel.auditionFire(it) },
+                    )
+                }
+            }
+        }
+    }
+
     MahjongTheme {
         val motion = MaterialTheme.motionScheme
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            // The title screen, revealed behind a screen that's being swiped back
+            // The screen Back leads to, revealed behind a screen that's being swiped back
             if (back.revealing) {
-                Box(Modifier.fillMaxSize()) { mainMenu() }
+                Box(Modifier.fillMaxSize()) { screenContent(backTarget) }
             }
 
             AnimatedContent(
@@ -84,7 +166,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                         // The back gesture has already shown this change
                         back.committed -> EnterTransition.None togetherWith ExitTransition.None
                         // Material's shared-axis depth motion: forward comes up from below, back recedes
-                        targetState is Screen.MainMenu ->
+                        targetState is Screen.MainMenu || initialState is Screen.Game ->
                             (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 1.06f)) togetherWith
                                 (fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), targetScale = 0.94f))
                         else ->
@@ -94,80 +176,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                 },
                 modifier = Modifier.predictiveBack(back),
                 label = "ScreenTransition",
-            ) { screen ->
-                // Every screen but the title (whose scenery runs full-bleed) keeps its content clear
-                // of the camera cutout
-                val contentModifier = if (screen is Screen.MainMenu) {
-                    Modifier.fillMaxSize()
-                } else {
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                        .windowInsetsPadding(WindowInsets.displayCutout)
-                }
-                Box(modifier = contentModifier) {
-                    when (screen) {
-                        is Screen.MainMenu -> mainMenu()
-
-                        is Screen.LevelSelect -> {
-                            LevelSelectScreen(
-                                progress = progress,
-                                levels = viewModel.currentLevelConstellations,
-                                onLevelSelected = { level -> viewModel.startLevel(level) },
-                                onBack = toMenu,
-                                fireIntensity = settings.fireIntensity,
-                                fire = settings.animationsEnabled,
-                            )
-                        }
-
-                        is Screen.ConstellationSelect -> {
-                            ConstellationSelectScreen(
-                                progress = progress,
-                                onConstellationSelected = { constellation -> viewModel.startConstellation(constellation) },
-                                onBack = toMenu,
-                                fireIntensity = settings.fireIntensity,
-                                fire = settings.animationsEnabled,
-                            )
-                        }
-
-                        is Screen.Game -> {
-                            GameScreen(
-                                gameState = gameState,
-                                levelIndex = levelIndex,
-                                settings = settings,
-                                tutorialStep = tutorialStep,
-                                winMessage = winMessage,
-                                totalLevels = viewModel.currentLevelConstellations.size,
-                                onBack = toMenu,
-                                onTileClick = { tileId -> viewModel.onTileTapped(tileId) },
-                                onTileMatch = { viewModel.playTileMatch() },
-                                onHint = { viewModel.requestHint() },
-                                onUndo = { viewModel.undo() },
-                                onRestart = { viewModel.restartGame() },
-                                onReshuffle = { viewModel.reshuffle() },
-                                onReplay = { viewModel.replayDeal() },
-                                onNextLevel = { viewModel.playNextLevel() },
-                                onMainMenu = toMenu,
-                                onTutorialContinue = { step -> viewModel.continueTutorial(step) },
-                                onBoardZoom = { viewModel.onBoardZoom(it) },
-                                onWinShown = { viewModel.playWin() },
-                                onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
-                            )
-                        }
-
-                        is Screen.Settings -> {
-                            SettingsScreen(
-                                settings = settings,
-                                onSettingsChanged = { updated -> viewModel.updateSettings(updated) },
-                                onBack = toMenu,
-                                onSettingsPreview = { updated -> viewModel.previewSettings(updated) },
-                                onSettingsCommit = { viewModel.commitSettings() },
-                                onFireAudition = { viewModel.auditionFire(it) },
-                            )
-                        }
-                    }
-                }
-            }
+            ) { screen -> screenContent(screen) }
         }
     }
 }

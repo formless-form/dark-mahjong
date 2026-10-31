@@ -163,6 +163,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // Where the game on the table was started from, which Back returns to: Levels, Layouts, or the
+    // title (Continue)
+    private val _gameOrigin = MutableStateFlow<Screen>(Screen.MainMenu)
+    val gameOrigin: StateFlow<Screen> = _gameOrigin.asStateFlow()
+
     fun navigateTo(screen: Screen) {
         perfAutoplay?.cancel()
         if (screen != Screen.Game) {
@@ -179,6 +184,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         perfAutoplay?.cancel()
         val current = _gameState.value
         if (current != null && !current.isWon && current.remainingTilesCount > 0) {
+            _gameOrigin.value = Screen.MainMenu
             _currentScreen.value = Screen.Game
             return
         }
@@ -189,12 +195,19 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 _currentLevelIndex.value = savedLevelIndex(saved)
                 _gameState.value = restored
                 _tutorialStepIndex.value = TutorialScript.resumeStep(restored, saved.tutorialStep)
+                _gameOrigin.value = Screen.MainMenu
                 _currentScreen.value = Screen.Game
             }
         }
     }
 
     fun startLevel(levelIndex: Int) {
+        _gameOrigin.value = Screen.LevelSelect
+        beginLevel(levelIndex)
+    }
+
+    // Also the next level from the win card, which keeps where the first was started from
+    private fun beginLevel(levelIndex: Int) {
         _currentLevelIndex.value = levelIndex
         val constellation = ConstellationRepository.getLevel(levelIndex)
         initGame(constellation)
@@ -202,6 +215,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun startConstellation(constellation: Constellation) {
+        _gameOrigin.value = Screen.ConstellationSelect
         _currentLevelIndex.value = null
         initGame(constellation)
         _currentScreen.value = Screen.Game
@@ -220,6 +234,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             prefsRepo.updateSettings(saved, saved.copy(fireplaceLit = fireplace, tableSurface = surface ?: saved.tableSurface))
         }
         _currentLevelIndex.value = null
+        _gameOrigin.value = Screen.MainMenu
         initGame(constellation, Random(7))
         _currentScreen.value = Screen.Game
         // Matches a free pair every two seconds, so match animations can be timed alike
@@ -421,7 +436,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     fun playNextLevel() {
         val currentLevel = _currentLevelIndex.value ?: return
         if (currentLevel < ConstellationRepository.totalLevels) {
-            startLevel(currentLevel + 1)
+            beginLevel(currentLevel + 1)
         }
     }
 
