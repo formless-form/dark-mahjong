@@ -57,7 +57,7 @@ internal object LayoutDifficulty {
         "mah_1593808196" to 0.2890f, // Blossom
         "mah_2756835802" to 0.2885f, // Stairs
         "mah_2926596175" to 0.2840f, // Platypus
-        "mah_450647981" to 0.2830f, // Potted
+        "mah_450647981" to 0.2830f, // Potted Plant
         "mah_3906642412" to 0.2825f, // Diamond
         "classic_turtle" to 0.2765f, // Classic Turtle
         "mah_2881142435" to 0.2755f, // Circle
@@ -133,7 +133,7 @@ internal object LayoutDifficulty {
         "mah_3316304069", // Green Dragon
         "mah_2630082713", // Platform
         "mah_3906642412", // Diamond
-        "mah_450647981", // Potted
+        "mah_450647981", // Potted Plant
         "mah_554306016", // Cactus
         "mah_2005925237", // Block
         "mah_702162641", // Red Dragon

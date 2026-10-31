@@ -44,7 +44,7 @@ LAYER_SHIFT_X, LAYER_SHIFT_Y, TILE_ASPECT = 0.03, 0.13, 1.333
 BOARD_W, BOARD_H, PADDING = 427.0, 792.0, 16.0
 
 # Spelling fixes to Mah's board names
-RENAMES = {"Teotihucan": "Teotihuacan"}
+RENAMES = {"Teotihucan": "Teotihuacan", "Potted": "Potted Plant"}
 
 
 def decode(board_map):
