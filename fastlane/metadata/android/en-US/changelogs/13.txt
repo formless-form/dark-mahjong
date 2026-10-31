@@ -1,9 +1,9 @@
 New in 1.4.0:
-• Levels reordered by how often they're really cleared, easiest first. Your progress carries over
-• Hints always lead somewhere: follow them and the board clears
-• Restart asks: the same deal again, or a new one
-• Volume sliders that follow your ears
-• Follows the phone's Remove animations setting, fire and all
-• The tutorial resumes where you left it, and its zoom steps can be skipped
-• Two-thumb taps and steadier pinch-zoom
-• Fixed: rare storage crashes and many small things
+• Levels reordered by real difficulty; progress carries over
+• Hints always lead to a cleared board
+• Restart: same deal or new deal
+• More accurate volume sliders
+• Follows the phone's Remove animations setting
+• Tutorial resumes where you left off; zoom steps can be skipped
+• Two-thumb taps, steadier pinch-zoom
+• Fixed: rare storage crashes and small bugs
