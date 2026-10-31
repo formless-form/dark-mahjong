@@ -730,12 +730,13 @@ private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h:
         val len = s.getDistance()
         return if (len > cap) s * (cap / len) else s
     }
-    val lamp = cast(w / 2f + LAMP_U * h, h / 2f - LAMP_V * h, LAMP_HEIGHT * h, tileW * 0.35f)
+    val stretch = TableSurfaceRenderer.lampStretch(w, h)
+    val lamp = cast(w / 2f + LAMP_U * stretch * h, h / 2f - LAMP_V * h, LAMP_HEIGHT * h, tileW * 0.35f)
     if (flame.power <= 0f) return TileShadows(lamp)
     // The light reaching this tile from each, as the shaders light it (the fire by its brightness)
     val u = (cx - w / 2f) / h
     val v = (h / 2f - cy) / h
-    val lampHere = flame.lamp * TableSurfaceRenderer.lampLight(u, v)
+    val lampHere = flame.lamp * TableSurfaceRenderer.lampLight(u, v, stretch)
     fun fireShare(fu: Float, fv: Float, power: Float): Float {
         val du = u - fu
         val dv = v - fv
@@ -751,7 +752,7 @@ private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h:
 private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLight): Float {
     val u = (cx - w / 2f) / h
     val v = (h / 2f - cy) / h
-    return TableSurfaceRenderer.flameGlare(u, v, flame)
+    return TableSurfaceRenderer.flameGlare(u, v, flame, TableSurfaceRenderer.lampStretch(w, h))
 }
 
 private const val SMASH_MILLIS = 840

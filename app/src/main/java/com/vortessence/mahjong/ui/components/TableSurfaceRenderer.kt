@@ -21,6 +21,7 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.vortessence.mahjong.data.model.TableSurface
 import kotlin.math.exp
+import kotlin.math.max
 
 /**
  * Draws the tabletop: procedural green felt, walnut, Thai straw mat (redrawn from measurements
@@ -123,7 +124,7 @@ half4 main(float2 p) {
     float fp;
     float2 q = tablePoint(p, fp);
     if (underTiles(q)) return half4(0.0, 0.0, 0.0, 1.0);
-    float2 lq = (q - LAMP_AT) * float2(1.0, 0.85);
+    float2 lq = fromLamp(q, LAMP_AT) * float2(1.0, 0.85);
     float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
     float fire = fireShadow(q, 0.0);
     // Slate's relief: lit as in the menus by a lamp low enough to rake it, and by the fire, which
@@ -138,7 +139,7 @@ half4 main(float2 p) {
         float2 inside = min(sp, surfaceSize - sp);
         float cover = clamp(min(inside.x, inside.y) / 8.0, 0.0, 1.0);
         float3 n = normalize(mix(float3(0.0, 0.0, 1.0), surface.eval(sp).rgb * 2.0 - 1.0, cover));
-        lampFacing = facing(n, normalize(float3(LAMP_AT - q, SLATE_LAMP_HEIGHT)), SLATE_LAMP_EVEN);
+        lampFacing = facing(n, normalize(float3(lampAt(LAMP_AT) - q, SLATE_LAMP_HEIGHT)), SLATE_LAMP_EVEN);
         fireFacing = min(facing(n, normalize(float3(flame.xy - q, flameHeight)), SLATE_FIRE_EVEN), 3.0);
     }
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
@@ -170,7 +171,7 @@ half4 main(float2 p) {
     if (underTiles(q)) return half4(0.0, 0.0, 0.0, 1.0);
     // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
     // and the fire just in front of its flames
-    float2 m = (q - LAMP_MIRROR) * float2(3.4, 1.3);
+    float2 m = fromLamp(q, LAMP_MIRROR) * float2(3.4, 1.3);
     float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4, 2.2);
     float grain = grained > 0.5 ? 0.75 + 0.5 * vnoise(q * 1.2 * float2(60.0, 6.0)) : 1.0;
     float3 c = gloss * grain * (lampLevel * exp(-dot(m, m) * 5.0) * 0.24 * LAMP_ON_TABLE
@@ -448,24 +449,30 @@ half4 main(float2 p) {
         s.setFloatUniform("mode", surface.ordinal.toFloat())
     }
 
+    /**
+     * How far the lamp's light is stretched across a table [width] x [height]: 1 upright, and the
+     * table's width over its height when it's wider (a long lamp over a long table), as the shaders.
+     */
+    fun lampStretch(width: Float, height: Float): Float = max(1f, width / height)
+
     /** Strength of the lamp's and the flame's glossy reflection at plane point (u, v), for tile glare. */
-    fun flameGlare(u: Float, v: Float, flame: FlameLight): Float {
+    fun flameGlare(u: Float, v: Float, flame: FlameLight, stretch: Float = 1f): Float {
         val mu = (u - flame.u) * 3.4f
         val mv = (v - flame.v + 0.05f) * 2.2f
         // The dimmed lamp's own reflection, plus a fainter one of the flame
-        return flame.lamp * lampGlare(u, v) + 0.7f * flame.power * exp(-(mu * mu + mv * mv) * 4f)
+        return flame.lamp * lampGlare(u, v, stretch) + 0.7f * flame.power * exp(-(mu * mu + mv * mv) * 4f)
     }
 
     /** Lamp brightness at plane point (u, v), matching the shader: used to light the tiles. */
-    fun lampLight(u: Float, v: Float): Float {
-        val du = u - LAMP_U
+    fun lampLight(u: Float, v: Float, stretch: Float = 1f): Float {
+        val du = (u - LAMP_U * stretch) / stretch
         val dv = (v - LAMP_V) * 0.85f
         return 0.12f + 0.95f * kotlin.math.exp(-(du * du + dv * dv) * LAMP_FALLOFF)
     }
 
     /** Strength of the lamp's glossy reflection at plane point (u, v), for tile glare. */
-    fun lampGlare(u: Float, v: Float): Float {
-        val mu = (u - LAMP_MIRROR_U) * 3.0f
+    fun lampGlare(u: Float, v: Float, stretch: Float = 1f): Float {
+        val mu = (u - LAMP_MIRROR_U * stretch) / stretch * 3.0f
         val mv = (v - LAMP_MIRROR_V) * 1.6f
         return kotlin.math.exp(-(mu * mu + mv * mv) * 3.5f)
     }
@@ -523,6 +530,13 @@ const float3 LAMP_ON_TILES = float3(1.0, 0.89, 0.76);
 uniform float4 flame;       // u, v, power, reach (squared distance at which it halves)
 uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
+// On a table wider than tall (a board played on its side) the lamp is a long one, its pool of
+// light stretched across the table's width, so the ends of a wide board aren't left in the dark
+// (TableSurfaceRenderer.lampStretch)
+float lampStretch() { return max(1.0, res.x / res.y); }
+float2 lampAt(float2 at) { return float2(at.x * lampStretch(), at.y); }
+// q from a point of the lamp's light ([at], as for an upright table), across in the lamp's widths
+float2 fromLamp(float2 q, float2 at) { return float2((q.x - at.x * lampStretch()) / lampStretch(), q.y - at.y); }
 uniform shader heightMap;   // the board's height map, at the flat table's resolution (BoardShadowMap)
 uniform shader aoMap;       // the table's ambient occlusion in green, at a coarser resolution
 uniform float4 mapXform;    // table pixels now to map pixels: scale x, y, then offset x, y (the board may have moved)
@@ -624,7 +638,7 @@ half4 main(float2 p) {
     float2 q = float2((p.x - 0.5 * res.x) / res.y, (0.5 * res.y - p.y) / res.y);
     // The lamp's light on the tiles (softer than on the table, so no face is ever too dark to
     // read), plus the flame; times the room's exposure
-    float2 l = (q - LAMP_AT) / 0.95;
+    float2 l = fromLamp(q, LAMP_AT) / 0.95;
     float lamp = 0.30 + 0.70 * exp(-dot(l, l) * 3.2);
     // Traced only where a tile stands (when the height map is up to date): elsewhere on the
     // layer there are only the tiles' shadows, black, which no light changes
