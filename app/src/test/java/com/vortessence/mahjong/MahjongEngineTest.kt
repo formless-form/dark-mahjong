@@ -275,7 +275,6 @@ class MahjongEngineTest {
             val classic = ConstellationRepository.getById(id)!!
             assertNotNull("Classic constellation with id '$id' must be preserved", classic)
             assertEquals(id, classic.id)
-            assertFalse("Classic constellation '$id' should not be marked portrait-optimized", classic.isPortraitOptimized)
         }
 
         // Verify classic turtle is indeed wide (> 30 units wide, aspect ratio > 1.0)

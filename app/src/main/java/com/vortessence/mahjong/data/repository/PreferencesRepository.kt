@@ -18,6 +18,7 @@ import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.WideBoards
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -53,6 +54,7 @@ class PreferencesRepository(private val context: Context) {
         val FIREPLACE = booleanPreferencesKey("fireplace")
         val FIRE_VOLUME = floatPreferencesKey("fire_volume")
         val FIRE_INTENSITY = floatPreferencesKey("fire_intensity")
+        val WIDE_BOARDS = stringPreferencesKey("wide_boards")
         val LAST_WIN_DAY = longPreferencesKey("last_win_epoch_day")
         // Which level numbering the stored highest level is in: 2 since levels were ordered by
         // measured difficulty (absent means the order before)
@@ -91,6 +93,9 @@ class PreferencesRepository(private val context: Context) {
             fireplaceLit = prefs[Keys.FIREPLACE] ?: d.fireplaceLit,
             fireVolume = prefs[Keys.FIRE_VOLUME] ?: d.fireVolume,
             fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: d.fireIntensity,
+            wideBoards = prefs[Keys.WIDE_BOARDS]
+                ?.let { name -> WideBoards.entries.firstOrNull { it.name == name } }
+                ?: d.wideBoards,
         )
     }
 
@@ -123,6 +128,7 @@ class PreferencesRepository(private val context: Context) {
             put(Keys.FIREPLACE) { it.fireplaceLit }
             put(Keys.FIRE_VOLUME) { it.fireVolume }
             put(Keys.FIRE_INTENSITY) { it.fireIntensity }
+            put(Keys.WIDE_BOARDS) { it.wideBoards.name }
         }
     }
 

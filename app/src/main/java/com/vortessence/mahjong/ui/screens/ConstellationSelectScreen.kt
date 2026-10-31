@@ -38,6 +38,7 @@ import com.vortessence.mahjong.ui.components.ExpressiveScreen
 import com.vortessence.mahjong.ui.components.MenuBackdrop
 import com.vortessence.mahjong.ui.components.LevelBadge
 import com.vortessence.mahjong.ui.components.SegmentGap
+import com.vortessence.mahjong.ui.components.layoutShape
 import com.vortessence.mahjong.ui.components.segmentColors
 
 @Composable
@@ -92,7 +93,10 @@ fun ConstellationSelectScreen(
                                 label = constellation.name.first().toString(),
                             )
                         },
-                        overlineContent = { Text(layoutLabel(constellation), color = MaterialTheme.colorScheme.primary) },
+                        // No line at all for a layout with nothing to say (an about-even layout of our own)
+                        overlineContent = layoutLabel(constellation).takeIf { it.isNotEmpty() }?.let { label ->
+                            { Text(label, color = MaterialTheme.colorScheme.primary) }
+                        },
                         supportingContent = {
                             Text(
                                 listOf("${constellation.difficulty.displayName} · ${constellation.tileCount} tiles", constellation.description)
@@ -112,10 +116,11 @@ fun ConstellationSelectScreen(
     }
 }
 
-// "Tall", "Wide", or for an imported layout its shape and group, e.g. "Tall · Animals"
+// Its shape if clearly tall or wide, and for an imported layout its group: e.g. "Tall · Animals",
+// "Wide", or just "Animals"
 private fun layoutLabel(constellation: Constellation): String = when {
     constellation.id == ConstellationRepository.TUTORIAL_ID -> "Guided lesson"
-    else -> listOfNotNull(if (constellation.isPortraitOptimized) "Tall" else "Wide", constellation.category).joinToString(" · ")
+    else -> listOfNotNull(layoutShape(constellation.positions).label, constellation.category).joinToString(" · ")
 }
 
 @Composable

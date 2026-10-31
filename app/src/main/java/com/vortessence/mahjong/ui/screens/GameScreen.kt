@@ -12,9 +12,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Box
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
@@ -25,12 +29,17 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.TutorialAction
 import com.vortessence.mahjong.engine.TutorialStep
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 import com.vortessence.mahjong.ui.components.GameHeader
+import com.vortessence.mahjong.ui.components.GameRail
+import com.vortessence.mahjong.ui.components.HoldOrientation
+import com.vortessence.mahjong.ui.components.RotateDialog
+import com.vortessence.mahjong.ui.components.isWideBoard
 import com.vortessence.mahjong.ui.components.GameToolbar
 import com.vortessence.mahjong.ui.components.LoadingPage
 import com.vortessence.mahjong.data.repository.levelLabel
@@ -106,6 +115,14 @@ fun GameScreen(
         if (ConstellationRepository.TUTORIAL_ID == gameState.constellation.id) onRestart() else askRestart = true
     }
     var stalemateClosed by remember(gameState.tiles) { mutableStateOf(false) }
+    val hint = { if (gameState.isStalemate) stalemateClosed = false else onHint() }
+
+    // A wide board is held on its side if the player chose so; the first one asks. On its side the
+    // header and toolbar become a rail beside the board (the tutorial, never wide, keeps its card)
+    val wide = remember(gameState.constellation.id) { isWideBoard(gameState.tiles) }
+    HoldOrientation(landscape = wide && settings.wideBoards == WideBoards.LANDSCAPE)
+    var askedSideways by rememberSaveable(gameState.constellation.id) { mutableStateOf(false) }
+    val sideways = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && tutorialStep == null
 
     // When the board is cleared it softly blurs behind the celebration, as Android 17 blurs
     // what sits behind its own panels
@@ -115,7 +132,33 @@ fun GameScreen(
         label = "BoardBlur",
     )
 
-    Column(
+    if (sideways) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .then(if (blur > 0.dp) Modifier.blur(blur) else Modifier)
+        ) {
+            GameRail(
+                gameState = gameState,
+                levelIndex = levelIndex,
+                onBackClick = onBack,
+                onHintClick = hint,
+                onUndoClick = onUndo,
+                onRestartClick = restart,
+                hintAndUndoEnabled = !gameState.isWon,
+            )
+            MahjongBoard(
+                gameState = gameState,
+                settings = settings,
+                highlightedTileIds = tutorialHighlights,
+                onZoomedInChange = { boardZoomedIn = it },
+                onTileClick = onTileClick,
+                onTileMatch = onTileMatch,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+        }
+    } else Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -169,7 +212,7 @@ fun GameScreen(
                 } else {
                     GameToolbar(
                         gameState = gameState,
-                        onHintClick = { if (gameState.isStalemate) stalemateClosed = false else onHint() },
+                        onHintClick = hint,
                         onUndoClick = onUndo,
                         onRestartClick = restart,
                         // Nothing to hint or undo once the board is cleared
@@ -201,6 +244,22 @@ fun GameScreen(
             onUndo = onUndo,
             onRestart = restart,
             onDismiss = { stalemateClosed = true },
+        )
+    }
+
+    if (wide && settings.wideBoards == WideBoards.ASK && !askedSideways && !gameState.isWon && tutorialStep == null) {
+        RotateDialog(
+            animate = settings.animationsEnabled,
+            onLandscape = {
+                askedSideways = true
+                onSettingsChanged(settings.copy(wideBoards = WideBoards.LANDSCAPE))
+            },
+            onPortrait = {
+                askedSideways = true
+                onSettingsChanged(settings.copy(wideBoards = WideBoards.PORTRAIT))
+            },
+            // Closed without an answer: asked again with the next wide board
+            onDismiss = { askedSideways = true },
         )
     }
 

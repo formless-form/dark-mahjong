@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.BoardTile
+import com.vortessence.mahjong.data.model.TilePosition
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.model.TableSurface
@@ -541,7 +542,8 @@ private fun BoardContent(
             drawContext.canvas.translate(pan.x, pan.y)
             drawContext.canvas.scale(zoom, zoom)
 
-            val flame = FlameLight.at(clockSeconds, settings.lampBrightness, firelit, settings.fireIntensity)
+            // On a table wider than tall (played on its side) the hearth is beyond the far edge
+            val flame = FlameLight.at(clockSeconds, settings.lampBrightness, firelit, settings.fireIntensity, hearthAbove = canvasW > canvasH)
             val hintStrength = if (hinting) hintPulse(FrameClock.since(clockSeconds, hintShownAt)) else 1f
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableLight(
                 scope = this,
@@ -987,6 +989,34 @@ data class BoardTransform(
     }
 }
 
+/**
+ * Where tiles reach in the board's own units (a tile is 2 wide and 2 x [BoardTransform.ASPECT_RATIO]
+ * tall), each layer shifted up and to the left as it's drawn; a 10-unit square when there are none.
+ */
+internal class BoardBounds(val minX: Float, val maxX: Float, val minY: Float, val maxY: Float) {
+    val width get() = max(1f, maxX - minX)
+    val height get() = max(1f, maxY - minY)
+
+    companion object {
+        fun of(positions: Iterable<TilePosition>): BoardBounds {
+            val aspectRatio = BoardTransform.ASPECT_RATIO
+            val shiftX = 2f * BoardTransform.LAYER_SHIFT_FACTOR_X
+            val shiftY = 2f * aspectRatio * BoardTransform.LAYER_SHIFT_FACTOR_Y
+            var minX = Float.MAX_VALUE
+            var maxX = -Float.MAX_VALUE
+            var minY = Float.MAX_VALUE
+            var maxY = -Float.MAX_VALUE
+            for (p in positions) {
+                minX = min(minX, p.x - p.z * shiftX)
+                maxX = max(maxX, p.x + 2f - p.z * shiftX + shiftX)
+                minY = min(minY, p.y * aspectRatio - p.z * shiftY)
+                maxY = max(maxY, (p.y + 2f) * aspectRatio - p.z * shiftY + shiftY)
+            }
+            return if (minX == Float.MAX_VALUE) BoardBounds(0f, 10f, 0f, 10f) else BoardBounds(minX, maxX, minY, maxY)
+        }
+    }
+}
+
 internal fun computeBoardTransform(
     tiles: List<BoardTile>,
     availableWidth: Float,
@@ -998,33 +1028,11 @@ internal fun computeBoardTransform(
 ): BoardTransform {
     val aspectRatio = BoardTransform.ASPECT_RATIO
 
-    // Calculate normalized bounds of the given tiles
-    var minNormX = Float.MAX_VALUE
-    var maxNormX = -Float.MAX_VALUE
-    var minNormY = Float.MAX_VALUE
-    var maxNormY = -Float.MAX_VALUE
-
-    for (t in tiles) {
-        val normLeft = t.x - t.z * (2f * BoardTransform.LAYER_SHIFT_FACTOR_X)
-        val normRight = t.x + 2f - t.z * (2f * BoardTransform.LAYER_SHIFT_FACTOR_X) + (2f * BoardTransform.LAYER_SHIFT_FACTOR_X)
-        val normTop = (t.y * aspectRatio) - t.z * (2f * aspectRatio * BoardTransform.LAYER_SHIFT_FACTOR_Y)
-        val normBottom = ((t.y + 2f) * aspectRatio) - t.z * (2f * aspectRatio * BoardTransform.LAYER_SHIFT_FACTOR_Y) + (2f * aspectRatio * BoardTransform.LAYER_SHIFT_FACTOR_Y)
-
-        if (normLeft < minNormX) minNormX = normLeft
-        if (normRight > maxNormX) maxNormX = normRight
-        if (normTop < minNormY) minNormY = normTop
-        if (normBottom > maxNormY) maxNormY = normBottom
-    }
-
-    if (minNormX == Float.MAX_VALUE) {
-        minNormX = 0f
-        maxNormX = 10f
-        minNormY = 0f
-        maxNormY = 10f
-    }
-
-    val totalNormW = max(1f, maxNormX - minNormX)
-    val totalNormH = max(1f, maxNormY - minNormY)
+    val bounds = BoardBounds.of(tiles.map { it.position })
+    val minNormX = bounds.minX
+    val minNormY = bounds.minY
+    val totalNormW = bounds.width
+    val totalNormH = bounds.height
 
     val contentW = max(10f, (availableWidth - paddingPx * 2f) / widthSqueeze)
     val contentH = max(10f, availableHeight - paddingPx * 2f)

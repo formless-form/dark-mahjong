@@ -28,6 +28,7 @@ import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.engine.TutorialScript
@@ -281,6 +282,87 @@ class ScreenshotTour {
             }
         }
         shoot("predictive_back")
+    }
+
+    // A wide layout (Nine Dragon Pagoda) on the walnut table, with the given wide-board setting
+    private fun wideGame(wideBoards: WideBoards, animations: Boolean = true, won: Boolean = false, fireplace: Boolean = false) {
+        TileWear.prepareNow()
+        val dealt = MahjongGameEngine.startNewGame(ConstellationRepository.getById("pagoda")!!)
+        val state = if (won) dealt.copy(tiles = dealt.tiles.map { it.copy(isRemoved = true) }, isWon = true) else dealt
+        compose.setContent {
+            MahjongTheme {
+                GameScreen(
+                    gameState = state,
+                    levelIndex = null,
+                    settings = GameSettings(
+                        tableSurface = TableSurface.WALNUT, wideBoards = wideBoards, animationsEnabled = animations, fireplaceLit = fireplace,
+                    ),
+                    winMessage = "The mist lifts, and so do the tiles.",
+                    onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
+                    onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
+                )
+            }
+        }
+    }
+
+    // The first wide board asks; with Remove animations on, the phone is held on its side
+    @Test
+    fun rotateDialog() {
+        wideGame(WideBoards.ASK, animations = false)
+        compose.waitForIdle()
+        captureScreenRoboImage("build/screenshots/rotate_dialog.png")
+    }
+
+    // Part-way through the phone's turn
+    @Test
+    fun rotateDialogTurning() {
+        compose.mainClock.autoAdvance = false
+        wideGame(WideBoards.ASK)
+        compose.mainClock.advanceTimeBy(1150)
+        captureScreenRoboImage("build/screenshots/rotate_dialog_turning.png")
+    }
+
+    @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
+    fun wideBoardLandscape() {
+        wideGame(WideBoards.LANDSCAPE)
+        compose.waitForIdle()
+        shoot("wide_landscape")
+    }
+
+    // The hearth beyond the far edge of a table played on its side
+    @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
+    fun wideBoardLandscapeFire() {
+        compose.mainClock.autoAdvance = false
+        wideGame(WideBoards.LANDSCAPE, fireplace = true)
+        compose.mainClock.advanceTimeBy(800)
+        shoot("wide_landscape_fire")
+    }
+
+    @Test
+    fun wideBoardPortrait() {
+        wideGame(WideBoards.PORTRAIT)
+        compose.waitForIdle()
+        shoot("wide_portrait")
+    }
+
+    @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
+    fun wideBoardLandscapeCelebration() {
+        compose.mainClock.autoAdvance = false
+        wideGame(WideBoards.LANDSCAPE, won = true)
+        compose.mainClock.advanceTimeBy(2200)
+        shoot("wide_landscape_celebration")
+    }
+
+    @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
+    fun noMovesDialogLandscape() {
+        compose.setContent {
+            MahjongTheme {
+                Box(Modifier.fillMaxSize().background(Color(0xFF0C1110)))
+                StalemateDialog(canUndo = true, onReshuffle = {}, onUndo = {}, onRestart = {})
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage("build/screenshots/no_moves_landscape.png")
     }
 
     private fun level(index: Int): GameState =

@@ -5,9 +5,9 @@ import com.vortessence.mahjong.data.model.Difficulty
 /**
  * How hard each layout really is: the share of its deals cleared without hints, undo or
  * reshuffles, averaged over a player taking any free pair at random and one taking the highest
- * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30). Levels and the Layouts list
- * run from the highest to the lowest, and the difficulty labels come from it. A new layout needs
- * measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
+ * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30; the wide layouts 2026-10-31).
+ * Levels and the Layouts list run from the highest to the lowest, and the difficulty labels come
+ * from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
  */
 internal object LayoutDifficulty {
 
@@ -22,24 +22,30 @@ internal object LayoutDifficulty {
         "diamond" to 0.9285f, // Imperial Diamond
         "celadon_hourglass" to 0.9275f, // Celadon Hourglass
         "pyramid" to 0.9100f, // Terraced Pyramid
+        "stone_bridge" to 0.8815f, // Stone Bridge
         "cascading_falls" to 0.8595f, // Cascading Falls
         "phoenix_tower" to 0.8410f, // Phoenix Tower
         "heart" to 0.8120f, // Jade Heart
         "imperial_monolith" to 0.8085f, // Imperial Monolith
         "ruyi_scepter" to 0.7900f, // Ruyi Scepter
         "pillar_of_heaven" to 0.7785f, // Pillar of Heaven
+        "twin_peaks" to 0.7780f, // Twin Peaks
         "crab" to 0.7145f, // Golden Crab
         "butterfly" to 0.6725f, // Emerald Butterfly
         "mah_828570775" to 0.6415f, // Fence
         "pagoda_spire" to 0.6145f, // Grand Pagoda Spire
         "fortress" to 0.5745f, // Iron Fortress
         "mah_1088330854" to 0.5655f, // Steps
+        "great_wall" to 0.5415f, // Great Wall
         "mah_3101065593" to 0.5380f, // White Dragon
         "mah_2232624362" to 0.5195f, // Flower
         "mah_3316304069" to 0.4580f, // Green Dragon
+        "sleeping_cat" to 0.4355f, // Sleeping Cat
         "mah_2036373485" to 0.4210f, // Abstract Garden
         "mah_2005925237" to 0.4150f, // Block
+        "feast_table" to 0.4055f, // Feast Table
         "mah_979337589" to 0.3775f, // Tree
+        "dragon_boat" to 0.3730f, // Dragon Boat
         "mah_554306016" to 0.3640f, // Cactus
         "castle" to 0.3620f, // Dragon Castle
         "mah_2283982827" to 0.3575f, // Heart

@@ -34,7 +34,7 @@ class MahLayoutsTest {
     @Test
     fun decodesMahsCompactFormat() {
         // Mah's run [x, count] is count tiles side by side, 2 half-units apart
-        val board = MahBoard("t", "T", "Test", com.vortessence.mahjong.data.model.Difficulty.EASY, true, "[[0,[[0,[[2,3],8]],[2,4]]],[1,[[1,[[3,2]]]]]]")
+        val board = MahBoard("t", "T", "Test", com.vortessence.mahjong.data.model.Difficulty.EASY, "[[0,[[0,[[2,3],8]],[2,4]]],[1,[[1,[[3,2]]]]]]")
         assertEquals(
             listOf(
                 TilePosition(2f, 0f, 0), TilePosition(4f, 0f, 0), TilePosition(6f, 0f, 0), TilePosition(8f, 0f, 0),

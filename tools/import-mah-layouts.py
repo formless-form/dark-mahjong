@@ -4,7 +4,8 @@ Imports layouts from Mah by ffalt (https://github.com/ffalt/mah, MIT licence) in
 
 Reads ffalt/mah's src/assets/data/boards.json (downloaded at the pinned commit, or a local copy
 given as an argument) and writes app/src/main/java/.../data/repository/MahLayouts.kt, keeping
-each board in Mah's own compact map format.
+each board in Mah's own compact map format. Their descriptions in Layouts are written by hand in
+MahDescriptions.kt, which this leaves alone: a newly kept board needs a line there.
 
 Which boards are kept: those whose tiles are at least MIN_TILE_DP wide when the whole board is
 fitted to a Pixel 9 Pro's board area, so none needs constant zooming and panning (the app's
@@ -129,7 +130,7 @@ def main():
     kept = []
     for board in boards:
         tiles = decode(board["map"])
-        tile_dp, height_over_width = fitted_tile_dp(tiles)
+        tile_dp, _ = fitted_tile_dp(tiles)
         if tile_dp < MIN_TILE_DP or not fully_supported(tiles):
             continue
         level, free = difficulty(tiles)
@@ -138,7 +139,6 @@ def main():
             "name": RENAMES.get(board["name"], board["name"]),
             "category": board["cat"],
             "difficulty": level,
-            "tall": height_over_width >= 1.0,
             "map": json.dumps(board["map"], separators=(",", ":")),
             "count": len(tiles),
             "free": free,
@@ -169,8 +169,7 @@ def main():
             f"        // {b['count']} tiles, {b['free'] * 100:.0f}% free at the start, {b['tile_dp']:.0f} dp tiles when fitted"
         )
         lines.append(
-            f"        MahBoard(\"{b['id']}\", \"{b['name']}\", \"{b['category']}\", Difficulty.{b['difficulty']}, "
-            f"isTall = {'true' if b['tall'] else 'false'},"
+            f"        MahBoard(\"{b['id']}\", \"{b['name']}\", \"{b['category']}\", Difficulty.{b['difficulty']},"
         )
         lines.append(f"            \"{b['map']}\"),")
     lines += ["    )", "}", ""]

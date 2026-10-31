@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Highlight
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PrivacyTip
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.Texture
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Fireplace
@@ -44,6 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.ui.components.CheckSwitch
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
 import com.vortessence.mahjong.ui.components.LeadingIcon
@@ -129,6 +131,12 @@ fun SettingsScreen(
                             shapes, Icons.Rounded.Vibration, "Vibration", "Gentle feedback on taps and matches",
                             settings.vibrationEnabled,
                         ) { onSettingsChanged(settings.copy(vibrationEnabled = it)) }
+                    },
+                    { shapes ->
+                        ChoiceRow(
+                            shapes, Icons.Rounded.ScreenRotation, "Wide boards", "Play the widest layouts on their side",
+                            WideBoards.entries, { it.shortName }, settings.wideBoards,
+                        ) { onSettingsChanged(settings.copy(wideBoards = it)) }
                     },
                 ),
             )

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Replay
@@ -44,7 +45,7 @@ fun StalemateDialog(
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.widthIn(max = DIALOG_MAX_WIDTH).fillMaxWidth(),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -98,7 +99,7 @@ fun RestartDialog(
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.widthIn(max = DIALOG_MAX_WIDTH).fillMaxWidth(),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -139,6 +140,10 @@ fun RestartDialog(
  * menus, with a lighter dim since the blur already sets the dialog apart. Phones that have
  * blur turned off (battery saver, or the accessibility setting) just get the dim.
  */
+// About as wide as an upright phone (which it still fills), so a dialog keeps its shape on a board
+// played on its side
+val DIALOG_MAX_WIDTH = 440.dp
+
 @Composable
 fun BlurBehindDialog(radius: Dp = 28.dp) {
     val view = LocalView.current

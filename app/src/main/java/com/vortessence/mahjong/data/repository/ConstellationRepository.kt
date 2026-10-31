@@ -81,6 +81,11 @@ object ConstellationRepository {
         MahLayouts.boards.map { measured(it.toConstellation()) }
     }
 
+    /** Wide layouts made for Layouts, to play on the phone's side. */
+    val wideConstellations: List<Constellation> by lazy {
+        WideLayouts.layouts.map(::measured)
+    }
+
     // A layout labelled by how often its deals are really cleared (LayoutDifficulty), rather than
     // by the label it was made with
     private fun measured(c: Constellation): Constellation =
@@ -99,7 +104,8 @@ object ConstellationRepository {
      * All constellations available in the app: the tutorial, then everything else easy to hard.
      */
     val constellations: List<Constellation> by lazy {
-        listOf(tutorialConstellation) + (phoneConstellations + classicConstellations + mahConstellations).sortedWith(easyToHard)
+        listOf(tutorialConstellation) +
+            (phoneConstellations + classicConstellations + wideConstellations + mahConstellations).sortedWith(easyToHard)
     }
 
     /**
@@ -169,7 +175,6 @@ object ConstellationRepository {
             difficulty = Difficulty.EASY,
             description = "Learn which tiles can be selected and which tiles match, step by step.",
             positions = list,
-            isPortraitOptimized = true,
             fixedTiles = tiles,
         )
     }
@@ -213,7 +218,6 @@ object ConstellationRepository {
             difficulty = Difficulty.EASY,
             description = "A slender sacred jade obelisk with a tiered capital and glowing gem crest.",
             positions = list,
-            isPortraitOptimized = true,
         )
     }
 
@@ -254,8 +258,7 @@ object ConstellationRepository {
             name = "Bamboo Spire",
             difficulty = Difficulty.EASY,
             description = "A soaring vertical bamboo stalk with stepped nodes and angled side shoots.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -302,8 +305,7 @@ object ConstellationRepository {
             name = "Dragon Saber",
             difficulty = Difficulty.EASY,
             description = "A double-edged ceremonial blade featuring an ornamental guard, grip, and pommel.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -346,8 +348,7 @@ object ConstellationRepository {
             name = "Celestial Lantern",
             difficulty = Difficulty.EASY,
             description = "A traditional hanging lantern with suspension cord, luminous chamber, and flowing tassel.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -401,8 +402,7 @@ object ConstellationRepository {
             name = "Torii Arch",
             difficulty = Difficulty.MEDIUM,
             description = "A grand ceremonial gateway flanked by towering pillars and a sacred crossbeam.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -450,8 +450,7 @@ object ConstellationRepository {
             name = "Celadon Hourglass",
             difficulty = Difficulty.MEDIUM,
             description = "A harmonious vessel form with flared rim, slender waist, and twin tiered chambers.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -491,8 +490,7 @@ object ConstellationRepository {
             name = "Cascading Falls",
             difficulty = Difficulty.MEDIUM,
             description = "A deep mountain chasm with flanking stepped cliffs framing a central waterfall.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -538,8 +536,7 @@ object ConstellationRepository {
             name = "Phoenix Tower",
             difficulty = Difficulty.MEDIUM,
             description = "A soaring citadel flanked by vertical wing buttresses and a fortified keep.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -577,8 +574,7 @@ object ConstellationRepository {
             name = "Imperial Monolith",
             difficulty = Difficulty.HARD,
             description = "A monumental stone stele enclosed within concentric tiered defensive terraces.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -624,8 +620,7 @@ object ConstellationRepository {
             name = "Ruyi Scepter",
             difficulty = Difficulty.HARD,
             description = "An auspicious curved jade scepter carved with cloud crests and dragon pearls.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -664,8 +659,7 @@ object ConstellationRepository {
             name = "Pillar of Heaven",
             difficulty = Difficulty.HARD,
             description = "A titanic column anchoring earth and heavens with multi-tiered cloud ramparts.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -722,8 +716,7 @@ object ConstellationRepository {
             name = "Grand Pagoda Spire",
             difficulty = Difficulty.EXPERT,
             description = "A soaring six-tier vertical pagoda temple reaching 144 tiles, tailored for mobile mastery.",
-            positions = list,
-            isPortraitOptimized = true
+            positions = list
         )
     }
 
@@ -758,8 +751,7 @@ object ConstellationRepository {
             name = "Mini Turtle",
             difficulty = Difficulty.EASY,
             description = "A friendly compact constellation with accessible paths, perfect for quick games.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -820,8 +812,7 @@ object ConstellationRepository {
             name = "Four Winds Cross",
             difficulty = Difficulty.EASY,
             description = "A symmetrical cross layout honoring the four cardinal winds.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -869,8 +860,7 @@ object ConstellationRepository {
             name = "Imperial Diamond",
             difficulty = Difficulty.EASY,
             description = "An exquisite diamond formation with stepped elevations leading to a central summit.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -912,8 +902,7 @@ object ConstellationRepository {
             name = "Terraced Pyramid",
             difficulty = Difficulty.EASY,
             description = "A classical tiered pyramid with concentric stepped terraces.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -959,8 +948,7 @@ object ConstellationRepository {
             name = "Jade Heart",
             difficulty = Difficulty.MEDIUM,
             description = "A harmonious heart silhouette symbolizing longevity and fortune.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -1022,8 +1010,7 @@ object ConstellationRepository {
             name = "Golden Crab",
             difficulty = Difficulty.MEDIUM,
             description = "A lively maritime constellation with prominent pincers and protective armor.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -1110,8 +1097,7 @@ object ConstellationRepository {
             name = "Emerald Butterfly",
             difficulty = Difficulty.MEDIUM,
             description = "Graceful mirrored wings layered with intricate patterns and delicate edges.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -1173,8 +1159,7 @@ object ConstellationRepository {
             name = "Classic Turtle",
             difficulty = Difficulty.MEDIUM,
             description = "The timeless 144-tile Shanghai Turtle formation revered by Mahjong players worldwide.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -1245,8 +1230,7 @@ object ConstellationRepository {
             name = "Iron Fortress",
             difficulty = Difficulty.HARD,
             description = "Heavily fortified ramparts with four corner bastions and a heavily guarded keep.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -1298,8 +1282,7 @@ object ConstellationRepository {
             name = "Dragon Castle",
             difficulty = Difficulty.HARD,
             description = "Grand fortress battlements, high watchtowers, and multi-tier defensive redoubts.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -1389,8 +1372,7 @@ object ConstellationRepository {
             name = "Celestial Dragon",
             difficulty = Difficulty.HARD,
             description = "A magnificent coiled dragon spanning the heavens with layered spinal ridges.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 
@@ -1449,8 +1431,7 @@ object ConstellationRepository {
             name = "Nine Dragon Pagoda",
             difficulty = Difficulty.EXPERT,
             description = "An intricate five-tiered temple spire offering a supreme architectural challenge.",
-            positions = list,
-            isPortraitOptimized = false
+            positions = list
         )
     }
 }

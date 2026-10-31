@@ -42,6 +42,12 @@ class FlameLight(
         const val FIRE_U = -0.50f
         const val FIRE_V = 0.10f
 
+        // On a table wider than tall (a board played on its side) the hearth stands beyond the far
+        // edge instead, as far past it as it is past the left edge of an upright table (about 0.23
+        // table heights; the far edge is at 0.58), its offset along the edge turned with the phone
+        private const val ABOVE_FIRE_U = 0.10f
+        private const val ABOVE_FIRE_V = 0.81f
+
         /** The lamp alone, at its natural strength. */
         val NONE = lampOnly(1f)
 
@@ -53,23 +59,32 @@ class FlameLight(
          * to a quarter brighter than it, 5% dimmer than it by default; [fireIntensity] runs a lit fire from embers (a quarter) to a roaring
          * blaze (one and three quarters). Beside a fire the lamp is turned down a little.
          */
-        fun at(seconds: Float, lampBrightness: Float, fireplaceLit: Boolean, fireIntensity: Float): FlameLight {
+        fun at(
+            seconds: Float,
+            lampBrightness: Float,
+            fireplaceLit: Boolean,
+            fireIntensity: Float,
+            // The hearth beyond the far edge of the table rather than off to its left
+            hearthAbove: Boolean = false,
+        ): FlameLight {
             val x = lampBrightness.coerceIn(0f, 1f)
             val lamp = if (x < 0.5f) 0.35f + 1.2f * x else 0.95f + 0.6f * (x - 0.5f)
             if (!fireplaceLit) return lampOnly(lamp)
-            return fireplace(seconds, 0.25f + 1.5f * fireIntensity.coerceIn(0f, 1f), lamp * 0.65f)
+            val strength = 0.25f + 1.5f * fireIntensity.coerceIn(0f, 1f)
+            return if (hearthAbove) fireplace(seconds, strength, lamp * 0.65f, ABOVE_FIRE_U, ABOVE_FIRE_V)
+            else fireplace(seconds, strength, lamp * 0.65f, FIRE_U, FIRE_V)
         }
 
         /**
-         * A fire in a hearth off to the left of the table: a broad, redder source (about 1700 K)
-         * that never settles. Its brightness wanders by up to about a third, in random surges
+         * A fire in a hearth beside the table, burning about ([atU], [atV]): a broad, redder
+         * source (about 1700 K) that never settles. Its brightness wanders by up to about a third, in random surges
          * and lulls with quick licks of flame on top, and now and then a log catches and it flares.
          * As the flames move, so does the light: a slow drift, and on top of it the quick, erratic
          * jumps of real flames (several a second), in both place and height. A flare lifts the
          * flames, so the shadows they cast twitch, stretch and shrink rather than sway. Brighter
          * flames burn yellower.
          */
-        private fun fireplace(t: Float, strength: Float, lamp: Float): FlameLight {
+        private fun fireplace(t: Float, strength: Float, lamp: Float, atU: Float, atV: Float): FlameLight {
             val surge = noise(t * 0.9f, 0f)
             val lick = noise(t * 3.7f, 17f)
             val flutter = noise(t * 11f, 41f)
@@ -78,8 +93,8 @@ class FlameLight(
             val flicker = (1f + 0.20f * surge + 0.11f * lick + 0.05f * flutter + 0.3f * flare).coerceIn(0.55f, 1.6f)
             val heat = (flicker - 1f) * 0.5f // brighter burns yellower, lulls glow redder
             return FlameLight(
-                u = FIRE_U + 0.02f * noise(t * 1.3f, 101f) + 0.012f * noise(t * 6.3f, 211f) + 0.006f * noise(t * 14.1f, 223f),
-                v = FIRE_V + 0.025f * noise(t * 1.1f, 131f) + 0.015f * noise(t * 5.7f, 227f) + 0.007f * noise(t * 13.3f, 229f),
+                u = atU + 0.02f * noise(t * 1.3f, 101f) + 0.012f * noise(t * 6.3f, 211f) + 0.006f * noise(t * 14.1f, 223f),
+                v = atV + 0.025f * noise(t * 1.1f, 131f) + 0.015f * noise(t * 5.7f, 227f) + 0.007f * noise(t * 13.3f, 229f),
                 power = strength * flicker,
                 reach = 0.14f,
                 r = 1f,
@@ -87,8 +102,8 @@ class FlameLight(
                 b = (0.17f + 0.10f * heat).coerceIn(0.08f, 0.35f),
                 lamp = lamp,
                 height = 0.28f,
-                steadyU = FIRE_U,
-                steadyV = FIRE_V,
+                steadyU = atU,
+                steadyV = atV,
                 steadyPower = strength,
                 flameHeight = 0.075f * (1f + 0.12f * lick + 0.08f * noise(t * 9.1f, 233f) + 0.15f * flare),
             )

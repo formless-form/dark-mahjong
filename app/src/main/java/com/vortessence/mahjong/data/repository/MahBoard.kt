@@ -14,16 +14,14 @@ internal class MahBoard(
     val name: String,
     val category: String,
     val difficulty: Difficulty,
-    val isTall: Boolean,
     val map: String,
 ) {
     fun toConstellation() = Constellation(
         id = id,
         name = name,
         difficulty = difficulty,
-        description = "",
+        description = MahDescriptions[id] ?: "",
         positions = positions(),
-        isPortraitOptimized = isTall,
         category = category,
     )
 

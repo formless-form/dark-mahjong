@@ -9,6 +9,14 @@ enum class TableSurface(val displayName: String, val shortName: String) {
     SLATE("Slate", "Slate"),
 }
 
+// How a wide board (one that plays much bigger with the phone on its side) is shown: the player is
+// asked the first time one comes up, and the answer is kept
+enum class WideBoards(val shortName: String) {
+    ASK("Ask"),
+    LANDSCAPE("Landscape"),
+    PORTRAIT("Portrait"),
+}
+
 data class GameSettings(
     val soundEnabled: Boolean = true,
     val soundVolume: Float = 0.7f,
@@ -28,4 +36,5 @@ data class GameSettings(
     val fireIntensity: Float = 0.6f,
     // The fire's crackle, on its own volume (subtle by default)
     val fireVolume: Float = 0.4f,
+    val wideBoards: WideBoards = WideBoards.ASK,
 )

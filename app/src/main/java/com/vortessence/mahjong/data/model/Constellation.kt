@@ -6,7 +6,6 @@ data class Constellation(
     val difficulty: Difficulty,
     val description: String,
     val positions: List<TilePosition>,
-    val isPortraitOptimized: Boolean = true,
     // Predefined tile for each entry in [positions]; null means tiles are dealt randomly
     val fixedTiles: List<Tile>? = null,
     // A grouping for imported layouts, e.g. "Animals"; null for Dark Mahjong's own
