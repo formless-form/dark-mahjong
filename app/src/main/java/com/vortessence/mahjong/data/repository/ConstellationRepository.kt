@@ -86,6 +86,11 @@ object ConstellationRepository {
         WideLayouts.layouts.map(::measured)
     }
 
+    /** Themed layouts, for Layouts. */
+    val themedConstellations: List<Constellation> by lazy {
+        ThemedLayouts.layouts.map(::measured)
+    }
+
     // A layout labelled by how often its deals are really cleared (LayoutDifficulty), rather than
     // by the label it was made with
     private fun measured(c: Constellation): Constellation =
@@ -105,7 +110,8 @@ object ConstellationRepository {
      */
     val constellations: List<Constellation> by lazy {
         listOf(tutorialConstellation) +
-            (phoneConstellations + classicConstellations + wideConstellations + mahConstellations).sortedWith(easyToHard)
+            (phoneConstellations + classicConstellations + wideConstellations + themedConstellations + mahConstellations)
+                .sortedWith(easyToHard)
     }
 
     /**

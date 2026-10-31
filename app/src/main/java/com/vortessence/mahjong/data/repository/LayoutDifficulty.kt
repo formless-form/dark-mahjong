@@ -5,9 +5,9 @@ import com.vortessence.mahjong.data.model.Difficulty
 /**
  * How hard each layout really is: the share of its deals cleared without hints, undo or
  * reshuffles, averaged over a player taking any free pair at random and one taking the highest
- * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30; the wide layouts 2026-10-31).
- * Levels and the Layouts list run from the highest to the lowest, and the difficulty labels come
- * from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
+ * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30; the wide and themed layouts
+ * 2026-10-31). Levels and the Layouts list run from the highest to the lowest, and the difficulty
+ * labels come from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
  */
 internal object LayoutDifficulty {
 
@@ -31,20 +31,28 @@ internal object LayoutDifficulty {
         "pillar_of_heaven" to 0.7785f, // Pillar of Heaven
         "twin_peaks" to 0.7780f, // Twin Peaks
         "crab" to 0.7145f, // Golden Crab
+        "stone_arch" to 0.6935f, // Stone Arch
+        "red_fox" to 0.6810f, // Red Fox
         "butterfly" to 0.6725f, // Emerald Butterfly
+        "crane_in_flight" to 0.6475f, // Crane in Flight
         "mah_828570775" to 0.6415f, // Fence
         "pagoda_spire" to 0.6145f, // Grand Pagoda Spire
         "fortress" to 0.5745f, // Iron Fortress
         "mah_1088330854" to 0.5655f, // Steps
+        "junk_ship" to 0.5590f, // Junk Ship
         "great_wall" to 0.5415f, // Great Wall
         "mah_3101065593" to 0.5380f, // White Dragon
         "mah_2232624362" to 0.5195f, // Flower
+        "standing_owl" to 0.4765f, // Standing Owl
+        "city_skyline" to 0.4705f, // City Skyline
         "mah_3316304069" to 0.4580f, // Green Dragon
         "sleeping_cat" to 0.4355f, // Sleeping Cat
+        "comet" to 0.4335f, // Comet
         "mah_2036373485" to 0.4210f, // Abstract Garden
         "mah_2005925237" to 0.4150f, // Block
         "feast_table" to 0.4055f, // Feast Table
         "mah_979337589" to 0.3775f, // Tree
+        "steam_train" to 0.3765f, // Steam Train
         "dragon_boat" to 0.3730f, // Dragon Boat
         "mah_554306016" to 0.3640f, // Cactus
         "castle" to 0.3620f, // Dragon Castle
@@ -54,8 +62,11 @@ internal object LayoutDifficulty {
         "mah_179167734" to 0.3150f, // Elephant
         "mah_130253071" to 0.3070f, // Fortress
         "mah_773823936" to 0.3055f, // Quad
+        "mountain_pass" to 0.3030f, // Mountain Pass
+        "blue_whale" to 0.2980f, // Blue Whale
         "mah_1593808196" to 0.2890f, // Blossom
         "mah_2756835802" to 0.2885f, // Stairs
+        "lotus_pond" to 0.2860f, // Lotus Pond
         "mah_2926596175" to 0.2840f, // Platypus
         "mah_450647981" to 0.2830f, // Potted Plant
         "mah_3906642412" to 0.2825f, // Diamond

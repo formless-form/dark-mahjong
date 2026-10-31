@@ -34,6 +34,10 @@ class WideBoardTest {
         assertEquals(LayoutShape.EVEN, layoutShape(ConstellationRepository.getById("mah_2283982827")!!.positions))
     }
 
-    // The layouts made wide for Layouts (WideLayouts): all of them wide enough to ask
-    private val WIDE_LAYOUTS = setOf("dragon_boat", "great_wall", "feast_table", "sleeping_cat", "twin_peaks", "stone_bridge")
+    // The layouts made wide for Layouts (WideLayouts, ThemedLayouts): all of them wide enough to ask
+    private val WIDE_LAYOUTS = setOf(
+        "dragon_boat", "great_wall", "feast_table", "sleeping_cat", "twin_peaks", "stone_bridge",
+        // ThemedLayouts' wide eight
+        "steam_train", "blue_whale", "city_skyline", "lotus_pond", "junk_ship", "red_fox", "crane_in_flight", "comet",
+    )
 }
