@@ -1,6 +1,6 @@
 New in 1.4.1:
 • Wide boards play on their side: the game offers landscape and remembers your choice
 • Six new wide layouts: Sleeping Cat, Stone Bridge, Twin Peaks, Great Wall, Dragon Boat, Feast Table
-• In landscape the firelight comes from beyond the far edge
+• In landscape a wider lamp lights the whole board, and the firelight comes from beyond the far edge
 • Layouts are marked Wide or Tall only when they are, and every layout has a description
 • Back returns to Layouts or Levels, wherever you started
