@@ -1,0 +1,5 @@
+New in 1.4.2:
+• Today's Puzzle: one board a day, the same for everyone, gentle on Monday and hardest at the weekend
+• A calendar ticks off every day you solve, with no streak to keep
+• Wide boards are in the rotation too
+• "Potted" is now "Potted Plant"
