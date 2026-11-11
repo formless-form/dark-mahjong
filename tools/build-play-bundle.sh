@@ -17,7 +17,7 @@ export DARK_MAHJONG_UPLOAD_KEY_PASS
 
 # Memory-capped, as for every Gradle build on this server. Perf hooks are forced off, whatever
 # gradle.properties says
-systemd-run --user --collect --wait --pipe -p MemoryMax=6G -p MemorySwapMax=1G \
+systemd-run --user --collect --wait --pipe \
     --working-directory="$PWD" --unit=mahjong-build "$PWD/gradlew" bundlePlayRelease -PperfHooks=false --no-daemon --console=plain -q
 
 VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
