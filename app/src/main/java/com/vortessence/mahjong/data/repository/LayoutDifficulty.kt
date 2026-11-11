@@ -6,8 +6,8 @@ import com.vortessence.mahjong.data.model.Difficulty
  * How hard each layout really is: the share of its deals cleared without hints, undo or
  * reshuffles, averaged over a player taking any free pair at random and one taking the highest
  * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30; the wide and themed layouts
- * 2026-10-31). Levels and the Layouts list run from the highest to the lowest, and the difficulty
- * labels come from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
+ * 2026-10-31, eight more themed 2026-11-11). Levels and the Layouts list run from the highest to
+ * the lowest, and the difficulty labels come from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
  */
 internal object LayoutDifficulty {
 
@@ -31,20 +31,26 @@ internal object LayoutDifficulty {
         "imperial_monolith" to 0.8085f, // Imperial Monolith
         "teapot" to 0.7985f, // Teapot
         "ruyi_scepter" to 0.7900f, // Ruyi Scepter
+        "rice_bowl" to 0.7870f, // Rice Bowl
         "pillar_of_heaven" to 0.7785f, // Pillar of Heaven
         "twin_peaks" to 0.7780f, // Twin Peaks
+        "maple_leaf" to 0.7730f, // Maple Leaf
         "bonsai_tree" to 0.7355f, // Bonsai Tree
+        "folding_fan" to 0.7320f, // Folding Fan
         "stone_arch" to 0.7270f, // Stone Arch
         "crab" to 0.7145f, // Golden Crab
         "red_fox" to 0.6810f, // Red Fox
         "butterfly" to 0.6725f, // Emerald Butterfly
         "crane_in_flight" to 0.6475f, // Crane in Flight
+        "paper_kite" to 0.6460f, // Paper Kite
         "mah_828570775" to 0.6415f, // Fence
         "pagoda_spire" to 0.6145f, // Grand Pagoda Spire
+        "tortoise" to 0.6125f, // Tortoise
         "fortress" to 0.5745f, // Iron Fortress
         "mah_1088330854" to 0.5655f, // Steps
         "junk_ship" to 0.5590f, // Junk Ship
         "mountain_pass" to 0.5565f, // Mountain Pass
+        "three_tier_pagoda" to 0.5535f, // Three-Tier Pagoda
         "great_wall" to 0.5415f, // Great Wall
         "mah_3101065593" to 0.5380f, // White Dragon
         "mah_2232624362" to 0.5195f, // Flower
@@ -57,9 +63,11 @@ internal object LayoutDifficulty {
         "mah_2005925237" to 0.4150f, // Block
         "hot_air_balloon" to 0.4090f, // Hot-Air Balloon
         "feast_table" to 0.4055f, // Feast Table
+        "koi_carp" to 0.3785f, // Koi Carp
         "mah_979337589" to 0.3775f, // Tree
         "steam_train" to 0.3765f, // Steam Train
         "dragon_boat" to 0.3730f, // Dragon Boat
+        "moon_bridge" to 0.3675f, // Moon Bridge
         "mah_554306016" to 0.3640f, // Cactus
         "castle" to 0.3620f, // Dragon Castle
         "mah_2283982827" to 0.3575f, // Heart

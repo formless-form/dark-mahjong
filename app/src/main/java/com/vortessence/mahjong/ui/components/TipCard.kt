@@ -37,7 +37,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import kotlin.math.PI
 import kotlin.math.floor
+import kotlin.math.sin
 import kotlin.math.roundToInt
 import com.vortessence.mahjong.tips.TipOffer
 
@@ -64,6 +66,7 @@ fun TipCard(offers: List<TipOffer>, thanked: Boolean, onTip: (TipOffer) -> Unit,
                         filterQuality = FilterQuality.None,
                         modifier = Modifier.matchParentSize(),
                     )
+                    SteamWisps(Modifier.fillMaxSize())
                     if (thanked) SleepyZs(Modifier.fillMaxSize())
                 }
                 Spacer(Modifier.height(18.dp))
@@ -114,6 +117,48 @@ fun TipCard(offers: List<TipOffer>, thanked: Boolean, onTip: (TipOffer) -> Unit,
 /** The monk pictures are 168 art pixels square, drawn one art pixel per dp. */
 private const val MONK_DP = 168
 private const val ART_PX = 168f
+
+/** The middle of the jade teacup's rim, where the steam rises from, in art pixels. */
+private val STEAM_RIM = Offset(65f, 91f)
+
+/**
+ * Three soft wisps of steam rising from the tea, swaying and leaning a little to the left as they go:
+ * each a ribbon of single art pixels that drifts up about 18 pixels, fading in just above the rim and
+ * out at the top. A faint shadow under each pixel lets it show against his white beard. Whole art
+ * pixels again, so the steam sits in the picture's own grain.
+ */
+@Composable
+private fun SteamWisps(modifier: Modifier) {
+    val phase by rememberInfiniteTransition(label = "steam").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart),
+        label = "steam phase",
+    )
+    Canvas(modifier) {
+        val px = size.width / ART_PX
+        val puffs = buildList {
+            for (wisp in 0 until 3) {
+                val baseX = STEAM_RIM.x + (wisp - 1) * 5f
+                for (puff in 0 until STEAM_PUFFS) {
+                    val t = (phase + wisp * 0.37f + puff / STEAM_PUFFS.toFloat()) % 1f
+                    val fade = if (t < 0.2f) t / 0.2f else (1f - t) / 0.8f
+                    val sway = sin((t * 2.2f + wisp * 0.9f + phase) * 2f * PI.toFloat()) * (0.5f + t * 1.6f) - t * 6f
+                    add(Triple((baseX + sway).roundToInt().toFloat(), floor(STEAM_RIM.y - 2f - t * 18f), fade))
+                }
+            }
+        }
+        for ((x, y, fade) in puffs) {
+            drawRect(STEAM_SHADOW.copy(alpha = 0.14f * fade), Offset((x + 1) * px, (y + 1) * px), Size(px, px))
+        }
+        for ((x, y, fade) in puffs) {
+            drawRect(Color.White.copy(alpha = 0.5f * fade), Offset(x * px, y * px), Size(px, px))
+        }
+    }
+}
+
+private const val STEAM_PUFFS = 18
+private val STEAM_SHADOW = Color(0xFF3A302A)
 
 /** Where the zzz rise from, just above the sleeping cat's ear, in art pixels. */
 private val ZZZ_START = Offset(101f, 134f)

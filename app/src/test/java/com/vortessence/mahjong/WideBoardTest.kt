@@ -37,7 +37,8 @@ class WideBoardTest {
     // The layouts made wide for Layouts (WideLayouts, ThemedLayouts): all of them wide enough to ask
     private val WIDE_LAYOUTS = setOf(
         "dragon_boat", "great_wall", "feast_table", "sleeping_cat", "twin_peaks", "stone_bridge",
-        // ThemedLayouts' wide eight
+        // ThemedLayouts' wide ten
         "steam_train", "blue_whale", "city_skyline", "lotus_pond", "junk_ship", "red_fox", "crane_in_flight", "comet",
+        "koi_carp", "moon_bridge",
     )
 }

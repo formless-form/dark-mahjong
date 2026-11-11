@@ -17,6 +17,7 @@ import kotlin.random.Random
  * The share of deals each clears is written to build/level-difficulty.csv.
  *
  * Slow, so it only runs when asked: MEASURE_LEVELS=300 (deals per level) in the environment.
+ * MEASURE_ONLY=id,id,... measures just those layouts, for new ones.
  */
 class LevelDifficultyMeasure {
 
@@ -25,7 +26,10 @@ class LevelDifficultyMeasure {
         val deals = System.getenv("MEASURE_LEVELS")?.toIntOrNull()
         assumeTrue("Set MEASURE_LEVELS to run", deals != null)
         // Every layout (the Layouts list is ordered the same way), its level number if it's a level
-        val layouts = ConstellationRepository.constellations.filter { it.id != ConstellationRepository.TUTORIAL_ID }
+        val only = System.getenv("MEASURE_ONLY")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()
+        val layouts = ConstellationRepository.constellations
+            .filter { it.id != ConstellationRepository.TUTORIAL_ID }
+            .filter { only == null || it.id in only }
         val rows = layouts.map { layout ->
             val level = ConstellationRepository.levelIndexOf(layout.id)
             val (random, careful) = clearRates(layout, deals!!)
