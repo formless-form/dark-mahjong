@@ -173,7 +173,7 @@ fun segmentColors(): ListItemColors = ListItemDefaults.segmentedColors(
 
 /** A list item's leading icon, in a soft circle. */
 @Composable
-fun LeadingIcon(icon: ImageVector, enabled: Boolean = true) {
+fun LeadingIcon(icon: ImageVector, enabled: Boolean = true, color: Color? = null) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -181,7 +181,7 @@ fun LeadingIcon(icon: ImageVector, enabled: Boolean = true) {
             .background(panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.35f), CircleShape),
     ) {
         // Greyed as Material greys a disabled row's text: the same colour at 38%
-        val tint = MaterialTheme.colorScheme.primary.let { if (enabled) it else it.copy(alpha = 0.38f) }
+        val tint = (color ?: MaterialTheme.colorScheme.primary).let { if (enabled) it else it.copy(alpha = 0.38f) }
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
     }
 }

@@ -4,8 +4,10 @@
  * NOTICE.md. The names "Dark Mahjong" and 暗夜麻將, the name seal and the launcher icon are not
  * licensed for use in modified versions (GPLv3 section 7(e)).
  *
- * Dark Mahjong is made to be free of ads and tracking, with nothing to buy, offline and open source. If you
- * build on it, please keep it that way: no ads, no in-app purchases, not sold for profit.
+ * Dark Mahjong is made to be free of ads and tracking, offline and open source, with nothing to buy:
+ * the Google Play build only offers optional tips through Google Play, which unlock nothing, and the
+ * open-source build has none. If you build on it, please keep it that way: no ads, nothing locked
+ * behind a payment, not sold for profit.
  */
 package com.vortessence.mahjong
 
@@ -23,6 +25,7 @@ import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.ui.components.PerfSwitches
 import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
+import com.vortessence.mahjong.tips.Tips
 import com.vortessence.mahjong.update.AppUpdates
 import kotlin.math.abs
 
@@ -30,6 +33,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MahjongViewModel by viewModels()
     private lateinit var updates: AppUpdates
+    private lateinit var tips: Tips
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +41,8 @@ class MainActivity : ComponentActivity() {
         ConstellationRepository.prepareAsync()
         // Play builds ask Google Play for newer versions; the open-source build never does
         updates = AppUpdates(this)
+        // Play builds can take optional tips through Google Play; the open-source build has none
+        tips = Tips(this)
         enableEdgeToEdge()
         // Full-screen game: system bars stay hidden and reappear briefly on an edge swipe
         WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -53,7 +59,7 @@ class MainActivity : ComponentActivity() {
                 ?.let { mode -> window.attributes = window.attributes.apply { preferredDisplayModeId = mode.modeId } }
         }
         setContent {
-            MahjongApp(viewModel = viewModel, updates = updates)
+            MahjongApp(viewModel = viewModel, updates = updates, tips = tips)
         }
         // Only on a fresh start: a recreated activity (a dark-mode switch) keeps the game in play
         if (savedInstanceState == null) openPerfScene(intent)

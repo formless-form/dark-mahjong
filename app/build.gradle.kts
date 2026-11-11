@@ -16,8 +16,8 @@ android {
         // Android 13: AGSL RuntimeShader for the generated backgrounds and tile effects
         minSdk = 33
         targetSdk = 37
-        versionCode = 19
-        versionName = "1.4.6"
+        versionCode = 20
+        versionName = "1.4.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Test builds for the phone (-PperfHooks=true, as tools/deploy-to-phone.sh builds them)
@@ -92,6 +92,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
 
     "playImplementation"(libs.play.app.update)
+    // Optional tips through Google Play Billing (closed source), in the Play build only
+    "playImplementation"(libs.play.billing)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

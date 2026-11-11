@@ -1,5 +1,7 @@
 package com.vortessence.mahjong
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.vortessence.mahjong.tips.Tips
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -41,7 +43,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
+fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = null) {
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
     val finishing by viewModel.finishing.collectAsStateWithLifecycle()
@@ -54,6 +56,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
     val firstRibbon by viewModel.firstRibbon.collectAsStateWithLifecycle()
     val quickGame by viewModel.quickGame.collectAsStateWithLifecycle()
     val update by updates.notice.collectAsStateWithLifecycle()
+    val tipOffers by (tips?.offers ?: remember { MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
+    val tipThanked by (tips?.thanked ?: remember { MutableStateFlow(false) }).collectAsStateWithLifecycle()
     val gameOrigin by viewModel.gameOrigin.collectAsStateWithLifecycle()
     val puzzleDay by viewModel.puzzleDay.collectAsStateWithLifecycle()
     val puzzleStarted by viewModel.todaysPuzzleStarted.collectAsStateWithLifecycle()
@@ -179,6 +183,10 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates) {
                         onSettingsPreview = { updated -> viewModel.previewSettings(updated) },
                         onSettingsCommit = { viewModel.commitSettings() },
                         onFireAudition = { viewModel.auditionFire(it) },
+                        tipOffers = tipOffers,
+                        tipThanked = tipThanked,
+                        onTip = { tips?.tip(it) },
+                        onTipClosed = { tips?.clearThanks() },
                     )
                 }
             }

@@ -1,5 +1,13 @@
 package com.vortessence.mahjong.ui.screens
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import com.vortessence.mahjong.ui.components.TipCard
+import com.vortessence.mahjong.tips.TipOffer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -68,7 +76,21 @@ fun SettingsScreen(
     onSettingsPreview: (GameSettings) -> Unit = onSettingsChanged,
     onSettingsCommit: () -> Unit = {},
     onFireAudition: (Boolean) -> Unit = {},
+    // Tips through Google Play (the Play build only; none offered, no row)
+    tipOffers: List<TipOffer> = emptyList(),
+    tipThanked: Boolean = false,
+    onTip: (TipOffer) -> Unit = {},
+    onTipClosed: () -> Unit = {},
 ) {
+    var tipping by remember { mutableStateOf(false) }
+    if (tipping) {
+        TipCard(
+            offers = tipOffers,
+            thanked = tipThanked,
+            onTip = onTip,
+            onClose = { tipping = false; onTipClosed() },
+        )
+    }
     ExpressiveScreen(
         title = "Settings",
         onBack = onBack,
@@ -201,6 +223,26 @@ fun SettingsScreen(
                     },
                 ),
             )
+
+            // A tip jar, where Google Play can take tips (the Play build, installed from Play)
+            if (tipOffers.isNotEmpty()) {
+                SectionHeader("Support")
+                SegmentedGroup(
+                    listOf(
+                        { shapes ->
+                            SegmentedListItem(
+                                onClick = { tipping = true },
+                                shapes = shapes,
+                                colors = segmentColors(),
+                                leadingContent = { LeadingIcon(Icons.Rounded.Favorite, color = Color(0xFFE5534B)) },
+                                supportingContent = { Text("Leave a tip if you're enjoying the game") },
+                            ) {
+                                Text("Support Dark Mahjong")
+                            }
+                        },
+                    ),
+                )
+            }
 
             SectionHeader("About")
             val uriHandler = LocalUriHandler.current

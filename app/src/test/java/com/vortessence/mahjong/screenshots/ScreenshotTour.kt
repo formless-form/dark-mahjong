@@ -1,5 +1,7 @@
 package com.vortessence.mahjong.screenshots
 
+import com.vortessence.mahjong.ui.components.TipCard
+import com.vortessence.mahjong.tips.TipOffer
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.performClick
 import androidx.compose.foundation.Canvas
@@ -627,6 +629,29 @@ class ScreenshotTour {
     }
 
     // The whole settings list on one tall page, down to the credits at its foot
+    // The tip jar: Settings' Support row, the tip card, and its thank-you
+    private val tipOffers = listOf(TipOffer("tip_small", "$0.50"), TipOffer("tip_medium", "$1.00"), TipOffer("tip_large", "$2.00"))
+
+    @Test @Config(qualifiers = "w427dp-h3400dp-port-360dpi")
+    fun settingsSupport() {
+        compose.setContent {
+            MahjongTheme { SettingsScreen(settings = GameSettings(), onSettingsChanged = {}, onBack = {}, tipOffers = tipOffers) }
+        }
+        shoot("settings_support")
+    }
+
+    @Test
+    fun tipCard() {
+        compose.setContent { MahjongTheme { TipCard(tipOffers, thanked = false, onTip = {}, onClose = {}) } }
+        compose.onNode(isDialog()).captureRoboImage("build/screenshots/tip_card.png")
+    }
+
+    @Test
+    fun tipThanks() {
+        compose.setContent { MahjongTheme { TipCard(tipOffers, thanked = true, onTip = {}, onClose = {}) } }
+        compose.onNode(isDialog()).captureRoboImage("build/screenshots/tip_thanks.png")
+    }
+
     // Low-performance mode on: the fire out (as the app shows it, with animations stilled)
     @Test @Config(qualifiers = "w427dp-h3400dp-port-360dpi")
     fun settingsLowPerformance() {
