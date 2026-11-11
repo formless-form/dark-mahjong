@@ -6,7 +6,7 @@ import com.vortessence.mahjong.data.model.Difficulty
  * How hard each layout really is: the share of its deals cleared without hints, undo or
  * reshuffles, averaged over a player taking any free pair at random and one taking the highest
  * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30; the wide and themed layouts
- * 2026-10-31, eight more themed 2026-11-11). Levels and the Layouts list run from the highest to
+ * 2026-10-31, ten more themed 2026-11-11). Levels and the Layouts list run from the highest to
  * the lowest, and the difficulty labels come from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
  */
 internal object LayoutDifficulty {
@@ -46,6 +46,7 @@ internal object LayoutDifficulty {
         "mah_828570775" to 0.6415f, // Fence
         "pagoda_spire" to 0.6145f, // Grand Pagoda Spire
         "tortoise" to 0.6125f, // Tortoise
+        "twin_pyramids" to 0.5885f, // Twin Pyramids
         "fortress" to 0.5745f, // Iron Fortress
         "mah_1088330854" to 0.5655f, // Steps
         "junk_ship" to 0.5590f, // Junk Ship
@@ -71,6 +72,7 @@ internal object LayoutDifficulty {
         "mah_554306016" to 0.3640f, // Cactus
         "castle" to 0.3620f, // Dragon Castle
         "mah_2283982827" to 0.3575f, // Heart
+        "ziggurat" to 0.3575f, // Ziggurat
         "mah_2788427354" to 0.3420f, // Pyramid
         "mah_1048565772" to 0.3295f, // Invader
         "treasure_chest" to 0.3230f, // Treasure Chest

@@ -5,8 +5,8 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.TilePosition
 
 /**
- * Themed layouts (2026-10-31, eight more 2026-11-11), for Layouts (not the levels): ten wide
- * boards and fifteen to play upright. Each raised layer sits half a tile off the one below, which
+ * Themed layouts (2026-10-31, ten more 2026-11-11), for Layouts (not the levels): ten wide
+ * boards and seventeen to play upright. Each raised layer sits half a tile off the one below, which
  * is why their x and y run odd and even by turn; so stacks always leave tiles in pairs, and every
  * deal works first time.
  * Each row is a layer ([z]), a row of the board ([y]) and the tiles along it ([x]), in the
@@ -33,7 +33,7 @@ internal object ThemedLayouts {
             bonsaiTree(),
             hotAirBalloon(),
             treasureChest(),
-            // 2026-11-11: eight more
+            // 2026-11-11: ten more
             koiCarp(),
             moonBridge(),
             threeTierPagoda(),
@@ -42,6 +42,8 @@ internal object ThemedLayouts {
             mapleLeaf(),
             paperKite(),
             riceBowl(),
+            ziggurat(),
+            twinPyramids(),
         )
     }
 
@@ -634,6 +636,67 @@ internal object ThemedLayouts {
         row(z = 2, y = 1, 8, 10)
         row(z = 2, y = 3, 6, 8, 10, 12)
         row(z = 3, y = 2, 9)
+    }
+
+    // 142 tiles
+    private fun ziggurat() = layout(
+        "ziggurat", "Ziggurat",
+        "A great stepped temple rises in broad terraces to a flat summit.",
+    ) {
+        row(z = 0, y = 0, 2, 4, 6, 8, 10, 12, 14)
+        row(z = 0, y = 2, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 4, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 6, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 10, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 12, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 14, 0, 2, 4, 6, 8, 10, 12, 14, 16)
+        row(z = 0, y = 16, 2, 4, 6, 8, 10, 12, 14)
+        row(z = 1, y = 3, 3, 5, 7, 9, 11, 13)
+        row(z = 1, y = 5, 3, 5, 7, 9, 11, 13)
+        row(z = 1, y = 7, 3, 5, 7, 9, 11, 13)
+        row(z = 1, y = 9, 3, 5, 7, 9, 11, 13)
+        row(z = 1, y = 11, 3, 5, 7, 9, 11, 13)
+        row(z = 1, y = 13, 3, 5, 7, 9, 11, 13)
+        row(z = 1, y = 15, 3, 5, 7, 9, 11, 13)
+        row(z = 2, y = 5, 6, 8, 10)
+        row(z = 2, y = 7, 6, 8, 10)
+        row(z = 2, y = 9, 6, 8, 10)
+        row(z = 2, y = 11, 6, 8, 10)
+        row(z = 2, y = 13, 6, 8, 10)
+        row(z = 3, y = 6, 7, 9)
+        row(z = 3, y = 8, 7, 9)
+        row(z = 3, y = 10, 7, 9)
+        row(z = 3, y = 12, 7, 9)
+    }
+
+    // 104 tiles
+    private fun twinPyramids() = layout(
+        "twin_pyramids", "Twin Pyramids",
+        "Two stepped pyramids stand side by side, one a little ahead of the other.",
+    ) {
+        row(z = 0, y = 0, 0, 2, 4, 6, 8)
+        row(z = 0, y = 2, 0, 2, 4, 6, 8)
+        row(z = 0, y = 4, 0, 2, 4, 6, 8)
+        row(z = 0, y = 6, 0, 2, 4, 6, 8)
+        row(z = 0, y = 8, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 10, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        row(z = 0, y = 12, 10, 12, 14, 16, 18)
+        row(z = 0, y = 14, 10, 12, 14, 16, 18)
+        row(z = 0, y = 16, 10, 12, 14, 16, 18)
+        row(z = 0, y = 18, 10, 12, 14, 16, 18)
+        row(z = 1, y = 1, 1, 3, 5, 7)
+        row(z = 1, y = 3, 1, 3, 5, 7)
+        row(z = 1, y = 5, 1, 3, 5, 7)
+        row(z = 1, y = 7, 1, 3, 5, 7)
+        row(z = 1, y = 11, 11, 13, 15, 17)
+        row(z = 1, y = 13, 11, 13, 15, 17)
+        row(z = 1, y = 15, 11, 13, 15, 17)
+        row(z = 1, y = 17, 11, 13, 15, 17)
+        row(z = 2, y = 3, 2, 4, 6)
+        row(z = 2, y = 5, 2, 4, 6)
+        row(z = 2, y = 13, 12, 14, 16)
+        row(z = 2, y = 15, 12, 14, 16)
     }
 
     private fun layout(id: String, name: String, description: String, rows: MutableList<TilePosition>.() -> Unit) =
