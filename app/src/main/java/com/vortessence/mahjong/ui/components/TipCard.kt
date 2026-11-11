@@ -84,9 +84,19 @@ fun TipCard(offers: List<TipOffer>, thanked: Boolean, onTip: (TipOffer) -> Unit,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(Modifier.height(24.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        for (offer in offers) {
-                            BigButton(offer.price, onClick = { onTip(offer) }, primary = true, compact = true, modifier = Modifier.weight(1f))
+                    if (offers.isEmpty()) {
+                        // Google Play hasn't priced the tips (offline, or Play still starting up)
+                        Text(
+                            "Tips can't be reached right now. Please check your connection and try again later.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            for (offer in offers) {
+                                BigButton(offer.price, onClick = { onTip(offer) }, primary = true, compact = true, modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                     Spacer(Modifier.height(14.dp))

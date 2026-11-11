@@ -23,8 +23,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * often as they like. Google handles the payment; the game only learns that a tip went through,
  * and thanks them. Nothing in the game depends on it.
  *
- * Shown only once Google Play has priced the tips (installed from Play, products set up), so a
- * build that can't take tips simply doesn't offer them.
+ * Settings always offers them in this build; the card explains when Google Play can't price them
+ * yet (offline, or Play still starting up).
  */
 class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
     private val state = MutableStateFlow<List<TipOffer>>(emptyList())
@@ -34,6 +34,9 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
     val thanked: StateFlow<Boolean> = thanks.asStateFlow()
 
     private var details: Map<String, ProductDetails> = emptyMap()
+
+    /** The Play build always offers tips; the card says so if Google Play can't price them yet. */
+    val available = true
 
     private val client: BillingClient = BillingClient.newBuilder(activity)
         .setListener { result, purchases ->
@@ -65,10 +68,20 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
         }
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
-                listOf(BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(product).build()),
+                listOf(
+                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                        .setProductDetails(product)
+                        .apply { offerOf(product)?.offerToken?.let { setOfferToken(it) } }
+                        .build(),
+                ),
             )
             .build()
         client.launchBillingFlow(activity, params)
+    }
+
+    /** Called when the tip card opens: tries Google Play again if the prices haven't arrived. */
+    fun refresh() {
+        if (!client.isReady) connect() else if (details.isEmpty()) loadOffers()
     }
 
     fun clearThanks() {
@@ -96,12 +109,20 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
             if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryProductDetailsAsync showSamples()
             details = found.productDetailsList.associateBy { it.productId }
             state.value = TIP_PRODUCTS.mapNotNull { id ->
-                val price = details[id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: return@mapNotNull null
+                val price = details[id]?.let(::offerOf)?.formattedPrice ?: return@mapNotNull null
                 TipOffer(id, price)
             }
             if (state.value.isEmpty()) showSamples()
         }
     }
+
+    /**
+     * A tip's price. Products made in today's Play Console list their prices as purchase options and
+     * leave the older single offer empty unless one is marked backwards compatible, so the list is
+     * read first.
+     */
+    private fun offerOf(product: ProductDetails): ProductDetails.OneTimePurchaseOfferDetails? =
+        product.oneTimePurchaseOfferDetailsList?.firstOrNull() ?: product.oneTimePurchaseOfferDetails
 
     /**
      * Test builds only (BuildConfig.PERF_HOOKS, set by tools/deploy-to-phone.sh): sample prices, so the

@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 class Tips(activity: ComponentActivity) {
     val offers: StateFlow<List<TipOffer>> = MutableStateFlow(emptyList())
     val thanked: StateFlow<Boolean> = MutableStateFlow(false)
+    val available = false
+
+    fun refresh() {}
 
     fun tip(offer: TipOffer) {}
 

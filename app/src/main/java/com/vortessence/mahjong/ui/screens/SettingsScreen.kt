@@ -76,10 +76,12 @@ fun SettingsScreen(
     onSettingsPreview: (GameSettings) -> Unit = onSettingsChanged,
     onSettingsCommit: () -> Unit = {},
     onFireAudition: (Boolean) -> Unit = {},
-    // Tips through Google Play (the Play build only; none offered, no row)
+    // Tips through Google Play (the Play build only, where the row always shows)
+    tipsAvailable: Boolean = false,
     tipOffers: List<TipOffer> = emptyList(),
     tipThanked: Boolean = false,
     onTip: (TipOffer) -> Unit = {},
+    onTipOpened: () -> Unit = {},
     onTipClosed: () -> Unit = {},
 ) {
     var tipping by remember { mutableStateOf(false) }
@@ -224,14 +226,14 @@ fun SettingsScreen(
                 ),
             )
 
-            // A tip jar, where Google Play can take tips (the Play build, installed from Play)
-            if (tipOffers.isNotEmpty()) {
+            // A tip jar, in the Play build (the card explains if Google Play can't price tips yet)
+            if (tipsAvailable) {
                 SectionHeader("Support")
                 SegmentedGroup(
                     listOf(
                         { shapes ->
                             SegmentedListItem(
-                                onClick = { tipping = true },
+                                onClick = { tipping = true; onTipOpened() },
                                 shapes = shapes,
                                 colors = segmentColors(),
                                 leadingContent = { LeadingIcon(Icons.Rounded.Favorite, color = Color(0xFFE5534B)) },

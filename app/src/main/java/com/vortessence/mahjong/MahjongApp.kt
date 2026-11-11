@@ -183,9 +183,11 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         onSettingsPreview = { updated -> viewModel.previewSettings(updated) },
                         onSettingsCommit = { viewModel.commitSettings() },
                         onFireAudition = { viewModel.auditionFire(it) },
+                        tipsAvailable = tips?.available == true,
                         tipOffers = tipOffers,
                         tipThanked = tipThanked,
                         onTip = { tips?.tip(it) },
+                        onTipOpened = { tips?.refresh() },
                         onTipClosed = { tips?.clearThanks() },
                     )
                 }

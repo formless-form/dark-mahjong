@@ -1,0 +1,2 @@
+New in 1.4.8:
+• Tips in Settings → Support now show their prices properly

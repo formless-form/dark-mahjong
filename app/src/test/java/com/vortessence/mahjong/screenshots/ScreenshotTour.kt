@@ -635,7 +635,7 @@ class ScreenshotTour {
     @Test @Config(qualifiers = "w427dp-h3400dp-port-360dpi")
     fun settingsSupport() {
         compose.setContent {
-            MahjongTheme { SettingsScreen(settings = GameSettings(), onSettingsChanged = {}, onBack = {}, tipOffers = tipOffers) }
+            MahjongTheme { SettingsScreen(settings = GameSettings(), onSettingsChanged = {}, onBack = {}, tipsAvailable = true, tipOffers = tipOffers) }
         }
         shoot("settings_support")
     }
