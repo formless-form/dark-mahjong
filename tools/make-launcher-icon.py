@@ -29,6 +29,7 @@ CANVAS_DP = 108  # adaptive icon canvas; launchers show the middle 72 dp through
 SEAL_DP = 58     # the seal's side: its glyphs stay inside the 66 dp safe circle
 DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 SUPERSAMPLE = 3
+BORDER_DP = 2  # a carved paper rim just inside the launcher's circle mask (Pixel's shape)
 
 # Quadrant centres as fractions of the seal, read right column first: 暗夜 then 麻將 (NameSeal.kt)
 CELLS = [("暗", 0.71, 0.31), ("夜", 0.71, 0.70), ("麻", 0.29, 0.31), ("將", 0.29, 0.70)]
@@ -93,11 +94,22 @@ def glyph_mask(size_px, px_per_dp):
     return np.asarray(img, dtype=np.float64) / 255
 
 
-def render_layers(final_px):
+def border_mask(size_px, px_per_dp):
+    """Paper everywhere outside a circle just inside the 72 dp one the launcher shows: a rim on a round
+    mask, and paper corners on a squarer one, so the red never shows outside the circle."""
+    ys, xs = np.mgrid[0:size_px, 0:size_px].astype(np.float64)
+    r = np.hypot(xs - size_px / 2, ys - size_px / 2) / px_per_dp
+    return np.clip((r - (36 - BORDER_DP)) * px_per_dp + 0.5, 0, 1)
+
+
+def render_layers(final_px, border=True):
     px_per_dp = final_px / CANVAS_DP * SUPERSAMPLE
     size = final_px * SUPERSAMPLE
     sx, sy = carved_edges(size, px_per_dp)
-    alpha = sample(glyph_mask(size, px_per_dp), sx, sy)
+    mask = glyph_mask(size, px_per_dp)
+    if border:
+        mask = np.maximum(mask, border_mask(size, px_per_dp))
+    alpha = sample(mask, sx, sy)
 
     # Background: the vermilion field, faintly mottled like ink on stone
     ys, xs = np.mgrid[0:size, 0:size] / px_per_dp
@@ -176,7 +188,8 @@ def main():
         for layer, img in layers.items():
             img.save(os.path.join(folder, f"ic_launcher_{layer}.webp"), lossless=True, quality=100)
     # The store icon: a full square (the store applies its own rounding), scaled from the middle 72 dp
-    layers = render_layers(768)
+    # (no rim: the store crops it to its own rounded square, where a circle wouldn't sit right)
+    layers = render_layers(768, border=False)
     full = layers["background"].convert("RGBA")
     full.alpha_composite(layers["foreground"])
     inset = 768 * (CANVAS_DP - 72) / CANVAS_DP / 2

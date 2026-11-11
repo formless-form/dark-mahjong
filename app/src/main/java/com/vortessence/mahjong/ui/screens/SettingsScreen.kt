@@ -5,6 +5,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import com.vortessence.mahjong.ui.components.TipCard
 import com.vortessence.mahjong.tips.TipOffer
@@ -84,7 +85,8 @@ fun SettingsScreen(
     onTipOpened: () -> Unit = {},
     onTipClosed: () -> Unit = {},
 ) {
-    var tipping by remember { mutableStateOf(false) }
+    // Kept if the payment sheet makes Android rebuild the screen, so the thank-you still has a card
+    var tipping by rememberSaveable { mutableStateOf(false) }
     if (tipping) {
         TipCard(
             offers = tipOffers,

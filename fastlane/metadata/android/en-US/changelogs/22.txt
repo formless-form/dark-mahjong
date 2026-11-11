@@ -1,0 +1,2 @@
+New in 1.4.9:
+• Small bug fix
