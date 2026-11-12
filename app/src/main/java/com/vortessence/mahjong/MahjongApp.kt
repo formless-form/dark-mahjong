@@ -25,7 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vortessence.mahjong.engine.TodaysPuzzle
+import com.vortessence.mahjong.data.model.WideBoards
+import com.vortessence.mahjong.ui.components.PerformanceNotice
 import com.vortessence.mahjong.ui.components.PredictiveBackHandling
+import com.vortessence.mahjong.ui.components.isWideBoard
 import com.vortessence.mahjong.ui.components.PredictiveBackState
 import com.vortessence.mahjong.ui.components.predictiveBack
 import com.vortessence.mahjong.ui.screens.ConstellationSelectScreen
@@ -61,6 +64,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     val gameOrigin by viewModel.gameOrigin.collectAsStateWithLifecycle()
     val puzzleDay by viewModel.puzzleDay.collectAsStateWithLifecycle()
     val puzzleStarted by viewModel.todaysPuzzleStarted.collectAsStateWithLifecycle()
+    val perfNotice by viewModel.perfNotice.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
@@ -221,6 +225,27 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                 modifier = Modifier.predictiveBack(back),
                 label = "ScreenTransition",
             ) { screen -> screenContent(screen) }
+
+            // The first-game check found this phone struggling: said between games, never over a
+            // board in play, the tutorial, Settings or the wide-board question
+            val fps = perfNotice
+            if (fps != null) {
+                val game = gameState
+                val between = when (currentScreen) {
+                    is Screen.Settings -> false
+                    is Screen.Game -> game != null && !game.isWon && game.moveHistory.isEmpty() && tutorialStep == null &&
+                        !(settings.wideBoards == WideBoards.ASK && isWideBoard(game.tiles))
+                    else -> true
+                }
+                if (between) {
+                    PerformanceNotice(
+                        fps = fps,
+                        onShown = { viewModel.perfNoticeShown() },
+                        onKeep = { viewModel.perfNoticeAnswered(keep = true) },
+                        onTurnBackOn = { viewModel.perfNoticeAnswered(keep = false) },
+                    )
+                }
+            }
         }
     }
 }

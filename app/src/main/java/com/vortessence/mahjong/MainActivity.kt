@@ -17,6 +17,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.vortessence.mahjong.perf.FrameWatch
+import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -34,6 +39,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MahjongViewModel by viewModels()
     private lateinit var updates: AppUpdates
     private lateinit var tips: Tips
+    private lateinit var frameWatch: FrameWatch
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,8 +67,25 @@ class MainActivity : ComponentActivity() {
         setContent {
             MahjongApp(viewModel = viewModel, updates = updates, tips = tips)
         }
+        // The first-game performance check: frames are timed while a game is in play, until it
+        // has decided (once per install)
+        frameWatch = FrameWatch(window) { viewModel.onFrameVerdict(it) }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                try {
+                    viewModel.measuringFrames.collect { frameWatch.setRecording(it) }
+                } finally {
+                    frameWatch.setRecording(false)
+                }
+            }
+        }
         // Only on a fresh start: a recreated activity (a dark-mode switch) keeps the game in play
         if (savedInstanceState == null) openPerfScene(intent)
+    }
+
+    override fun onDestroy() {
+        frameWatch.release()
+        super.onDestroy()
     }
 
     // Test builds only: adb shell am start -S -n com.formlessform.darkmahjong/com.vortessence.mahjong.MainActivity
@@ -70,11 +93,15 @@ class MainActivity : ComponentActivity() {
     // (-S stops the app first, so the scene opens on a fresh start)
     private fun openPerfScene(intent: Intent?) {
         if (!BuildConfig.PERF_HOOKS) return
+        // --ez perfCheckReset true: the first-game performance check runs again, as on a new install
+        // (with a perf scene, the scene's frames are the ones timed)
+        val checkReset = intent?.getBooleanExtra("perfCheckReset", false) == true
+        if (checkReset) viewModel.resetPerfCheck()
         PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         val layout = intent?.getStringExtra("perfLayout") ?: return
         PerfSwitches.fireFps = intent.getIntExtra("perfFireFps", 0)
         val surface = intent.getStringExtra("perfSurface")?.let { name -> TableSurface.entries.firstOrNull { it.name == name } }
-        viewModel.startPerfScene(layout, intent.getBooleanExtra("perfFire", false), surface, intent.getBooleanExtra("perfAutoplay", false))
+        viewModel.startPerfScene(layout, intent.getBooleanExtra("perfFire", false), surface, intent.getBooleanExtra("perfAutoplay", false), countsForCheck = checkReset)
     }
 
     override fun onResume() {

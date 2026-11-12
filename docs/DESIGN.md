@@ -194,6 +194,18 @@ Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit
     - With a hint showing, the median frame is 26 → 21 ms and the 99th percentile 44 → 31 ms.
     - Matches are unchanged (GPU about 10 ms at full clock).
 - **Test builds** (`tools/deploy-to-phone.sh`, `-PperfHooks=true`) can be told over adb to open a fixed deal, switch drawing stages off, set the fire's rate or play matches by themselves, for measuring; Play builds never can.
+- **Low-performance mode, switched on by itself where needed** (2026-11-12, `perf/FrameWatch`,
+  `perf/FrameTally`). The frames of the player's first game in play are timed once per install,
+  existing players included (unless they set the switch themselves). Timing skips the first
+  5 seconds and stops at 600 frames, or at 45 seconds of drawing with at least 60 frames. Each
+  frame's budget is one screen refresh, never less than a 60th of a second. The frame's reported
+  deadline isn't used: the emulator sets it at 150 ms. If 25% of frames run late, or 10% take
+  over twice their budget, the phone is judged to be struggling. A card then appears between
+  games (never over a board in play or the tutorial): "Smoother play on this phone". It names
+  the frame rate found, switches the mode on, and offers "Keep it" or "Turn effects back on".
+  The outcome is stored as `perf_check`, and the check never runs again. In test builds,
+  `--ez perfCheckReset true` with a perf scene runs the check on that scene. `-PsideBySide=true`
+  builds "Dark Mahjong Test" under its own ID, installed beside the Play copy.
 - Still to do: a Baseline Profile for fast cold start; perhaps a cheaper fire-shadow trace for weaker GPUs.
 
 ## Updates

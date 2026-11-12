@@ -13,6 +13,9 @@ import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.ContinueInfo
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.PerfCheck
+import com.vortessence.mahjong.data.model.PerfCheckState
+import com.vortessence.mahjong.perf.FrameVerdict
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
@@ -94,6 +97,26 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _firstRibbon = MutableStateFlow(false)
     val firstRibbon: StateFlow<Boolean> = _firstRibbon.asStateFlow()
 
+    // The first-game performance check, as stored (null until read)
+    private val _perfCheck = MutableStateFlow<PerfCheckState?>(null)
+    // A test build's perf scene is on the table: never part of the check
+    private val _perfScene = MutableStateFlow(false)
+
+    /**
+     * Whether the frames now being drawn count towards the first-game check: a game in play, the
+     * check still to run, the effects on (Low-performance mode and the phone's Remove animations
+     * both off).
+     */
+    val measuringFrames: StateFlow<Boolean> = combine(_perfCheck, _currentScreen, _gameState, _settings, _perfScene) { check, screen, game, s, perfScene ->
+        check?.check == PerfCheck.PENDING && screen is Screen.Game && game != null && !game.isWon &&
+            !s.lowPerformance && s.phoneAnimates && !perfScene
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** The check found this phone struggling, at this many frames a second: its card is due. */
+    val perfNotice: StateFlow<Int?> = _perfCheck
+        .map { if (it?.check == PerfCheck.SLOW) it.fps else null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     private val _progress = MutableStateFlow(Progress())
     val progress: StateFlow<Progress> = _progress.asStateFlow()
 
@@ -171,6 +194,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                         else -> FireRoom.NONE
                     },
                 )
+            }
+        }
+        viewModelScope.launch {
+            prefsRepo.perfCheckFlow.collect {
+                android.util.Log.i("FrameWatch", "check: $it")
+                // A test build's reset is on its way: what's stored is about to go
+                if (!perfCheckResetting) _perfCheck.value = it
             }
         }
         // Collect progress
@@ -307,7 +337,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
      * Test builds only (BuildConfig.PERF_HOOKS): the same deal of [layoutName] every time, with the
      * fireplace lit or not on [surface], so frame timings before and after a change compare alike.
      */
-    fun startPerfScene(layoutName: String, fireplace: Boolean, surface: TableSurface?, autoplay: Boolean = false) {
+    fun startPerfScene(layoutName: String, fireplace: Boolean, surface: TableSurface?, autoplay: Boolean = false, countsForCheck: Boolean = false) {
         val constellation = ConstellationRepository.constellations.firstOrNull { it.name.equals(layoutName, ignoreCase = true) } ?: return
         // From the saved settings, which may not have loaded yet (a scene opens with the app), so
         // that only the fire and the table change
@@ -315,6 +345,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             val saved = prefsRepo.settingsFlow.first()
             prefsRepo.updateSettings(saved, saved.copy(fireplaceLit = fireplace, tableSurface = surface ?: saved.tableSurface))
         }
+        // Kept out of the first-game check, unless the check is what's being tried
+        _perfScene.value = !countsForCheck
         _currentLevelIndex.value = null
         _gameOrigin.value = Screen.MainMenu
         initGame(constellation, Random(7))
@@ -611,6 +643,41 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     /** The slider is let go: what it shows is saved. */
     fun commitSettings() {
         updateSettings(_settings.value)
+    }
+
+    /** The first-game check is done: a phone that kept up is left alone; one that didn't gets its card. */
+    fun onFrameVerdict(verdict: FrameVerdict) {
+        if (_perfCheck.value?.check != PerfCheck.PENDING) return
+        val state = if (verdict.struggling) PerfCheck.SLOW else PerfCheck.PASSED
+        _perfCheck.value = PerfCheckState(state, verdict.fps)
+        viewModelScope.launch { prefsRepo.setPerfCheck(state, verdict.fps) }
+    }
+
+    /** The check's card is on screen: Low-performance mode goes on as it says. */
+    fun perfNoticeShown() {
+        if (!_settings.value.lowPerformance) updateSettings(_settings.value.copy(lowPerformance = true))
+    }
+
+    /** The card is closed: [keep] Low-performance mode, or turn the effects back on. */
+    fun perfNoticeAnswered(keep: Boolean) {
+        val state = if (keep) PerfCheck.SWITCHED else PerfCheck.DECLINED
+        if (!keep) updateSettings(_settings.value.copy(lowPerformance = false))
+        _perfCheck.value = _perfCheck.value?.copy(check = state)
+        viewModelScope.launch { prefsRepo.setPerfCheck(state) }
+    }
+
+    // A test build's reset of the check is being written
+    private var perfCheckResetting = false
+
+    /** Test builds: the check as on a first install, with nothing stored shown meanwhile. */
+    fun resetPerfCheck() {
+        perfCheckResetting = true
+        _perfCheck.value = null
+        viewModelScope.launch {
+            prefsRepo.resetPerfCheck()
+            perfCheckResetting = false
+            _perfCheck.value = prefsRepo.perfCheckFlow.first()
+        }
     }
 
     fun onResume() {

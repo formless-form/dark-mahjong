@@ -47,3 +47,24 @@ data class GameSettings(
     /** A match lifts the pair and smashes them together (with or without the full sparkle). */
     val matchSmash: Boolean get() = animationsEnabled || (lowPerformance && phoneAnimates)
 }
+
+/**
+ * The first-game performance check: frames of the player's first game are timed, once, and a phone
+ * that can't keep up is switched to Low-performance mode, with a card saying so.
+ */
+enum class PerfCheck {
+    // Still to run
+    PENDING,
+    // The phone kept up
+    PASSED,
+    // It didn't: Low-performance mode goes on when the card is shown
+    SLOW,
+    // The card was seen and the mode kept
+    SWITCHED,
+    // The card was seen and the effects turned back on
+    DECLINED,
+    // The player set Low-performance mode themselves before the check ran: never run
+    MANUAL,
+}
+
+data class PerfCheckState(val check: PerfCheck = PerfCheck.PENDING, val fps: Int = 0)

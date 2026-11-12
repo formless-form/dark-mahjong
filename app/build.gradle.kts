@@ -23,6 +23,11 @@ android {
         // Test builds for the phone (-PperfHooks=true, as tools/deploy-to-phone.sh builds them)
         // can be told over adb to open a fixed scene for measuring; Play builds never can
         buildConfigField("boolean", "PERF_HOOKS", (findProperty("perfHooks") == "true").toString())
+        // -PsideBySide=true: a test build under its own ID and name, installed beside the Play copy
+        // so testing never touches a player's own games
+        val sideBySide = findProperty("sideBySide") == "true"
+        if (sideBySide) applicationIdSuffix = ".test"
+        manifestPlaceholders["appLabel"] = if (sideBySide) "Dark Mahjong Test" else "Dark Mahjong"
     }
 
     // Two builds: "play" for Google Play also asks Play whether a newer version is out (Google's

@@ -16,6 +16,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.MAX_HINTS
+import com.vortessence.mahjong.data.model.PerfCheck
+import com.vortessence.mahjong.data.model.PerfCheckState
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
@@ -65,6 +67,9 @@ class PreferencesRepository(private val context: Context) {
         // Which level numbering the stored highest level is in: 2 since levels were ordered by
         // measured difficulty (absent means the order before)
         val LEVEL_ORDER = intPreferencesKey("level_order")
+        // The first-game performance check (PerfCheck's names) and the frame rate it found
+        val PERF_CHECK = stringPreferencesKey("perf_check")
+        val PERF_CHECK_FPS = intPreferencesKey("perf_check_fps")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
@@ -115,6 +120,33 @@ class PreferencesRepository(private val context: Context) {
             puzzleDaysSolved = prefs[Keys.PUZZLE_DAYS_SOLVED]?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet(),
         )
     }.distinctUntilChanged()
+
+    /**
+     * Where the first-game performance check stands. Not yet run, it counts as the player's own
+     * choice ([PerfCheck.MANUAL], never run) once they have set Low-performance mode themselves.
+     */
+    val perfCheckFlow: Flow<PerfCheckState> = data.map { prefs ->
+        val state = prefs[Keys.PERF_CHECK]?.let { name -> PerfCheck.entries.firstOrNull { it.name == name } }
+            ?: if (prefs[Keys.LOW_PERFORMANCE] != null) PerfCheck.MANUAL else PerfCheck.PENDING
+        PerfCheckState(state, prefs[Keys.PERF_CHECK_FPS] ?: 0)
+    }.distinctUntilChanged()
+
+    /** The check's outcome, and the frame rate it found. */
+    suspend fun setPerfCheck(state: PerfCheck, fps: Int? = null) {
+        write { prefs ->
+            prefs[Keys.PERF_CHECK] = state.name
+            if (fps != null) prefs[Keys.PERF_CHECK_FPS] = fps
+        }
+    }
+
+    /** Test builds: the check as on a first install, to run again. */
+    suspend fun resetPerfCheck() {
+        write { prefs ->
+            prefs.remove(Keys.PERF_CHECK)
+            prefs.remove(Keys.PERF_CHECK_FPS)
+            prefs.remove(Keys.LOW_PERFORMANCE)
+        }
+    }
 
     /**
      * Writes the settings that differ between [from] and [to], and only those: the others keep
