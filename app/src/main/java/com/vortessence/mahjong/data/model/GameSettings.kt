@@ -49,19 +49,19 @@ data class GameSettings(
 }
 
 /**
- * The first-game performance check: frames of the player's first game are timed, once, and a phone
- * that can't keep up is switched to Low-performance mode, with a card saying so.
+ * The first-game performance check: frames of the player's first game are timed, once, and on a
+ * phone that can't keep up the player is asked whether to turn on Low-performance mode.
  */
 enum class PerfCheck {
     // Still to run
     PENDING,
     // The phone kept up
     PASSED,
-    // It didn't: Low-performance mode goes on when the card is shown
+    // It didn't: the player is to be asked about Low-performance mode
     SLOW,
-    // The card was seen and the mode kept
+    // They said yes, and the mode went on
     SWITCHED,
-    // The card was seen and the effects turned back on
+    // They said no thanks
     DECLINED,
     // The player set Low-performance mode themselves before the check ran: never run
     MANUAL,

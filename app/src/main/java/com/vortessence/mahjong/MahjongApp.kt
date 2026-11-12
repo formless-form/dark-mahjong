@@ -64,7 +64,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     val gameOrigin by viewModel.gameOrigin.collectAsStateWithLifecycle()
     val puzzleDay by viewModel.puzzleDay.collectAsStateWithLifecycle()
     val puzzleStarted by viewModel.todaysPuzzleStarted.collectAsStateWithLifecycle()
-    val perfNotice by viewModel.perfNotice.collectAsStateWithLifecycle()
+    val perfQuestion by viewModel.perfQuestion.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
@@ -226,10 +226,9 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                 label = "ScreenTransition",
             ) { screen -> screenContent(screen) }
 
-            // The first-game check found this phone struggling: said between games, never over a
+            // The first-game check found this phone struggling: asked between games, never over a
             // board in play, the tutorial, Settings or the wide-board question
-            val stutterPercent = perfNotice
-            if (stutterPercent != null) {
+            if (perfQuestion) {
                 val game = gameState
                 val between = when (currentScreen) {
                     is Screen.Settings -> false
@@ -239,10 +238,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                 }
                 if (between) {
                     PerformanceNotice(
-                        stutterPercent = stutterPercent,
-                        onShown = { viewModel.perfNoticeShown() },
-                        onKeep = { viewModel.perfNoticeAnswered(keep = true) },
-                        onTurnBackOn = { viewModel.perfNoticeAnswered(keep = false) },
+                        onTurnOn = { viewModel.perfQuestionAnswered(turnOn = true) },
+                        onNoThanks = { viewModel.perfQuestionAnswered(turnOn = false) },
                     )
                 }
             }

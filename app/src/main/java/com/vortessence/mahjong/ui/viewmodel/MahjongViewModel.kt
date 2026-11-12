@@ -113,10 +113,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             !s.lowPerformance && s.phoneAnimates && !perfScene
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    /** The check found this phone struggling, with this share of frames (percent) stuttering: its card is due. */
-    val perfNotice: StateFlow<Int?> = _perfCheck
-        .map { if (it?.check == PerfCheck.SLOW) it.stutterPercent else null }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    /** The check found this phone struggling: the question of Low-performance mode is due. */
+    val perfQuestion: StateFlow<Boolean> = _perfCheck
+        .map { it?.check == PerfCheck.SLOW }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _progress = MutableStateFlow(Progress())
     val progress: StateFlow<Progress> = _progress.asStateFlow()
@@ -655,15 +655,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { prefsRepo.setPerfCheck(state, stutterPercent) }
     }
 
-    /** The check's card is on screen: Low-performance mode goes on as it says. */
-    fun perfNoticeShown() {
-        if (!_settings.value.lowPerformance) updateSettings(_settings.value.copy(lowPerformance = true))
-    }
-
-    /** The card is closed: [keep] Low-performance mode, or turn the effects back on. */
-    fun perfNoticeAnswered(keep: Boolean) {
-        val state = if (keep) PerfCheck.SWITCHED else PerfCheck.DECLINED
-        if (!keep) updateSettings(_settings.value.copy(lowPerformance = false))
+    /** The question is answered: Low-performance mode on if [turnOn], otherwise left as it is. */
+    fun perfQuestionAnswered(turnOn: Boolean) {
+        val state = if (turnOn) PerfCheck.SWITCHED else PerfCheck.DECLINED
+        if (turnOn) updateSettings(_settings.value.copy(lowPerformance = true))
         _perfCheck.value = _perfCheck.value?.copy(check = state)
         viewModelScope.launch { prefsRepo.setPerfCheck(state) }
     }

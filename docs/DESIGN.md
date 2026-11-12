@@ -207,10 +207,12 @@ Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit
     frame while the GPU finishes the last, so a smooth Pixel looked 100% late. Late against the
     phone's own deadline: the Pixel 9 Pro playing Quad by itself, perfectly smooth, has 13–17% of
     frames late, and that's not what the eye sees. With stutters, the same Pixel run has none.
-  - **The card.** It appears between games, never over a board in play or the tutorial: "Smoother
-    play on this phone". It says how often the game stuttered, switches the mode on, and offers
-    "Keep it" or "Turn effects back on". The outcome is stored as `perf_check` (with
-    `perf_check_stutters`), and the check never runs again.
+  - **The question.** Nothing is switched by itself. Between games (never over a board in play
+    or the tutorial), the player is asked "Smoother play?": the game doesn't seem to be running
+    smoothly, so would they like Low-performance mode (it can be turned off in Settings)? The
+    answers are "Yes, turn it on" and "No thanks"; Back is a no, and a tap beside the card doesn't
+    close it. An unanswered question is asked again next launch. The outcome is stored as
+    `perf_check` (with `perf_check_stutters`), and the check never runs again.
   - **Test builds.** `--ez perfCheckReset true` with a perf scene runs the check on that scene,
     and a message shows the result. `-PsideBySide=true` builds "Dark Mahjong Test" under its own
     ID, installed beside the Play copy.

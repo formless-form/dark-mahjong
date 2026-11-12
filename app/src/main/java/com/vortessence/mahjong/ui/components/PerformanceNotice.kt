@@ -16,29 +16,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import kotlin.math.roundToInt
+import androidx.compose.ui.window.DialogProperties
 
 /**
- * The first-game performance check found this phone dropping frames: Low-performance mode is
- * switched on as the card appears ([onShown]), and the player can keep it or turn the effects back
- * on. Closed any other way, the mode stays.
+ * The first-game performance check found this phone stuttering: the player is asked whether to
+ * turn on Low-performance mode. Nothing changes unless they say yes; Back is a no. A stray tap
+ * beside the card doesn't close it, so the question is never lost unanswered.
  */
 @Composable
 fun PerformanceNotice(
-    // The share of frames (percent) that stuttered in the check
-    stutterPercent: Int,
-    onShown: () -> Unit,
-    onKeep: () -> Unit,
-    onTurnBackOn: () -> Unit,
+    onTurnOn: () -> Unit,
+    onNoThanks: () -> Unit,
 ) {
-    LaunchedEffect(Unit) { onShown() }
-    Dialog(onDismissRequest = onKeep) {
+    Dialog(onDismissRequest = onNoThanks, properties = DialogProperties(dismissOnClickOutside = false)) {
         BlurBehindDialog()
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
@@ -57,35 +52,29 @@ fun PerformanceNotice(
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Smoother play on this phone",
+                    text = "Smoother play?",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = performanceNoticeText(stutterPercent),
+                    text = PERFORMANCE_QUESTION,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(24.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    BigButton("Keep it", onClick = onKeep, primary = true, icon = Icons.Rounded.Speed, modifier = Modifier.fillMaxWidth())
-                    BigButton("Turn effects back on", onClick = onTurnBackOn, icon = Icons.Rounded.LocalFireDepartment, modifier = Modifier.fillMaxWidth())
+                    BigButton("Yes, turn it on", onClick = onTurnOn, primary = true, icon = Icons.Rounded.Speed, modifier = Modifier.fillMaxWidth())
+                    BigButton("No thanks", onClick = onNoThanks, icon = Icons.Rounded.LocalFireDepartment, modifier = Modifier.fillMaxWidth())
                 }
             }
         }
     }
 }
 
-/** The card's explanation, with how often the first game stuttered. */
-fun performanceNoticeText(stutterPercent: Int): String {
-    val often = when {
-        stutterPercent >= 75 -> "almost all the time"
-        stutterPercent > 0 -> "often (about 1 frame in ${(100f / stutterPercent).roundToInt()})"
-        else -> "often"
-    }
-    return "Your first game stuttered $often on this phone. Low-performance mode is now on: the " +
-        "firelight and fireworks are off, so play stays smooth. You can change this anytime in Settings."
-}
+const val PERFORMANCE_QUESTION =
+    "The game doesn't seem to be running smoothly on your phone. Would you like to turn on " +
+        "low-performance mode? It turns off the firelight and fireworks, and can be turned off in " +
+        "Settings if you change your mind."
