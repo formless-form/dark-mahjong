@@ -7,6 +7,7 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.vortessence.mahjong.BuildConfig
 import com.vortessence.mahjong.audio.AudioManager
 import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.Constellation
@@ -104,13 +105,17 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _perfScene = MutableStateFlow(false)
 
     /**
-     * Whether the frames now being drawn count towards the first-game check: a game in play, the
-     * check still to run, the effects on (Low-performance mode and the phone's Remove animations
-     * both off).
+     * Whether the frames now being drawn count towards the first-game check: a real game in play
+     * with a full board's worth of tiles standing (never the tutorial, a small board any phone
+     * draws smoothly, which would pass a phone that lags on a full one), the check still to run,
+     * and the effects on (Low-performance mode and the phone's Remove animations both off).
      */
-    val measuringFrames: StateFlow<Boolean> = combine(_perfCheck, _currentScreen, _gameState, _settings, _perfScene) { check, screen, game, s, perfScene ->
+    val measuringFrames: StateFlow<Boolean> = combine(
+        _perfCheck, _currentScreen, _gameState, _settings,
+        combine(_perfScene, _tutorialStepIndex) { perfScene, tutorial -> perfScene || tutorial != null },
+    ) { check, screen, game, s, excluded ->
         check?.check == PerfCheck.PENDING && screen is Screen.Game && game != null && !game.isWon &&
-            !s.lowPerformance && s.phoneAnimates && !perfScene
+            game.remainingTilesCount >= PERF_CHECK_MIN_TILES && !s.lowPerformance && s.phoneAnimates && !excluded
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** The check found this phone struggling: the question of Low-performance mode is due. */
@@ -199,7 +204,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
         viewModelScope.launch {
             prefsRepo.perfCheckFlow.collect {
-                android.util.Log.i("FrameWatch", "check: $it")
+                if (BuildConfig.PERF_HOOKS) android.util.Log.i("FrameWatch", "check: $it")
                 // A test build's reset is on its way: what's stored is about to go
                 if (!perfCheckResetting) _perfCheck.value = it
             }
@@ -692,6 +697,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         audioManager.release()
     }
 }
+
+// The first-game check counts frames only while at least this many tiles stand: a full board's
+// work, not the last few pairs of one
+private const val PERF_CHECK_MIN_TILES = 60
 
 /** What Today's Puzzle is called wherever it's named. */
 const val TODAYS_PUZZLE = "Today's Puzzle"

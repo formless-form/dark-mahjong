@@ -6,6 +6,8 @@ import android.os.Looper
 import android.util.Log
 import android.view.FrameMetrics
 import android.view.Window
+import com.vortessence.mahjong.BuildConfig
+import com.vortessence.mahjong.ui.components.TileRenderer
 
 /**
  * Times the frames of the player's first game, once, for the first-game performance check: while
@@ -30,6 +32,9 @@ class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdic
     private val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
         if (!recording || Run.decided) return@OnFrameMetricsAvailableListener
         if (metrics.getMetric(FrameMetrics.FIRST_DRAW_FRAME) == 1L) return@OnFrameMetricsAvailableListener
+        // Until the tiles' images are made (in the background, slower on a slow phone), tiles are
+        // drawn shape by shape: not how the game draws, so not counted
+        if (!TileRenderer.TileAtlas.made) return@OnFrameMetricsAvailableListener
         if (metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP) < countFrom) return@OnFrameMetricsAvailableListener
         val vsync = metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP)
         val gap = if (lastVsync > 0) vsync - lastVsync else 0L
@@ -61,7 +66,7 @@ class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdic
             lastVsync = 0L
         }
         recording = on
-        Log.i(TAG, if (on) "counting frames (refresh ${refreshNs / 1000} us)" else "paused")
+        if (BuildConfig.PERF_HOOKS) Log.i(TAG, if (on) "counting frames (refresh ${refreshNs / 1000} us)" else "paused")
     }
 
     /** Stops listening (the activity is going, or the check is done). */

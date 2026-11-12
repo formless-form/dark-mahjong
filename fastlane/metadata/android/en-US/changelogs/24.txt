@@ -1,0 +1,5 @@
+New in 1.4.11:
+• Faster, smoother graphics
+• If the game isn't running smoothly on your phone, it offers to turn on low-performance mode
+• Warmer lamp light, and brighter boards when played sideways
+• 2 new pyramid layouts

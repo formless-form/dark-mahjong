@@ -888,6 +888,9 @@ object TileRenderer {
         @Volatile
         private var baked: Baked? = null
 
+        /** Some images are made, so tiles are stamped from them (the game's usual drawing). */
+        val made: Boolean get() = baked != null
+
         @Volatile
         private var wanted = 0
         private val worker = Executors.newSingleThreadExecutor { Thread(it, "tile-atlas").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
