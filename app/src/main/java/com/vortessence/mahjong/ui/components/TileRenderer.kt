@@ -101,11 +101,11 @@ object TileRenderer {
             scope, boardTile, ix, iy, iw, ih, isSelected, isHinted, isBlockedHighlight,
             isTutorialHighlight, highlightFreeTiles, glare, shadows, hintStrength, live,
         )
-        if (rightAway > 0f || belowAway > 0f) drawSidesAway(scope, rightAway, belowAway, ix, iy, iw, ih)
-        if (seams != null) drawSeams(scope, seams, ix, iy, iw, ih)
+        if ((rightAway > 0f || belowAway > 0f) && !PerfSwitches.isOff("sides")) drawSidesAway(scope, rightAway, belowAway, ix, iy, iw, ih)
+        if (seams != null && !PerfSwitches.isOff("seams")) drawSeams(scope, seams, ix, iy, iw, ih)
         // Lower layers a shade darker; a highlighted or selected tile keeps its colour true
         val highlighted = isSelected || isHinted || isBlockedHighlight || isTutorialHighlight
-        if (layerShade > 0f && !highlighted) {
+        if (layerShade > 0f && !highlighted && !PerfSwitches.isOff("layershade")) {
             scope.drawRoundRect(
                 color = Color.Black.copy(alpha = layerShade),
                 topLeft = Offset(ix, iy),
@@ -329,7 +329,7 @@ object TileRenderer {
         val tintAlpha = if (isImportantHighlight) 0.5f * strength else 0.15f
 
         // 1. Physically Grounded 3D Shadows
-        drawRestingShadows(scope, boardTile.z, x, y, width, height, shadows)
+        if (!PerfSwitches.isOff("rest")) drawRestingShadows(scope, boardTile.z, x, y, width, height, shadows)
         if (isSelected) drawGoldGlow(scope, x, y, width, height)
 
         // Tiles are stamped from the atlas, highlighted ones too: their bodies come tinted

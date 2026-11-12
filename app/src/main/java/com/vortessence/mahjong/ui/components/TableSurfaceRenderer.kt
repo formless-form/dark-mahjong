@@ -386,7 +386,7 @@ half4 main(float2 p) {
             TableSurface.SLATE -> 0.18f
             TableSurface.GREEN_MAT -> 0f
         }
-        if (gloss > 0f) {
+        if (gloss > 0f && !PerfSwitches.isOff("gloss")) {
             val g = glossShader ?: RuntimeShader(TABLE_GLOSS_AGSL).also { glossShader = it }
             setCameraUniforms(g, width, height, zoom, pan)
             flame.setUniforms(g)
