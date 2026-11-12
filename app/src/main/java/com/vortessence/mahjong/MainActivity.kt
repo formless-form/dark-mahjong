@@ -13,6 +13,7 @@ package com.vortessence.mahjong
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -69,7 +70,14 @@ class MainActivity : ComponentActivity() {
         }
         // The first-game performance check: frames are timed while a game is in play, until it
         // has decided (once per install)
-        frameWatch = FrameWatch(window) { viewModel.onFrameVerdict(it) }
+        frameWatch = FrameWatch(window) { verdict ->
+            viewModel.onFrameVerdict(verdict)
+            // Test builds say how it went, so a phone that passes (and gets no card) shows it too
+            if (BuildConfig.PERF_HOOKS) {
+                val result = if (verdict.struggling) "struggling" else "passed"
+                Toast.makeText(this, "Frame check: $result (${verdict.fps} fps)", Toast.LENGTH_LONG).show()
+            }
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 try {
