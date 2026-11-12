@@ -67,9 +67,10 @@ class PreferencesRepository(private val context: Context) {
         // Which level numbering the stored highest level is in: 2 since levels were ordered by
         // measured difficulty (absent means the order before)
         val LEVEL_ORDER = intPreferencesKey("level_order")
-        // The first-game performance check (PerfCheck's names) and the frame rate it found
+        // The first-game performance check (PerfCheck's names) and the share of frames (percent)
+        // that stuttered
         val PERF_CHECK = stringPreferencesKey("perf_check")
-        val PERF_CHECK_FPS = intPreferencesKey("perf_check_fps")
+        val PERF_CHECK_STUTTERS = intPreferencesKey("perf_check_stutters")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
@@ -128,14 +129,14 @@ class PreferencesRepository(private val context: Context) {
     val perfCheckFlow: Flow<PerfCheckState> = data.map { prefs ->
         val state = prefs[Keys.PERF_CHECK]?.let { name -> PerfCheck.entries.firstOrNull { it.name == name } }
             ?: if (prefs[Keys.LOW_PERFORMANCE] != null) PerfCheck.MANUAL else PerfCheck.PENDING
-        PerfCheckState(state, prefs[Keys.PERF_CHECK_FPS] ?: 0)
+        PerfCheckState(state, prefs[Keys.PERF_CHECK_STUTTERS] ?: 0)
     }.distinctUntilChanged()
 
-    /** The check's outcome, and the frame rate it found. */
-    suspend fun setPerfCheck(state: PerfCheck, fps: Int? = null) {
+    /** The check's outcome, and the share of frames (percent) that stuttered. */
+    suspend fun setPerfCheck(state: PerfCheck, stutterPercent: Int? = null) {
         write { prefs ->
             prefs[Keys.PERF_CHECK] = state.name
-            if (fps != null) prefs[Keys.PERF_CHECK_FPS] = fps
+            if (stutterPercent != null) prefs[Keys.PERF_CHECK_STUTTERS] = stutterPercent
         }
     }
 
@@ -143,7 +144,7 @@ class PreferencesRepository(private val context: Context) {
     suspend fun resetPerfCheck() {
         write { prefs ->
             prefs.remove(Keys.PERF_CHECK)
-            prefs.remove(Keys.PERF_CHECK_FPS)
+            prefs.remove(Keys.PERF_CHECK_STUTTERS)
             prefs.remove(Keys.LOW_PERFORMANCE)
         }
     }

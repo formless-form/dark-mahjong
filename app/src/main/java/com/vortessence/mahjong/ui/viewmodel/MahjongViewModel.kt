@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -112,9 +113,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             !s.lowPerformance && s.phoneAnimates && !perfScene
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    /** The check found this phone struggling, at this many frames a second: its card is due. */
+    /** The check found this phone struggling, with this share of frames (percent) stuttering: its card is due. */
     val perfNotice: StateFlow<Int?> = _perfCheck
-        .map { if (it?.check == PerfCheck.SLOW) it.fps else null }
+        .map { if (it?.check == PerfCheck.SLOW) it.stutterPercent else null }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _progress = MutableStateFlow(Progress())
@@ -649,8 +650,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     fun onFrameVerdict(verdict: FrameVerdict) {
         if (_perfCheck.value?.check != PerfCheck.PENDING) return
         val state = if (verdict.struggling) PerfCheck.SLOW else PerfCheck.PASSED
-        _perfCheck.value = PerfCheckState(state, verdict.fps)
-        viewModelScope.launch { prefsRepo.setPerfCheck(state, verdict.fps) }
+        val stutterPercent = (verdict.stutterShare * 100).roundToInt()
+        _perfCheck.value = PerfCheckState(state, stutterPercent)
+        viewModelScope.launch { prefsRepo.setPerfCheck(state, stutterPercent) }
     }
 
     /** The check's card is on screen: Low-performance mode goes on as it says. */

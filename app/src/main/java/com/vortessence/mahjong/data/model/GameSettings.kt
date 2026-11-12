@@ -67,4 +67,5 @@ enum class PerfCheck {
     MANUAL,
 }
 
-data class PerfCheckState(val check: PerfCheck = PerfCheck.PENDING, val fps: Int = 0)
+// [stutterPercent]: the share of frames that stuttered in the check
+data class PerfCheckState(val check: PerfCheck = PerfCheck.PENDING, val stutterPercent: Int = 0)

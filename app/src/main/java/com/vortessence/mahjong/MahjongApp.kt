@@ -228,8 +228,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
 
             // The first-game check found this phone struggling: said between games, never over a
             // board in play, the tutorial, Settings or the wide-board question
-            val fps = perfNotice
-            if (fps != null) {
+            val stutterPercent = perfNotice
+            if (stutterPercent != null) {
                 val game = gameState
                 val between = when (currentScreen) {
                     is Screen.Settings -> false
@@ -239,7 +239,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                 }
                 if (between) {
                     PerformanceNotice(
-                        fps = fps,
+                        stutterPercent = stutterPercent,
                         onShown = { viewModel.perfNoticeShown() },
                         onKeep = { viewModel.perfNoticeAnswered(keep = true) },
                         onTurnBackOn = { viewModel.perfNoticeAnswered(keep = false) },

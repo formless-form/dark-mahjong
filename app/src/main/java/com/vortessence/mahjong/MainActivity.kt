@@ -75,7 +75,13 @@ class MainActivity : ComponentActivity() {
             // Test builds say how it went, so a phone that passes (and gets no card) shows it too
             if (BuildConfig.PERF_HOOKS) {
                 val result = if (verdict.struggling) "struggling" else "passed"
-                Toast.makeText(this, "Frame check: $result (${verdict.fps} fps)", Toast.LENGTH_LONG).show()
+                fun pct(share: Float) = "${(share * 100).toInt()}%"
+                Toast.makeText(
+                    this,
+                    "Frame check: $result. Stutters ${pct(verdict.stutterShare)}, late ${pct(verdict.lateShare)}, " +
+                        "very late ${pct(verdict.veryLateShare)}",
+                    Toast.LENGTH_LONG,
+                ).show()
             }
         }
         lifecycleScope.launch {

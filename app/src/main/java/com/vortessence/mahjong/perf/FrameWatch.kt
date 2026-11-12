@@ -21,17 +21,20 @@ class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdic
     // phone while its drawing is set up, and the first second back at the table after a pause
     @Volatile private var countFrom = Long.MAX_VALUE
     @Volatile private var recording = false
-    // Each frame's time: one refresh of the screen, but never less than a 60th of a second, since
-    // the app asks for 60 frames a second at most (a screen with no 60 Hz mode runs faster than the
-    // game needs). Not the frame's own reported deadline, which some devices (the emulator) set
-    // many refreshes long
-    @Volatile private var budgetNs = SIXTY_HZ_NS
+    // One refresh of the screen, but never less than a 60th of a second, since the app asks for 60
+    // frames a second at most (a screen with no 60 Hz mode runs faster than the game needs)
+    @Volatile private var refreshNs = SIXTY_HZ_NS
+    // The vsync of the last frame counted (on the listener's thread), 0 after a pause
+    @Volatile private var lastVsync = 0L
 
     private val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
         if (!recording || Run.decided) return@OnFrameMetricsAvailableListener
         if (metrics.getMetric(FrameMetrics.FIRST_DRAW_FRAME) == 1L) return@OnFrameMetricsAvailableListener
         if (metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP) < countFrom) return@OnFrameMetricsAvailableListener
-        Run.tally.add(metrics.getMetric(FrameMetrics.TOTAL_DURATION), budgetNs)
+        val vsync = metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP)
+        val gap = if (lastVsync > 0) vsync - lastVsync else 0L
+        lastVsync = vsync
+        Run.tally.add(metrics.getMetric(FrameMetrics.TOTAL_DURATION), metrics.getMetric(FrameMetrics.DEADLINE), refreshNs, gap)
         val verdict = Run.tally.verdict() ?: return@OnFrameMetricsAvailableListener
         Run.decided = true
         Log.i(TAG, "verdict: $verdict")
@@ -51,13 +54,14 @@ class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdic
                 window.addOnFrameMetricsAvailableListener(listener, Handler(t.looper))
             }
             val refresh = window.decorView.display?.refreshRate ?: 60f
-            budgetNs = maxOf((1e9 / refresh).toLong(), SIXTY_HZ_NS)
+            refreshNs = maxOf((1e9 / refresh).toLong(), SIXTY_HZ_NS)
             val skip = if (Run.warmedUp) RESUME_SKIP_NS else WARM_UP_NS
             Run.warmedUp = true
             countFrom = System.nanoTime() + skip
+            lastVsync = 0L
         }
         recording = on
-        Log.i(TAG, if (on) "counting frames (budget ${budgetNs / 1000} us)" else "paused")
+        Log.i(TAG, if (on) "counting frames (refresh ${refreshNs / 1000} us)" else "paused")
     }
 
     /** Stops listening (the activity is going, or the check is done). */

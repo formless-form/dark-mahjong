@@ -197,15 +197,23 @@ Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit
 - **Low-performance mode, switched on by itself where needed** (2026-11-12, `perf/FrameWatch`,
   `perf/FrameTally`). The frames of the player's first game in play are timed once per install,
   existing players included (unless they set the switch themselves). Timing skips the first
-  5 seconds and stops at 600 frames, or at 45 seconds of drawing with at least 60 frames. Each
-  frame's budget is one screen refresh, never less than a 60th of a second. The frame's reported
-  deadline isn't used: the emulator sets it at 150 ms. If 25% of frames run late, or 10% take
-  over twice their budget, the phone is judged to be struggling. A card then appears between
-  games (never over a board in play or the tutorial): "Smoother play on this phone". It names
-  the frame rate found, switches the mode on, and offers "Keep it" or "Turn effects back on".
-  The outcome is stored as `perf_check`, and the check never runs again. In test builds,
-  `--ez perfCheckReset true` with a perf scene runs the check on that scene. `-PsideBySide=true`
-  builds "Dark Mahjong Test" under its own ID, installed beside the Play copy.
+  5 seconds and stops at 600 frames, or at 45 seconds of play with at least 60 frames.
+  - **Judged by eye, by stutters.** Steady motion at 20–30 fps looks smooth (the firelight itself
+    redraws at 20). A stutter is a frame that missed the deadline the phone gave it and left the
+    last picture up over 60 ms, a moment below about 17 fps. A long gap before an on-time frame is
+    only a pause in play. A phone is judged to be struggling when 15% of frames stutter. Late
+    frames are logged too, but don't decide.
+  - **Measures tried and dropped.** Each frame's time against one refresh: phones prepare one
+    frame while the GPU finishes the last, so a smooth Pixel looked 100% late. Late against the
+    phone's own deadline: the Pixel 9 Pro playing Quad by itself, perfectly smooth, has 13–17% of
+    frames late, and that's not what the eye sees. With stutters, the same Pixel run has none.
+  - **The card.** It appears between games, never over a board in play or the tutorial: "Smoother
+    play on this phone". It says how often the game stuttered, switches the mode on, and offers
+    "Keep it" or "Turn effects back on". The outcome is stored as `perf_check` (with
+    `perf_check_stutters`), and the check never runs again.
+  - **Test builds.** `--ez perfCheckReset true` with a perf scene runs the check on that scene,
+    and a message shows the result. `-PsideBySide=true` builds "Dark Mahjong Test" under its own
+    ID, installed beside the Play copy.
 - Still to do: a Baseline Profile for fast cold start; perhaps a cheaper fire-shadow trace for weaker GPUs.
 
 ## Updates

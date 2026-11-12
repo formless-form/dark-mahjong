@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import kotlin.math.roundToInt
 
 /**
  * The first-game performance check found this phone dropping frames: Low-performance mode is
@@ -30,7 +31,8 @@ import androidx.compose.ui.window.Dialog
  */
 @Composable
 fun PerformanceNotice(
-    fps: Int,
+    // The share of frames (percent) that stuttered in the check
+    stutterPercent: Int,
     onShown: () -> Unit,
     onKeep: () -> Unit,
     onTurnBackOn: () -> Unit,
@@ -62,7 +64,7 @@ fun PerformanceNotice(
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = performanceNoticeText(fps),
+                    text = performanceNoticeText(stutterPercent),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -77,9 +79,13 @@ fun PerformanceNotice(
     }
 }
 
-/** The card's explanation, with the frame rate the check found. */
-fun performanceNoticeText(fps: Int): String {
-    val rate = if (fps in 1..59) " (about $fps frames a second, where 60 is smooth)" else ""
-    return "Your first game was dropping frames$rate. Low-performance mode is now on: the firelight " +
-        "and fireworks are off, so play stays smooth. You can change this anytime in Settings."
+/** The card's explanation, with how often the first game stuttered. */
+fun performanceNoticeText(stutterPercent: Int): String {
+    val often = when {
+        stutterPercent >= 75 -> "almost all the time"
+        stutterPercent > 0 -> "often (about 1 frame in ${(100f / stutterPercent).roundToInt()})"
+        else -> "often"
+    }
+    return "Your first game stuttered $often on this phone. Low-performance mode is now on: the " +
+        "firelight and fireworks are off, so play stays smooth. You can change this anytime in Settings."
 }
