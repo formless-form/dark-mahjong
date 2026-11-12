@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import java.util.concurrent.Executors
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.min
+import androidx.compose.ui.graphics.asAndroidPath
 import android.graphics.Paint
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -101,8 +103,18 @@ object TileRenderer {
             scope, boardTile, ix, iy, iw, ih, isSelected, isHinted, isBlockedHighlight,
             isTutorialHighlight, highlightFreeTiles, glare, shadows, hintStrength, live,
         )
-        if ((rightAway > 0f || belowAway > 0f) && !PerfSwitches.isOff("sides")) drawSidesAway(scope, rightAway, belowAway, ix, iy, iw, ih)
-        if (seams != null && !PerfSwitches.isOff("seams")) drawSeams(scope, seams, ix, iy, iw, ih)
+        // The sides' shading is stamped from the atlas's wall masks: clipping each tile to its
+        // curved sides, under the camera's perspective, cost most of a frame (2026-11-12). Drawn
+        // clipped only until the atlas is ready (or when told to, to compare)
+        val walls = if (live || PerfSwitches.isOff("atlas") || PerfSwitches.isOff("wallstamps")) null else TileAtlas.ready(iw)
+        if ((rightAway > 0f || belowAway > 0f) && !PerfSwitches.isOff("sides")) {
+            if (walls != null) walls.stampSidesAway(scope, ix, iy, iw, rightAway, belowAway)
+            else drawSidesAway(scope, rightAway, belowAway, ix, iy, iw, ih)
+        }
+        if (seams != null && !PerfSwitches.isOff("seams")) {
+            if (walls != null) walls.stampSeams(scope, boardTile.id, seams, ix, iy, iw, ih)
+            else drawSeams(scope, seams, ix, iy, iw, ih)
+        }
         // Lower layers a shade darker; a highlighted or selected tile keeps its colour true
         val highlighted = isSelected || isHinted || isBlockedHighlight || isTutorialHighlight
         if (layerShade > 0f && !highlighted && !PerfSwitches.isOff("layershade")) {
@@ -228,19 +240,122 @@ object TileRenderer {
     }
 
     // The sides' outline for a tile iw x ih, at the origin: the tile and its sides swept down
-    // and to the right, less its face. Made once for each tile size
+    // and to the right, less its face. Made once for each tile size (main thread)
     private fun sidesOutline(iw: Float, ih: Float, depthX: Float, depthY: Float): Path {
         val made = sidesPath
         if (made != null && sidesW == iw && sidesH == ih) return made
-        val r = CornerRadius(iw * 0.085f)
-        val whole = Path().apply { addRoundRect(RoundRect(0f, 0f, iw + depthX, ih + depthY, r)) }
-        val face = Path().apply { addRoundRect(RoundRect(0f, 0f, iw, ih, r)) }
-        val sides = Path().apply { op(whole, face, PathOperation.Difference) }
+        val sides = newSidesOutline(iw, ih, depthX, depthY)
         sidesPath = sides
         sidesW = iw
         sidesH = ih
         return sides
     }
+
+    private fun newSidesOutline(iw: Float, ih: Float, depthX: Float, depthY: Float): Path {
+        val r = CornerRadius(iw * 0.085f)
+        val whole = Path().apply { addRoundRect(RoundRect(0f, 0f, iw + depthX, ih + depthY, r)) }
+        val face = Path().apply { addRoundRect(RoundRect(0f, 0f, iw, ih, r)) }
+        return Path().apply { op(whole, face, PathOperation.Difference) }
+    }
+
+    /**
+     * One of the two walls the camera sees, as an alpha mask over the body's image (tile at
+     * [pad], [w] x [h]): the right wall if [right], else the lower. Each holds its share of the
+     * rounded corner between them, by angle, as drawSidesAway's sweep turns from one to the other;
+     * the two together cover the sides once. Stamped at a side's darkness, or through a seam's
+     * gradient, they shade the walls with no clipping at all.
+     */
+    private fun wallMask(right: Boolean, bodyW: Int, bodyH: Int, pad: Float, w: Float, h: Float): Bitmap {
+        val depthX = w * BoardTransform.LAYER_SHIFT_FACTOR_X
+        val depthY = h * BoardTransform.LAYER_SHIFT_FACTOR_Y
+        val r = w * 0.085f
+        val bitmap = Bitmap.createBitmap(bodyW, bodyH, Bitmap.Config.ALPHA_8)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.translate(pad, pad)
+        canvas.clipPath(newSidesOutline(w, h, depthX, depthY).asAndroidPath())
+        // One rectangle each, its weight a single sweep about the corner's centre (angles clockwise
+        // from facing right): the right wall whole above the corner (facing up, 0.75 to 1), fading
+        // to nothing as the corner turns to face down (0 to 0.25); the lower wall the other way,
+        // whole to the left of the corner (0.25 to 0.5). Drawn as one shape, so no join shows
+        // where a straight wall meets its corner
+        val solid = android.graphics.Color.BLACK
+        val clear = android.graphics.Color.TRANSPARENT
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.shader = if (right) {
+            android.graphics.SweepGradient(w - r, h - r, intArrayOf(solid, clear, clear, solid, solid), floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f))
+        } else {
+            android.graphics.SweepGradient(w - r, h - r, intArrayOf(clear, solid, solid, clear, clear), floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f))
+        }
+        if (right) canvas.drawRect(w - r, -1f, w + depthX + 1f, h + depthY + 1f, paint)
+        else canvas.drawRect(-1f, h - r, w + depthX + 1f, h + depthY + 1f, paint)
+        bitmap.setHasMipMap(true)
+        return bitmap
+    }
+
+    /**
+     * A seam's shade along one side ([SEAM_RIGHT] or [SEAM_BOTTOM]) of the tile at ([ix], [iy]),
+     * [iw] x [ih], from [from] to [to] along it, as drawSeams draws it: fading in over a corner's
+     * length where it starts partway along, out where it ends partway, and on through the corner
+     * where it reaches the end (the wall mask gives the corner its share). Clear beyond, so it can
+     * be stamped through the whole wall's mask.
+     */
+    private fun seamGradient(side: Int, from: Float, to: Float, ix: Float, iy: Float, iw: Float, ih: Float): android.graphics.Shader? {
+        val vertical = side == SEAM_RIGHT
+        val r = iw * 0.085f
+        val length = if (vertical) ih else iw
+        val depth = if (vertical) ih * BoardTransform.LAYER_SHIFT_FACTOR_Y else iw * BoardTransform.LAYER_SHIFT_FACTOR_X
+        val toCorner = to >= 1f
+        // The straight stretch as drawSeams has it (to the corner's start where it runs on into it)
+        val start = from * length
+        val stretchEnd = if (toCorner) length - r else to * length
+        if (!toCorner && stretchEnd <= start) return null
+        val fade = (stretchEnd - start).coerceAtLeast(0f).let { min(r, it / 2f) }
+        val first = if (toCorner) min(start, length - r) else start
+        // Running into the corner, the shade carries on to the wall's far edge
+        val last = if (toCorner) length + depth else stretchEnd
+        val shade = android.graphics.Color.argb((SIDE_SHADOW * 255f).roundToInt(), 0, 0, 0)
+        val clear = android.graphics.Color.TRANSPARENT
+        val span = (last - first).coerceAtLeast(1e-3f)
+        val fadeIn = from > 0f
+        val colours = intArrayOf(if (fadeIn) clear else shade, shade, shade, if (toCorner) shade else clear)
+        val stops = floatArrayOf(0f, if (fadeIn) fade / span else 0f, if (toCorner) 1f else 1f - fade / span, 1f)
+        val origin = if (vertical) iy else ix
+        return if (vertical) {
+            android.graphics.LinearGradient(0f, origin + first, 0f, origin + last, colours, stops, android.graphics.Shader.TileMode.CLAMP)
+        } else {
+            android.graphics.LinearGradient(origin + first, 0f, origin + last, 0f, colours, stops, android.graphics.Shader.TileMode.CLAMP)
+        }
+    }
+
+    // A tile's seam gradients, kept while its seams and its place on the table hold (they change
+    // only when tiles are matched and the board re-fits): main thread
+    private class SeamShaders(
+        val seams: FloatArray, val ix: Float, val iy: Float, val iw: Float, val ih: Float,
+        // Per seam: whether it runs along the right side, and its gradient
+        val right: BooleanArray, val shaders: Array<android.graphics.Shader>,
+    )
+
+    private val seamShaders = HashMap<Int, SeamShaders>()
+
+    private fun seamShadersFor(id: Int, seams: FloatArray, ix: Float, iy: Float, iw: Float, ih: Float): SeamShaders {
+        val kept = seamShaders[id]
+        if (kept != null && kept.seams === seams && kept.ix == ix && kept.iy == iy && kept.iw == iw && kept.ih == ih) return kept
+        val right = ArrayList<Boolean>()
+        val shaders = ArrayList<android.graphics.Shader>()
+        var i = 0
+        while (i + 2 < seams.size) {
+            val side = seams[i].toInt()
+            seamGradient(side, seams[i + 1], seams[i + 2], ix, iy, iw, ih)?.let {
+                right += side == SEAM_RIGHT
+                shaders += it
+            }
+            i += 3
+        }
+        if (seamShaders.size > SEAM_CACHE_MAX) seamShaders.clear()
+        return SeamShaders(seams, ix, iy, iw, ih, right.toBooleanArray(), shaders.toTypedArray()).also { seamShaders[id] = it }
+    }
+
+    private const val SEAM_CACHE_MAX = 512
 
     private var sidesPath: Path? = null
     private var sidesW = 0f
@@ -687,7 +802,43 @@ object TileRenderer {
             private val art: Map<Tile, Bitmap>,
             private val surfaces: Array<Bitmap>,
             private val glares: Array<Bitmap>,
+            // The right and lower walls' masks (wallMask), over the body's image
+            private val wallRight: Bitmap,
+            private val wallBelow: Bitmap,
         ) {
+            // Where the body's image (and so the walls' masks) goes for a tile at (x, y), width wide
+            private fun bodyRect(x: Float, y: Float, width: Float, body: Bitmap) {
+                val k = width / this.width
+                stampRect.set(x - pad * k, y - pad * k, x - pad * k + body.width * k, y - pad * k + body.height * k)
+            }
+
+            /** The right and lower sides darkened by [right] and [below], for facing away from the light. */
+            internal fun stampSidesAway(scope: DrawScope, x: Float, y: Float, width: Float, right: Float, below: Float) {
+                val canvas = scope.drawContext.canvas.nativeCanvas
+                bodyRect(x, y, width, wallRight)
+                if (right > 0f) {
+                    wallPaint.alpha = (right.coerceIn(0f, 1f) * 255f).roundToInt()
+                    canvas.drawBitmap(wallRight, null, stampRect, wallPaint)
+                }
+                if (below > 0f) {
+                    wallPaint.alpha = (below.coerceIn(0f, 1f) * 255f).roundToInt()
+                    canvas.drawBitmap(wallBelow, null, stampRect, wallPaint)
+                }
+            }
+
+            /** The tile's seams ([MahjongBoard]'s), each its wall's mask stamped through its gradient. */
+            internal fun stampSeams(scope: DrawScope, id: Int, seams: FloatArray, x: Float, y: Float, width: Float, height: Float) {
+                val shaders = seamShadersFor(id, seams, x, y, width, height)
+                if (shaders.shaders.isEmpty()) return
+                val canvas = scope.drawContext.canvas.nativeCanvas
+                bodyRect(x, y, width, wallRight)
+                for (i in shaders.shaders.indices) {
+                    seamPaint.shader = shaders.shaders[i]
+                    canvas.drawBitmap(if (shaders.right[i]) wallRight else wallBelow, null, stampRect, seamPaint)
+                }
+                seamPaint.shader = null
+            }
+
             /**
              * Stamps [tile] at ([x], [y]), its body tinted by [highlight] as strongly as
              * [strength] (and with free tiles' green if [free]), the selection's gold over its
@@ -798,7 +949,9 @@ object TileRenderer {
             val glares = Array(TileWear.LOOKS) { look ->
                 image(width, ih) { drawGlaze(this, look, face.topLeft, face.size, w, 1f, GlazePart.GLARE) }
             }
-            baked = Baked(width, pad, bodies, art, surfaces, glares)
+            val wallRight = wallMask(right = true, bodyW, bodyH, pad.toFloat(), w, h)
+            val wallBelow = wallMask(right = false, bodyW, bodyH, pad.toFloat(), w, h)
+            baked = Baked(width, pad, bodies, art, surfaces, glares, wallRight, wallBelow)
         }
 
         // Every face once: a Season or Flower of each kind, a dragon of each colour, and so on
@@ -810,6 +963,8 @@ object TileRenderer {
         private val stampPaint = Paint(Paint.FILTER_BITMAP_FLAG)
         private val tintPaint = Paint(Paint.FILTER_BITMAP_FLAG)
         private val glarePaint = Paint(Paint.FILTER_BITMAP_FLAG)
+        private val wallPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { color = android.graphics.Color.BLACK }
+        private val seamPaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
         private const val STEP = 16
         // Enough for tiles a little magnified; zoomed right in they soften slightly, which keeps the

@@ -69,6 +69,10 @@ android {
                 it.systemProperty("robolectric.graphicsMode", "NATIVE")
                 it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
                 it.systemProperty("roborazzi.test.record", "true")
+                // PerfPreview: -PperfSet=<folder> names the renders' set, -PperfOff=<stages> switches
+                // drawing stages off in every render (as the test builds' perfOff), to compare
+                findProperty("perfSet")?.let { v -> it.systemProperty("perfSet", v) }
+                findProperty("perfOff")?.let { v -> it.systemProperty("perfOff", v) }
                 it.maxHeapSize = "3g"
                 // Robolectric reaches into FileDescriptor internals, which newer JDKs lock down
                 it.jvmArgs(

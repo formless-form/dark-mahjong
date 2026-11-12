@@ -194,6 +194,20 @@ Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit
     - With a hint showing, the median frame is 26 → 21 ms and the 99th percentile 44 → 31 ms.
     - Matches are unchanged (GPU about 10 ms at full clock).
 - **Test builds** (`tools/deploy-to-phone.sh`, `-PperfHooks=true`) can be told over adb to open a fixed deal, switch drawing stages off, set the fire's rate or play matches by themselves, for measuring; Play builds never can.
+- **The sides' shading is stamped, not clipped** (2026-11-12). The side shading added on 1 Nov
+  (seams against neighbours, and walls facing away from the light) clipped every tile to its
+  curved sides' outline twice, under the camera's perspective. That cost most of a frame. The
+  atlas now holds two alpha masks of the walls, right and lower, each with its share of the
+  rounded corner by angle. A side's darkness is the mask stamped at that alpha, and a seam is the
+  mask stamped through a gradient that holds its stretch and faded ends. There are no clips.
+  - **Measured** on the Pixel 9 Pro (Quad, fire lit, walnut): at rest, the render thread went from
+    21.8 to 8.4 ms and the GPU from 42.6 to 22.2 ms (p90 51.8 to 30.1). With matches playing,
+    render 15.1 to 7.0 ms and GPU p90 41.6 to 22.3 ms.
+  - **The look** matches the clipped version pixel for pixel, except the first row of each wall.
+    That row is now shaded fully, as the wall drawn there is; the clip's edge sat half a pixel
+    off it.
+  - **Fallback:** the clipped drawing remains until the atlas is ready, and under the test-only
+    switch `wallstamps`, for comparing.
 - **Low-performance mode, switched on by itself where needed** (2026-11-12, `perf/FrameWatch`,
   `perf/FrameTally`). The frames of the player's first game in play are timed once per install,
   existing players included (unless they set the switch themselves). Timing skips the first

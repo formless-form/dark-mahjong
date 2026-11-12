@@ -25,7 +25,7 @@ import kotlin.random.Random
  * Fixed deals of big layouts at a fixed moment of the fire, at the Pixel 9 Pro's size, for
  * comparing the look before and after rendering changes. Rendered into build/perf-preview/<set>,
  * where <set> is the system property perfSet (default "current").
- * Run: ./gradlew testFossDebugUnitTest --tests '*PerfPreview*'
+ * Run: ./gradlew testFossDebugUnitTest --tests '*PerfPreview*' [-PperfSet=name] [-PperfOff=stage,stage]
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")
@@ -46,7 +46,7 @@ class PerfPreview {
         // Every tile taken away, as after a win
         cleared: Boolean = false,
     ) {
-        PerfSwitches.off = off
+        PerfSwitches.off = off + (System.getProperty("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList())
         TileWear.prepareNow()
         TileRenderer.TileAtlas.bakeInline = true
         val constellation = ConstellationRepository.constellations.first { it.name == layout }
