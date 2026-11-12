@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vortessence.mahjong.BuildConfig
 import com.vortessence.mahjong.audio.AudioManager
+import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.ContinueInfo
@@ -118,6 +119,24 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             game.remainingTilesCount >= PERF_CHECK_MIN_TILES && !s.lowPerformance && s.phoneAnimates && !excluded
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /**
+     * The board on the table was dealt (or carried on) since the check's verdict and hasn't been
+     * touched: the question may open over it, as the board comes up, but never while it is being
+     * looked at or played, under a finger about to tap.
+     */
+    private val _boardFresh = MutableStateFlow(true)
+    val boardFresh: StateFlow<Boolean> = _boardFresh.asStateFlow()
+
+    /** A new deal (or the same one again): counted, so the board starts afresh (its zoom too). */
+    private val _deal = MutableStateFlow(0)
+    val deal: StateFlow<Int> = _deal.asStateFlow()
+
+    private fun newDeal() {
+        stopFinishing()
+        _deal.value++
+        _boardFresh.value = true
+    }
+
     /** The check found this phone struggling: the question of Low-performance mode is due. */
     val perfQuestion: StateFlow<Boolean> = _perfCheck
         .map { it?.check == PerfCheck.SLOW }
@@ -180,6 +199,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { prefsRepo.migrateLevelOrder() }
         // Hints became earned: players from before start with 2
         viewModelScope.launch { prefsRepo.migrateHints() }
+        // The check's verdict and Low-performance mode belong to this phone, not one restored from
+        viewModelScope.launch { prefsRepo.namePerfPhone() }
         // Collect settings. While the player's own changes are still being written, what's read
         // back is older than what they see, so it waits until the writes are done
         viewModelScope.launch {
@@ -256,6 +277,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 _puzzleDay.value = saved.puzzleDay
                 _gameState.value = restored
                 _tutorialStepIndex.value = TutorialScript.resumeStep(restored, saved.tutorialStep)
+                newDeal()
                 _gameOrigin.value = Screen.MainMenu
                 _currentScreen.value = Screen.Game
             }
@@ -290,16 +312,20 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             saved != null && saved.puzzleDay == today && saved.tiles.any { !it.isRemoved } -> {
                 _gameState.value = saved.toGameState()
                 _winMessage.value = null
-        _firstRibbon.value = false
+                _firstRibbon.value = false
                 _tutorialStepIndex.value = null
+                newDeal()
             }
             else -> {
                 _gameState.value = TodaysPuzzle.dealOn(today)
                 _winMessage.value = null
-        _firstRibbon.value = false
+                _firstRibbon.value = false
                 _tutorialStepIndex.value = null
+                newDeal()
             }
         }
+        // Today's Puzzle, not a Quick Game: its win card offers no "Another?"
+        _quickGame.value = false
         _currentLevelIndex.value = null
         _puzzleDay.value = today
         saveCurrentGame()
@@ -382,6 +408,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _firstRibbon.value = false
         _gameState.value = state
         _tutorialStepIndex.value = if (TutorialScript.isTutorial(state)) 0 else null
+        newDeal()
         saveCurrentGame()
     }
 
@@ -407,6 +434,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _finishing = MutableStateFlow(false)
     val finishing: StateFlow<Boolean> = _finishing.asStateFlow()
     private var finishJob: Job? = null
+
+    // A new deal stops a finish still taking the old one's pairs
+    private fun stopFinishing() {
+        finishJob?.cancel()
+        finishJob = null
+        _finishing.value = false
+    }
 
     fun finish() {
         val start = _gameState.value ?: return
@@ -440,6 +474,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private fun tap(tileId: Int) {
         val current = _gameState.value ?: return
         if (current.isWon) return
+        _boardFresh.value = false
 
         val step = currentTutorialStep
         if (step != null && !TutorialScript.isTapAllowed(step, tileId)) return
@@ -549,22 +584,30 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private var hintSearch: Job? = null
+    // The tiles the search under way is for
+    private var hintSearchTiles: List<BoardTile>? = null
 
     fun requestHint() {
         if (_tutorialStepIndex.value != null) return
         val current = _gameState.value ?: return
         if (current.isWon) return
+        _boardFresh.value = false
         // The pair already shown is shown again, free; a new one costs a hint (the screen
-        // doesn't ask with none left)
+        // doesn't ask with none left). The tutorial's free play gives them free, as it promises
         if (current.hintPair != null) return
-        if (_progress.value.hints <= 0) return
+        val free = TutorialScript.isTutorial(current)
+        if (!free && _progress.value.hints <= 0) return
+        // A second tap while the same board's hint is still being found is the same request:
+        // cancelling the first could lose a hint it had just spent
+        if (hintSearch?.isActive == true && hintSearchTiles === current.tiles) return
         audioManager.playTileSelect()
         // Finding a plan can take a moment on a big board, so it's done in the background, and
         // shown only if the board hasn't changed meanwhile
         hintSearch?.cancel()
+        hintSearchTiles = current.tiles
         hintSearch = viewModelScope.launch {
             val hint = withContext(Dispatchers.Default) { MahjongGameEngine.findHint(current) } ?: return@launch
-            if (_gameState.value?.tiles !== current.tiles || !prefsRepo.spendHint()) return@launch
+            if (_gameState.value?.tiles !== current.tiles || !(free || prefsRepo.spendHint())) return@launch
             _gameState.update { state ->
                 if (state?.tiles === current.tiles) {
                     state.copy(hintPair = hint.pair, plan = hint.plan.ifEmpty { state.plan }, blockedTileId = null, usedHelp = true)
@@ -591,11 +634,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val state = MahjongGameEngine.replay(current)
         _gameState.value = state
         _tutorialStepIndex.value = if (TutorialScript.isTutorial(state)) 0 else null
+        newDeal()
         saveCurrentGame()
     }
 
     fun reshuffle() {
         val current = _gameState.value ?: return
+        _boardFresh.value = false
         val updated = MahjongGameEngine.reshuffleRemaining(current).copy(usedHelp = true)
         _gameState.value = updated
         saveCurrentGame()
@@ -657,6 +702,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val state = if (verdict.struggling) PerfCheck.SLOW else PerfCheck.PASSED
         val stutterPercent = (verdict.stutterShare * 100).roundToInt()
         _perfCheck.value = PerfCheckState(state, stutterPercent)
+        // Reached on the board being played: the question waits for the next
+        if (verdict.struggling) _boardFresh.value = false
         viewModelScope.launch { prefsRepo.setPerfCheck(state, stutterPercent) }
     }
 

@@ -27,9 +27,16 @@ object LampColour {
     fun table(k: Float = kelvin) = shifted(TABLE_AT_TUNED, k)
     fun tiles(k: Float = kelvin) = shifted(TILES_AT_TUNED, k)
 
+    // Worked out once per temperature, not for every shader every frame
+    private class Colours(val k: Float, val table: FloatArray, val tiles: FloatArray)
+    @Volatile
+    private var colours: Colours? = null
+
     fun setUniforms(s: RuntimeShader) {
-        s.setFloatUniform("LAMP_ON_TABLE", table())
-        s.setFloatUniform("LAMP_ON_TILES", tiles())
+        val k = kelvin
+        val c = colours?.takeIf { it.k == k } ?: Colours(k, table(k), tiles(k)).also { colours = it }
+        s.setFloatUniform("LAMP_ON_TABLE", c.table)
+        s.setFloatUniform("LAMP_ON_TILES", c.tiles)
     }
 
     // Each channel's shortfall from white, scaled by how far the blackbody's own falls short at [k]

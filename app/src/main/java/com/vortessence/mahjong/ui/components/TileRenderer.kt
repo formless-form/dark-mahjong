@@ -921,9 +921,12 @@ object TileRenderer {
             fun image(iw: Int, ih: Int, draw: DrawScope.() -> Unit): Bitmap {
                 val bitmap = Bitmap.createBitmap(iw, ih, Bitmap.Config.ARGB_8888)
                 CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap.asImageBitmap()), Size(iw.toFloat(), ih.toFloat()), draw)
-                // Stamped smaller than made, it stays smooth rather than shimmering
-                bitmap.setHasMipMap(true)
-                return bitmap.asShared()
+                // Stamped smaller than made, it stays smooth rather than shimmering. Set on the
+                // shared copy, as asShared() doesn't carry it over
+                val shared = bitmap.asShared()
+                if (shared !== bitmap) bitmap.recycle()
+                shared.setHasMipMap(true)
+                return shared
             }
             val bodyW = ceil(w + depthX).toInt() + 2 * pad
             val bodyH = ceil(h + depthY).toInt() + 2 * pad

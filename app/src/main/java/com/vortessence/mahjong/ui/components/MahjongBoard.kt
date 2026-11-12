@@ -59,6 +59,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -137,6 +138,9 @@ fun MahjongBoard(
     // How much of the bottom of the board's area lies under something drawn over it (the game
     // toolbar): the table carries on underneath, but the tiles are fitted above it
     bottomOverlap: Dp = 0.dp,
+    // Counts the deals: a new one (a restart, or the same deal replayed) starts the board afresh,
+    // its zoom and any animation in flight with it
+    deal: Int = 0,
 ) {
     val density = LocalDensity.current
     val paddingPx = with(density) { 16.dp.toPx() }
@@ -172,7 +176,7 @@ fun MahjongBoard(
         val canvasH = (boardSize.height - with(density) { bottomOverlap.toPx() }).coerceAtLeast(1f)
 
         if ((canvasW > 0f) && (canvasH > 0f) && gameState.tiles.isNotEmpty()) {
-            key(gameState.constellation.id) {
+            key(gameState.constellation.id, deal) {
                 BoardContent(
                     gameState = gameState,
                     settings = settings,
@@ -662,9 +666,10 @@ private fun BoardContent(
             drawContext.canvas.restore()
         }
 
-        // Match bursts on a layer of their own, so a burst redraws only itself, never the board.
+        // Match bursts on a layer of their own (a graphics layer: without one, each burst frame
+        // would record and draw the whole board again), so a burst redraws only itself.
         // Firework light is its own, so it goes on after the lamp's falloff
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
             if (matchBursts.frame == 0L || matchBursts.idle) return@Canvas
             val nativeCanvas = drawContext.canvas.nativeCanvas
             nativeCanvas.save()

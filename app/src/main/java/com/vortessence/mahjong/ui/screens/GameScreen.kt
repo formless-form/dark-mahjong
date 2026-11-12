@@ -77,6 +77,8 @@ fun GameScreen(
     firstRibbon: Boolean = false,
     // Hints left to spend; null where they're free (the tutorial)
     hints: Int? = null,
+    // Counts the deals: a new one (or the same again) starts the board afresh, zoomed out
+    deal: Int = 0,
     // A Quick Game: the win card offers another of the same difficulty
     quickGame: Boolean = false,
     onAnotherQuickGame: () -> Unit = {},
@@ -188,6 +190,7 @@ fun GameScreen(
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 MahjongBoard(
                     gameState = gameState,
+                    deal = deal,
                     settings = settings,
                     highlightedTileIds = tutorialHighlights,
                     onZoomedInChange = { boardZoomedIn = it },
@@ -232,6 +235,7 @@ fun GameScreen(
             }
             MahjongBoard(
                 gameState = gameState,
+                deal = deal,
                 settings = settings,
                 highlightedTileIds = tutorialHighlights,
                 highlightZoomOut = tutorialStep?.highlightZoomOut == true,

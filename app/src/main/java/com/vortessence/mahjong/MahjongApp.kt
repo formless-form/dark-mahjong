@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vortessence.mahjong.engine.TodaysPuzzle
+import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.ui.components.PerformanceNotice
 import com.vortessence.mahjong.ui.components.PredictiveBackHandling
@@ -65,6 +66,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     val puzzleDay by viewModel.puzzleDay.collectAsStateWithLifecycle()
     val puzzleStarted by viewModel.todaysPuzzleStarted.collectAsStateWithLifecycle()
     val perfQuestion by viewModel.perfQuestion.collectAsStateWithLifecycle()
+    val boardFresh by viewModel.boardFresh.collectAsStateWithLifecycle()
+    val deal by viewModel.deal.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
@@ -154,8 +157,9 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         tutorialStep = tutorialStep,
                         winMessage = winMessage,
                         firstRibbon = firstRibbon,
-                        // Free in the tutorial; earned everywhere else
-                        hints = if (tutorialStep != null) null else progress.hints,
+                        // Free in the tutorial (its free play too); earned everywhere else
+                        hints = if (tutorialStep != null || gameState?.let { TutorialScript.isTutorial(it) } == true) null else progress.hints,
+                        deal = deal,
                         quickGame = quickGame,
                         onAnotherQuickGame = { viewModel.anotherQuickGame() },
                         totalLevels = viewModel.currentLevelConstellations.size,
@@ -227,12 +231,13 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
             ) { screen -> screenContent(screen) }
 
             // The first-game check found this phone struggling: asked between games, never over a
-            // board in play, the tutorial, Settings or the wide-board question
+            // board in play (only as a board dealt since comes up, before it's touched), the
+            // tutorial, Settings or the wide-board question
             if (perfQuestion) {
                 val game = gameState
                 val between = when (currentScreen) {
                     is Screen.Settings -> false
-                    is Screen.Game -> game != null && !game.isWon && game.moveHistory.isEmpty() && tutorialStep == null &&
+                    is Screen.Game -> game != null && !game.isWon && game.moveHistory.isEmpty() && boardFresh && tutorialStep == null &&
                         !(settings.wideBoards == WideBoards.ASK && isWideBoard(game.tiles))
                     else -> true
                 }

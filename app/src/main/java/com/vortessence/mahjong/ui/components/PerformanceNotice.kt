@@ -15,24 +15,40 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The first-game performance check found this phone stuttering: the player is asked whether to
  * turn on Low-performance mode. Nothing changes unless they say yes; Back is a no. A stray tap
- * beside the card doesn't close it, so the question is never lost unanswered.
+ * beside the card doesn't close it, so the question is never lost unanswered; nor do its buttons
+ * take a tap in its first half-second, one meant for what was there before it. On a short screen
+ * (on its side, or with large text) it scrolls.
  */
 @Composable
 fun PerformanceNotice(
     onTurnOn: () -> Unit,
     onNoThanks: () -> Unit,
 ) {
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(ARMING.milliseconds)
+        armed = true
+    }
     Dialog(onDismissRequest = onNoThanks, properties = DialogProperties(dismissOnClickOutside = false)) {
         BlurBehindDialog()
         Surface(
@@ -42,7 +58,7 @@ fun PerformanceNotice(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
             ) {
                 Icon(
                     Icons.Rounded.Speed,
@@ -66,13 +82,16 @@ fun PerformanceNotice(
                 )
                 Spacer(Modifier.height(24.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    BigButton("Yes, turn it on", onClick = onTurnOn, primary = true, icon = Icons.Rounded.Speed, modifier = Modifier.fillMaxWidth())
-                    BigButton("No thanks", onClick = onNoThanks, icon = Icons.Rounded.LocalFireDepartment, modifier = Modifier.fillMaxWidth())
+                    BigButton("Yes, turn it on", onClick = { if (armed) onTurnOn() }, primary = true, icon = Icons.Rounded.Speed, modifier = Modifier.fillMaxWidth())
+                    BigButton("No thanks", onClick = { if (armed) onNoThanks() }, icon = Icons.Rounded.LocalFireDepartment, modifier = Modifier.fillMaxWidth())
                 }
             }
         }
     }
 }
+
+// How long the buttons wait before taking a tap, in milliseconds
+private const val ARMING = 500
 
 const val PERFORMANCE_QUESTION =
     "The game doesn't seem to be running smoothly on your phone. Would you like to turn on " +

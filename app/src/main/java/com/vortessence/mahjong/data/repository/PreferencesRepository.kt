@@ -1,6 +1,7 @@
 package com.vortessence.mahjong.data.repository
 
 import android.content.Context
+import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
@@ -22,9 +23,11 @@ import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.model.WideBoards
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import java.time.LocalDateTime
@@ -37,6 +40,9 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 )
 
 private const val MEASURED_LEVEL_ORDER = 2
+
+// This phone, as the performance check knows it: a new phone of the same model would measure alike
+private val thisPhone = "${Build.MANUFACTURER}/${Build.MODEL}"
 
 class PreferencesRepository(private val context: Context) {
 
@@ -71,6 +77,9 @@ class PreferencesRepository(private val context: Context) {
         // that stuttered
         val PERF_CHECK = stringPreferencesKey("perf_check")
         val PERF_CHECK_STUTTERS = intPreferencesKey("perf_check_stutters")
+        // The phone the check and Low-performance mode belong to (its maker and model). Backups
+        // carry everything to a new phone, where neither applies: the check runs again there
+        val PERF_DEVICE = stringPreferencesKey("perf_device")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
@@ -103,7 +112,7 @@ class PreferencesRepository(private val context: Context) {
                 ?: d.tableSurface,
             lampBrightness = prefs[Keys.LAMP_BRIGHTNESS] ?: d.lampBrightness,
             fireplaceLit = prefs[Keys.FIREPLACE] ?: d.fireplaceLit,
-            lowPerformance = prefs[Keys.LOW_PERFORMANCE] ?: d.lowPerformance,
+            lowPerformance = prefs[Keys.LOW_PERFORMANCE].takeIf { onThisPhone(prefs) } ?: d.lowPerformance,
             fireVolume = prefs[Keys.FIRE_VOLUME] ?: d.fireVolume,
             fireIntensity = prefs[Keys.FIRE_INTENSITY] ?: d.fireIntensity,
             wideBoards = prefs[Keys.WIDE_BOARDS]
@@ -127,14 +136,39 @@ class PreferencesRepository(private val context: Context) {
      * choice ([PerfCheck.MANUAL], never run) once they have set Low-performance mode themselves.
      */
     val perfCheckFlow: Flow<PerfCheckState> = data.map { prefs ->
+        if (!onThisPhone(prefs)) return@map PerfCheckState(PerfCheck.PENDING, 0)
         val state = prefs[Keys.PERF_CHECK]?.let { name -> PerfCheck.entries.firstOrNull { it.name == name } }
             ?: if (prefs[Keys.LOW_PERFORMANCE] != null) PerfCheck.MANUAL else PerfCheck.PENDING
         PerfCheckState(state, prefs[Keys.PERF_CHECK_STUTTERS] ?: 0)
     }.distinctUntilChanged()
 
+    // Stored with no phone named (before 1.4.12), they're this phone's
+    private fun onThisPhone(prefs: Preferences) = prefs[Keys.PERF_DEVICE].let { it == null || it == thisPhone }
+
+    // About to write the check or the mode: what another phone left is dropped first
+    private fun claimForThisPhone(prefs: MutablePreferences) {
+        if (!onThisPhone(prefs)) {
+            prefs.remove(Keys.PERF_CHECK)
+            prefs.remove(Keys.PERF_CHECK_STUTTERS)
+            prefs.remove(Keys.LOW_PERFORMANCE)
+        }
+        prefs[Keys.PERF_DEVICE] = thisPhone
+    }
+
+    /** Tests: the check and the mode as a backup from [phone] brings them (null: unnamed, as before 1.4.12). */
+    internal suspend fun storedOnPhone(phone: String?) {
+        write { prefs -> if (phone != null) prefs[Keys.PERF_DEVICE] = phone else prefs.remove(Keys.PERF_DEVICE) }
+    }
+
+    /** Once per launch: what's stored from before phones were named is this phone's. */
+    suspend fun namePerfPhone() {
+        write { prefs -> if (prefs[Keys.PERF_DEVICE] == null) prefs[Keys.PERF_DEVICE] = thisPhone }
+    }
+
     /** The check's outcome, and the share of frames (percent) that stuttered. */
     suspend fun setPerfCheck(state: PerfCheck, stutterPercent: Int? = null) {
         write { prefs ->
+            claimForThisPhone(prefs)
             prefs[Keys.PERF_CHECK] = state.name
             if (stutterPercent != null) prefs[Keys.PERF_CHECK_STUTTERS] = stutterPercent
         }
@@ -146,6 +180,7 @@ class PreferencesRepository(private val context: Context) {
             prefs.remove(Keys.PERF_CHECK)
             prefs.remove(Keys.PERF_CHECK_STUTTERS)
             prefs.remove(Keys.LOW_PERFORMANCE)
+            prefs[Keys.PERF_DEVICE] = thisPhone
         }
     }
 
@@ -169,6 +204,7 @@ class PreferencesRepository(private val context: Context) {
             put(Keys.TABLE_SURFACE) { it.tableSurface.name }
             put(Keys.LAMP_BRIGHTNESS) { it.lampBrightness }
             put(Keys.FIREPLACE) { it.fireplaceLit }
+            if (to.lowPerformance != from.lowPerformance) claimForThisPhone(prefs)
             put(Keys.LOW_PERFORMANCE) { it.lowPerformance }
             put(Keys.FIRE_VOLUME) { it.fireVolume }
             put(Keys.FIRE_INTENSITY) { it.fireIntensity }
@@ -306,6 +342,8 @@ class PreferencesRepository(private val context: Context) {
     val savedGameFlow: Flow<SavedGameState?> = data.map { prefs -> prefs[Keys.SAVED_GAME] ?: "" }
         .distinctUntilChanged()
         .map { raw -> if (raw.isNotEmpty()) SavedGameState.deserialize(raw) else null }
+        // Read back after every match: parsed off the main thread
+        .flowOn(Dispatchers.Default)
 
     suspend fun saveGame(savedState: SavedGameState) {
         write { prefs ->
