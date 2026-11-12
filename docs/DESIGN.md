@@ -194,6 +194,20 @@ Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit
     - With a hint showing, the median frame is 26 → 21 ms and the 99th percentile 44 → 31 ms.
     - Matches are unchanged (GPU about 10 ms at full clock).
 - **Test builds** (`tools/deploy-to-phone.sh`, `-PperfHooks=true`) can be told over adb to open a fixed deal, switch drawing stages off, set the fire's rate or play matches by themselves, for measuring; Play builds never can.
+- **The lamp and a board on its side** (2026-11-12, for 1.4.11):
+  - **The lamp is 2000 K,** chosen by Gareth from renders at 2700 (as first tuned), 2400, 2100 and
+    1800 K (LampColourPreview). It's set as a colour temperature in `LampColour`. Each channel
+    moves along the blackbody curve by the same proportion as the true colour does from 2700 K,
+    so 2700 K gives back the hand-tuned colours exactly: table (1, 0.86, 0.70), tiles
+    (1, 0.89, 0.76). At 2000 K the table is about (1, 0.81, 0.57). The shaders take it as uniforms.
+  - **On its side the board was darker:** tile faces 23% darker with the fire lit and 4% with the
+    lamp alone (OrientationPreview, measured with the tiles' pixels told apart from the table's).
+  - **The hearth beyond the far edge** is now centred along it and twice as broad. `FlameLight.spread`
+    stretches its pool of light across the table in every shader and in the Kotlin mirrors
+    (glare, resting shadows, sides). A broader hearth gives off as much more light.
+  - **The lamp's pool** also reaches further up and down a wide table (`lampDepth`, 30% of its
+    extra breadth).
+  - **Result:** on its side the faces come within 2% of upright, both ways. Upright is unchanged.
 - **The sides' shading is stamped, not clipped** (2026-11-12). The side shading added on 1 Nov
   (seams against neighbours, and walls facing away from the light) clipped every tile to its
   curved sides' outline twice, under the camera's perspective. That cost most of a frame. The

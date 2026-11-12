@@ -29,12 +29,24 @@ class FlameLight(
     // How high the flames stand above the table this frame, in table heights: the long shadows
     // are traced from here, so they stretch and shrink as the flames leap and drop
     val flameHeight: Float = 0.075f,
+    // How much wider than round the fire's pool of light spreads across the table (1 upright; a
+    // board on its side has a hearth along its far edge, broader, so the light reaches its ends)
+    val spread: Float = 1f,
 ) {
+    /** The fire's brightness at plane point ([pu], [pv]), as the shaders' flameLight: [atU], [atV] where it burns. */
+    fun falloff(pu: Float, pv: Float, atU: Float = u, atV: Float = v, strength: Float = power): Float {
+        val du = (pu - atU) / spread
+        val dv = pv - atV
+        return strength / (1f + (du * du + dv * dv) / reach)
+    }
+
     fun setUniforms(s: RuntimeShader) {
         s.setFloatUniform("flame", u, v, power, reach)
         s.setFloatUniform("flameColour", r, g, b)
         s.setFloatUniform("lampLevel", lamp)
         s.setFloatUniform("flameHeight", flameHeight)
+        s.setFloatUniform("flameSpread", spread)
+        LampColour.setUniforms(s)
     }
 
     companion object {
@@ -44,9 +56,11 @@ class FlameLight(
 
         // On a table wider than tall (a board played on its side) the hearth stands beyond the far
         // edge instead, as far past it as it is past the left edge of an upright table (about 0.23
-        // table heights; the far edge is at 0.58), its offset along the edge turned with the phone
-        private const val ABOVE_FIRE_U = 0.10f
+        // table heights; the far edge is at 0.58), centred along it, and twice as broad: the board
+        // stretches across the table, and a small hearth at its far end left it darker than upright
+        private const val ABOVE_FIRE_U = 0f
         private const val ABOVE_FIRE_V = 0.81f
+        private const val ABOVE_FIRE_SPREAD = 2f
 
         /** The lamp alone, at its natural strength. */
         val NONE = lampOnly(1f)
@@ -71,8 +85,8 @@ class FlameLight(
             val lamp = if (x < 0.5f) 0.35f + 1.2f * x else 0.95f + 0.6f * (x - 0.5f)
             if (!fireplaceLit) return lampOnly(lamp)
             val strength = 0.25f + 1.5f * fireIntensity.coerceIn(0f, 1f)
-            return if (hearthAbove) fireplace(seconds, strength, lamp * 0.65f, ABOVE_FIRE_U, ABOVE_FIRE_V)
-            else fireplace(seconds, strength, lamp * 0.65f, FIRE_U, FIRE_V)
+            return if (hearthAbove) fireplace(seconds, strength, lamp * 0.65f, ABOVE_FIRE_U, ABOVE_FIRE_V, ABOVE_FIRE_SPREAD)
+            else fireplace(seconds, strength, lamp * 0.65f, FIRE_U, FIRE_V, 1f)
         }
 
         /**
@@ -84,7 +98,7 @@ class FlameLight(
          * flames, so the shadows they cast twitch, stretch and shrink rather than sway. Brighter
          * flames burn yellower.
          */
-        private fun fireplace(t: Float, strength: Float, lamp: Float, atU: Float, atV: Float): FlameLight {
+        private fun fireplace(t: Float, strength: Float, lamp: Float, atU: Float, atV: Float, spread: Float): FlameLight {
             val surge = noise(t * 0.9f, 0f)
             val lick = noise(t * 3.7f, 17f)
             val flutter = noise(t * 11f, 41f)
@@ -93,9 +107,11 @@ class FlameLight(
             val flicker = (1f + 0.20f * surge + 0.11f * lick + 0.05f * flutter + 0.3f * flare).coerceIn(0.55f, 1.6f)
             val heat = (flicker - 1f) * 0.5f // brighter burns yellower, lulls glow redder
             return FlameLight(
-                u = atU + 0.02f * noise(t * 1.3f, 101f) + 0.012f * noise(t * 6.3f, 211f) + 0.006f * noise(t * 14.1f, 223f),
+                // A broader hearth's flames wander further along it
+                u = atU + spread * (0.02f * noise(t * 1.3f, 101f) + 0.012f * noise(t * 6.3f, 211f) + 0.006f * noise(t * 14.1f, 223f)),
                 v = atV + 0.025f * noise(t * 1.1f, 131f) + 0.015f * noise(t * 5.7f, 227f) + 0.007f * noise(t * 13.3f, 229f),
-                power = strength * flicker,
+                // A broader hearth burns more fire: its light grows with its breadth
+                power = strength * flicker * spread,
                 reach = 0.14f,
                 r = 1f,
                 g = (0.47f + 0.16f * heat).coerceIn(0.3f, 0.7f),
@@ -104,8 +120,9 @@ class FlameLight(
                 height = 0.28f,
                 steadyU = atU,
                 steadyV = atV,
-                steadyPower = strength,
+                steadyPower = strength * spread,
                 flameHeight = 0.075f * (1f + 0.12f * lick + 0.08f * noise(t * 9.1f, 233f) + 0.15f * flare),
+                spread = spread,
             )
         }
 

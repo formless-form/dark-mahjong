@@ -172,7 +172,7 @@ half4 main(float2 p) {
     // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
     // and the fire just in front of its flames
     float2 m = fromLamp(q, LAMP_MIRROR) * float2(3.4, 1.3);
-    float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4, 2.2);
+    float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4 / flameSpread, 2.2);
     float grain = grained > 0.5 ? 0.75 + 0.5 * vnoise(q * 1.2 * float2(60.0, 6.0)) : 1.0;
     float3 c = gloss * grain * (lampLevel * exp(-dot(m, m) * 5.0) * 0.24 * LAMP_ON_TABLE
         + 0.85 * flame.z * exp(-dot(mc, mc) * 4.0) * flameColour * float3(0.26, 0.24, 0.2));
@@ -455,9 +455,12 @@ half4 main(float2 p) {
      */
     fun lampStretch(width: Float, height: Float): Float = max(1f, width / height)
 
+    /** How far the lamp's light reaches up and down the table, as the shaders' lampDepth: 1 upright. */
+    fun lampDepth(stretch: Float): Float = 1f + LAMP_DEPTH * (stretch - 1f)
+
     /** Strength of the lamp's and the flame's glossy reflection at plane point (u, v), for tile glare. */
     fun flameGlare(u: Float, v: Float, flame: FlameLight, stretch: Float = 1f): Float {
-        val mu = (u - flame.u) * 3.4f
+        val mu = (u - flame.u) * 3.4f / flame.spread
         val mv = (v - flame.v + 0.05f) * 2.2f
         // The dimmed lamp's own reflection, plus a fainter one of the flame
         return flame.lamp * lampGlare(u, v, stretch) + 0.7f * flame.power * exp(-(mu * mu + mv * mv) * 4f)
@@ -466,14 +469,14 @@ half4 main(float2 p) {
     /** Lamp brightness at plane point (u, v), matching the shader: used to light the tiles. */
     fun lampLight(u: Float, v: Float, stretch: Float = 1f): Float {
         val du = (u - LAMP_U * stretch) / stretch
-        val dv = (v - LAMP_V) * 0.85f
+        val dv = (v - LAMP_V) / lampDepth(stretch) * 0.85f
         return 0.12f + 0.95f * kotlin.math.exp(-(du * du + dv * dv) * LAMP_FALLOFF)
     }
 
     /** Strength of the lamp's glossy reflection at plane point (u, v), for tile glare. */
     fun lampGlare(u: Float, v: Float, stretch: Float = 1f): Float {
         val mu = (u - LAMP_MIRROR_U * stretch) / stretch * 3.0f
-        val mv = (v - LAMP_MIRROR_V) * 1.6f
+        val mv = (v - LAMP_MIRROR_V) / lampDepth(stretch) * 1.6f
         return kotlin.math.exp(-(mu * mu + mv * mv) * 3.5f)
     }
 
@@ -488,6 +491,10 @@ half4 main(float2 p) {
 internal const val LAMP_U = 0.14f
 internal const val LAMP_V = 0.16f
 internal const val LAMP_HEIGHT = 0.9f
+
+// How much of a wide table's extra breadth the lamp's pool also gains up and down it: a board on
+// its side fills most of the table's height, and its near and far rows fell darker than upright
+internal const val LAMP_DEPTH = 0.3f
 
 // A glossy surface reflects the lamp a little beyond it and nearer the middle, as seen from the
 // tilted camera
@@ -521,12 +528,12 @@ const float SLATE_FIRE_EVEN = 0.15;  // and of the fire's: little, as it rakes a
  */
 private const val FLAME_AGSL = """
 // The lamp (TableSurfaceRenderer's LAMP_ constants): over the table a little to the right of
-// the board and up the table from it, so it lights the board at a slant; warm, about 2700 K
+// the board and up the table from it, so it lights the board at a slant; warm, about 2000 K (LampColour)
 const float2 LAMP_AT = float2($LAMP_U, $LAMP_V);
 // Where a glossy surface shows its reflection, as the tilted camera sees it
 const float2 LAMP_MIRROR = float2($LAMP_MIRROR_U, $LAMP_MIRROR_V);
-const float3 LAMP_ON_TABLE = float3(1.0, 0.86, 0.70);
-const float3 LAMP_ON_TILES = float3(1.0, 0.89, 0.76);
+uniform float3 LAMP_ON_TABLE;  // the lamp's colour on the table, and on the tiles (LampColour)
+uniform float3 LAMP_ON_TILES;
 uniform float4 flame;       // u, v, power, reach (squared distance at which it halves)
 uniform float3 flameColour;
 uniform float lampLevel;    // the lamp's strength alongside the flame
@@ -534,15 +541,19 @@ uniform float lampLevel;    // the lamp's strength alongside the flame
 // light stretched across the table's width, so the ends of a wide board aren't left in the dark
 // (TableSurfaceRenderer.lampStretch)
 float lampStretch() { return max(1.0, res.x / res.y); }
+// ...and, less, up and down the table, so the near and far rows of a board on its side (which
+// fills much more of the table's height) are lit as an upright board's (TableSurfaceRenderer.lampDepth)
+float lampDepth() { return 1.0 + $LAMP_DEPTH * (lampStretch() - 1.0); }
 float2 lampAt(float2 at) { return float2(at.x * lampStretch(), at.y); }
 // q from a point of the lamp's light ([at], as for an upright table), across in the lamp's widths
-float2 fromLamp(float2 q, float2 at) { return float2((q.x - at.x * lampStretch()) / lampStretch(), q.y - at.y); }
+float2 fromLamp(float2 q, float2 at) { return float2((q.x - at.x * lampStretch()) / lampStretch(), (q.y - at.y) / lampDepth()); }
 uniform shader heightMap;   // the board's height map, at the flat table's resolution (BoardShadowMap)
 uniform shader aoMap;       // the table's ambient occlusion in green, at a coarser resolution
 uniform float4 mapXform;    // table pixels now to map pixels: scale x, y, then offset x, y (the board may have moved)
 uniform float4 shade;       // fire shadows on (1) or off, occlusion map pixels per map pixel, one layer's height, the tallest stack's
 uniform float aoStrength;   // how deep the table's ambient occlusion goes (0 with no map)
 uniform float flameHeight;  // how high the flames stand above the table this frame, in table heights
+uniform float flameSpread;  // how much wider than round the fire's pool spreads across the table (FlameLight.spread)
 const int SHADOW_STEPS = 40;
 // Brings an over-bright colour back within range whole, keeping its hue. Clamping each channel
 // on its own would clip red first, so a bright orange flare would drift towards yellow-green.
@@ -550,7 +561,7 @@ float3 keepHue(float3 c) {
     return c / max(1.0, max(c.r, max(c.g, c.b)));
 }
 float3 flameLight(float2 q) {
-    float2 d = q - flame.xy;
+    float2 d = (q - flame.xy) / float2(flameSpread, 1.0);
     return flame.z / (1.0 + dot(d, d) / flame.w) * flameColour;
 }
 // The height map's pixel under q (in table heights), wherever the board has moved since it was made

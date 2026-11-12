@@ -751,9 +751,7 @@ private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h:
     val v = (h / 2f - cy) / h
     val lampHere = flame.lamp * TableSurfaceRenderer.lampLight(u, v, stretch)
     fun fireShare(fu: Float, fv: Float, power: Float): Float {
-        val du = u - fu
-        val dv = v - fv
-        val fireHere = power / (1f + (du * du + dv * dv) / flame.reach) * 0.6f // the fire's brightness
+        val fireHere = flame.falloff(u, v, fu, fv, power) * 0.6f // the fire's brightness
         return fireHere / (fireHere + lampHere)
     }
     val steady = fireShare(flame.steadyU, flame.steadyV, flame.steadyPower)
@@ -840,9 +838,7 @@ private fun sideAway(sx: Float, sy: Float, w: Float, h: Float, flame: FlameLight
     var weight = lampWeight
     var facing = lampWeight * lampFacing
     if (flame.power > 0f) {
-        val du = u - flame.u
-        val dv = v - flame.v
-        val fireWeight = flame.power / (1f + (du * du + dv * dv) / flame.reach) * 0.6f
+        val fireWeight = flame.falloff(u, v) * 0.6f
         weight += fireWeight
         facing += fireWeight * facing(flame.u, flame.v, flame.height)
     }
