@@ -64,6 +64,13 @@ data class TileKit(
     // The bar lit like a coloured LED: a near-white core down each colour, its halo adding light
     // to the face around it
     val led: Boolean = false,
+    // How far the glow spreads (1: as designed; small, a hairline at the bar's edge), and how
+    // near white an LED's core burns
+    val glowSpread: Float = 1f,
+    val ledCore: Float = 0.65f,
+    // The bar's colours lightened towards white by this much, and a fine light rim round it
+    val barLighten: Float = 0f,
+    val barRim: Boolean = false,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,

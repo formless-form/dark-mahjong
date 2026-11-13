@@ -127,10 +127,9 @@ class ColourCuePreview {
     private val cream = Color(0xFFF2E6C8)
 
     @Test fun ivory() = variant(TileKits.IVORY, "0-ivory")
-    @Test fun bar() = variant(bar, "1-bar-even")
-    @Test fun barSoftGlow() = variant(bar.copy(glow = 0.5f), "2-bar-soft-glow")
     @Test fun barGlow() = variant(bar.copy(glow = 1f), "3-bar-glow")
-    @Test fun barLongerGlow() = variant(bar.copy(glow = 1f, barLength = 0.56f, dotSize = 0.11f), "4-bar-longer-thicker-glow")
-    @Test fun led() = variant(bar.copy(glow = 1f, led = true), "5-led")
-    @Test fun ledLonger() = variant(bar.copy(glow = 1f, led = true, barLength = 0.56f, dotSize = 0.11f), "6-led-longer-thicker")
+    @Test fun coreOnly() = variant(bar.copy(led = true), "7-core-only")
+    @Test fun coreHairline() = variant(bar.copy(led = true, glow = 0.8f, glowSpread = 0.25f), "8-core-hairline-glow")
+    @Test fun brightGloss() = variant(bar.copy(barLighten = 0.25f), "9-brighter-gloss")
+    @Test fun backlitGlass() = variant(bar.copy(led = true, ledCore = 0.45f, barLighten = 0.15f, barRim = true), "10-backlit-glass")
 }

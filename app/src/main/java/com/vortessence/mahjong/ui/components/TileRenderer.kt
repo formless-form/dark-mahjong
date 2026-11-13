@@ -830,12 +830,13 @@ object TileRenderer {
                 val halos = if (kit.led) listOf(0.8f to 1f, 2.2f to 1f, 4f to 0.7f) else listOf(0.9f to 1f, 2.4f to 0.8f)
                 for ((spread, strength) in halos) {
                     val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                        maskFilter = android.graphics.BlurMaskFilter(barH * spread, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                        maskFilter = android.graphics.BlurMaskFilter(barH * spread * kit.glowSpread, android.graphics.BlurMaskFilter.Blur.NORMAL)
                         if (kit.led) blendMode = android.graphics.BlendMode.PLUS
                     }
                     colours.forEachIndexed { i, c ->
                         glowPaint.color = fill(c).copy(alpha = (strength * kit.glow).coerceIn(0f, 1f)).toArgb()
-                        canvas.drawRoundRect(left + i * part, top - barH * 0.3f, left + (i + 1) * part, top + barH * 1.3f, barH, barH, glowPaint)
+                            val out = barH * 0.3f * kit.glowSpread.coerceAtMost(1f)
+                        canvas.drawRoundRect(left + i * part, top - out, left + (i + 1) * part, top + barH + out, barH, barH, glowPaint)
                     }
                 }
             }
@@ -846,11 +847,12 @@ object TileRenderer {
                 Size(barW + barH * 0.36f, barH * 1.36f), CornerRadius(barH * 0.68f, barH * 0.68f),
             )
             scope.clipPath(pill) {
-                colours.forEachIndexed { i, c -> drawRect(fill(c), Offset(left + i * part, top), Size(part, barH)) }
+                fun lit(c: Color) = lerp(fill(c), Color.White, kit.barLighten)
+                colours.forEachIndexed { i, c -> drawRect(lit(c), Offset(left + i * part, top), Size(part, barH)) }
                 if (kit.led) {
                     // Lit from within: each colour's hot core, near white, fading to its edges
                     colours.forEachIndexed { i, c ->
-                        val core = lerp(fill(c), Color.White, 0.65f)
+                        val core = lerp(lit(c), Color.White, kit.ledCore)
                         drawRect(
                             Brush.verticalGradient(0f to Color.Transparent, 0.5f to core, 1f to Color.Transparent, startY = top, endY = top + barH),
                             Offset(left + i * part, top), Size(part, barH),
@@ -860,6 +862,13 @@ object TileRenderer {
                     // A sheen along its top, so it reads as a glossy inlay
                     drawRect(Color.White.copy(alpha = 0.28f), Offset(left, top), Size(barW, barH * 0.38f))
                 }
+            }
+            // A fine light rim, as round lit glass
+            if (kit.barRim) {
+                scope.drawRoundRect(
+                    Color.White.copy(alpha = 0.55f), Offset(left, top), Size(barW, barH), CornerRadius(barH / 2f, barH / 2f),
+                    style = Stroke(width = barH * 0.12f),
+                )
             }
             return
         }
