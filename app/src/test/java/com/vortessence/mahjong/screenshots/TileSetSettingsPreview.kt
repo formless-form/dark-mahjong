@@ -27,7 +27,6 @@ class TileSetSettingsPreview {
     val compose = createComposeRule()
 
     private fun shoot(samples: Boolean, set: TileSet, name: String) {
-        com.vortessence.mahjong.ui.components.TileKits.previewOffered = true
         MenuFire.flickers = false
         TileWear.prepareNow()
         compose.setContent {
