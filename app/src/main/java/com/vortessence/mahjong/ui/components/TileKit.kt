@@ -147,12 +147,12 @@ object TileKits {
      */
     val CHARCOAL = TileKit(
         name = "Charcoal",
-        faceTop = Color(0xFF494846),
-        faceBottom = Color(0xFF3D3C3A),
+        faceTop = Color(0xFF3F3E3C),
+        faceBottom = Color(0xFF343331),
         bevelHighlight = Color(0xFF9A9894),
         bevelAlpha = 0.5f,
-        side = Color(0xFF2F2E2C),
-        backing = Color(0xFF201F1E),
+        side = Color(0xFF292826),
+        backing = Color(0xFF1B1A19),
         ageing = Color(0xFFB08A4A),
         art = Color.White,
         raised = true,

@@ -165,16 +165,16 @@ class ColourCuePreview {
         ageing = Color(0xFF9A6A30), wear = 1.2f, bevel = 0.6f, toneVariation = 1.5f,
     )
 
-    @Test fun i01() = variant(TileKits.IVORY, "01-ivory-as-now")
-    @Test fun i02() = variant(ivoryBar, "02-ivory-colour-bar")
-    @Test fun i03() = variant(ivoryBar.copy(recolour = colourSafe), "03-ivory-colour-safe-bar")
-    @Test fun i04() = variant(TileKits.IVORY.copy(bevel = 1f), "04-wider-bevel")
-    @Test fun i05() = variant(TileKits.IVORY.copy(bevel = 1.8f), "05-stronger-bevel")
-    @Test fun i06() = variant(TileKits.IVORY.copy(toneVariation = 1f), "06-tone-variation")
-    @Test fun i07() = variant(TileKits.IVORY.copy(toneVariation = 2f), "07-tone-variation-strong")
-    @Test fun i08() = variant(TileKits.IVORY.copy(layerCue = 2f), "08-layer-cue-x2")
-    @Test fun i09() = variant(TileKits.IVORY.copy(layerCue = 3f), "09-layer-cue-x3")
-    @Test fun i10() = variant(jade, "10-jade")
-    @Test fun i11() = variant(bone, "11-bone")
-    @Test fun i12() = variant(TileKits.CHARCOAL.copy(bevel = 1f, toneVariation = 1f), "12-charcoal-bevel-tone")
+    // Darker jade, and Charcoal a shade darker (2026-11-13)
+    private val jadeDarker = jade.copy(faceTop = Color(0xFF356B52), faceBottom = Color(0xFF25523E), side = Color(0xFF1E4232), backing = Color(0xFF15301F))
+    private val jadeDarkest = jade.copy(faceTop = Color(0xFF2D5D47), faceBottom = Color(0xFF1F4635), side = Color(0xFF19382A), backing = Color(0xFF11281A))
+    private val charcoalBefore = TileKits.CHARCOAL.copy(
+        faceTop = Color(0xFF494846), faceBottom = Color(0xFF3D3C3A), side = Color(0xFF2F2E2C), backing = Color(0xFF201F1E),
+    )
+
+    @Test fun d1() = variant(jade, "1-jade-as-before")
+    @Test fun d2() = variant(jadeDarker, "2-jade-darker")
+    @Test fun d3() = variant(jadeDarkest, "3-jade-darker-still")
+    @Test fun d4() = variant(charcoalBefore, "4-charcoal-as-before")
+    @Test fun d5() = variant(TileKits.CHARCOAL, "5-charcoal-darker")
 }
