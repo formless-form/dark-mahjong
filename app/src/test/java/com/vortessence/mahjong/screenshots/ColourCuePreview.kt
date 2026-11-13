@@ -147,15 +147,34 @@ class ColourCuePreview {
     private val bar = dots.copy(dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artLift = 0.04f)
     private val cream = Color(0xFFF2E6C8)
 
-    // The bar's colours: brightness down the rows (darker, as now, brighter), saturation across
-    // (muted, as now, vivid)
-    @Test fun c1() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFBB7A75), FaceColours.GREEN to Color(0xFF5A9C69), FaceColours.BLUE to Color(0xFF8391C7))), "1-darker-muted")
-    @Test fun c2() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFBB4E46), FaceColours.GREEN to Color(0xFF2F9C46), FaceColours.BLUE to Color(0xFF566DC7))), "2-darker-as-now")
-    @Test fun c3() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFBB2D23), FaceColours.GREEN to Color(0xFF0E9C2C), FaceColours.BLUE to Color(0xFF3452C7))), "3-darker-vivid")
-    @Test fun c4() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFF09C96), FaceColours.GREEN to Color(0xFF74C886), FaceColours.BLUE to Color(0xFFA8BAFF))), "4-as-now-muted")
-    @Test fun c5() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFF0645A), FaceColours.GREEN to Color(0xFF3CC85A), FaceColours.BLUE to Color(0xFF6E8CFF))), "5-as-now-as-now")
-    @Test fun c6() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFF03A2D), FaceColours.GREEN to Color(0xFF12C839), FaceColours.BLUE to Color(0xFF426AFF))), "6-as-now-vivid")
-    @Test fun c7() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFFFB6B0), FaceColours.GREEN to Color(0xFF89EC9E), FaceColours.BLUE to Color(0xFFC1CEFF))), "7-brighter-muted")
-    @Test fun c8() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFFF857C), FaceColours.GREEN to Color(0xFF47EC6A), FaceColours.BLUE to Color(0xFF98ADFF))), "8-brighter-as-now")
-    @Test fun c9() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFFF6054), FaceColours.GREEN to Color(0xFF15EC43), FaceColours.BLUE to Color(0xFF7995FF))), "9-brighter-vivid")
+    // Ideas to make the tiles look better (2026-11-13), numbered as sent
+    private val ivoryBar = TileKits.IVORY.copy(
+        colourDots = true, dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artScale = 0.8f, artLift = 0.04f,
+        barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.LINE, barGap = 0.22f,
+    )
+    // Okabe and Ito's colours, told apart with any colour vision
+    private val colourSafe = mapOf(FaceColours.RED to Color(0xFFD55E00), FaceColours.GREEN to Color(0xFF009E73), FaceColours.BLUE to Color(0xFF0072B2))
+    private val jade = TileKits.CHARCOAL.copy(
+        name = "Jade",
+        faceTop = Color(0xFF3E7A5E), faceBottom = Color(0xFF2C5E47), side = Color(0xFF234D3A), backing = Color(0xFF1A3A2C),
+        bevelHighlight = Color(0xFF9CC9B0), art = Color(0xFFF4ECD6), terrazzo = 0f, wear = 0.4f, bevel = 0.8f, toneVariation = 1.2f,
+    )
+    private val bone = TileKits.IVORY.copy(
+        name = "Bone",
+        faceTop = Color(0xFFF3EAD3), faceBottom = Color(0xFFE2D4B4), side = Color(0xFFCDBB95), backing = Color(0xFF6B4A2B),
+        ageing = Color(0xFF9A6A30), wear = 1.2f, bevel = 0.6f, toneVariation = 1.5f,
+    )
+
+    @Test fun i01() = variant(TileKits.IVORY, "01-ivory-as-now")
+    @Test fun i02() = variant(ivoryBar, "02-ivory-colour-bar")
+    @Test fun i03() = variant(ivoryBar.copy(recolour = colourSafe), "03-ivory-colour-safe-bar")
+    @Test fun i04() = variant(TileKits.IVORY.copy(bevel = 1f), "04-wider-bevel")
+    @Test fun i05() = variant(TileKits.IVORY.copy(bevel = 1.8f), "05-stronger-bevel")
+    @Test fun i06() = variant(TileKits.IVORY.copy(toneVariation = 1f), "06-tone-variation")
+    @Test fun i07() = variant(TileKits.IVORY.copy(toneVariation = 2f), "07-tone-variation-strong")
+    @Test fun i08() = variant(TileKits.IVORY.copy(layerCue = 2f), "08-layer-cue-x2")
+    @Test fun i09() = variant(TileKits.IVORY.copy(layerCue = 3f), "09-layer-cue-x3")
+    @Test fun i10() = variant(jade, "10-jade")
+    @Test fun i11() = variant(bone, "11-bone")
+    @Test fun i12() = variant(TileKits.CHARCOAL.copy(bevel = 1f, toneVariation = 1f), "12-charcoal-bevel-tone")
 }

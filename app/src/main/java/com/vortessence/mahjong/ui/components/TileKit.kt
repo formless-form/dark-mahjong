@@ -84,6 +84,14 @@ data class TileKit(
     // How strongly a raised bar is embossed (0: the soft sheen alone): a crisp shadow cast below it,
     // a hard highlight along its top edge and shade along its underside, all sharp-edged
     val barEmboss: Float = 0f,
+    // A wider, softer bevel round the face (0: the fine one alone), lit along its top edge and
+    // shaded along its foot, as a carved tile's
+    val bevel: Float = 0f,
+    // How much each tile's tone differs from the next (0: all alike): a little warmer or cooler,
+    // lighter or darker, as the pieces of a real set
+    val toneVariation: Float = 0f,
+    // How strongly lower layers are shaded against the top one (1: the game's own)
+    val layerCue: Float = 1f,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,

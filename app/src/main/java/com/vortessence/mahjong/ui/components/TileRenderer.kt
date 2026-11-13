@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import java.util.concurrent.Executors
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
@@ -476,6 +477,7 @@ object TileRenderer {
         val look = TileWear.look(boardTile.id)
         val face = faceRect(x, y, width, height)
         if (!PerfSwitches.isOff("wear")) drawWear(scope, look, face.topLeft, face.size)
+        drawTone(scope, look, face.topLeft, face.size)
 
         // 8. The clear glaze, over everything painted on the face. The face is flat; its gloss
         // shows in sharp reflections of the lamp (streaked by tiny ripples in the glaze, strongest
@@ -495,6 +497,7 @@ object TileRenderer {
         drawTerrazzo(scope, look, face.topLeft, face.size, glints = 0f, kit = kit)
         getTileVector(tile)?.let { drawArtwork(scope, it, x, y, width, height, kit, faceColours(tile)) }
         drawWear(scope, look, face.topLeft, face.size, kit)
+        drawTone(scope, look, face.topLeft, face.size, kit)
         drawGlaze(scope, look, face.topLeft, face.size, width, 0f, GlazePart.ALL)
     }
 
@@ -756,6 +759,22 @@ object TileRenderer {
                 topLeft = Offset(x, y),
                 size = Size(width, height),
                 cornerRadius = corner,
+            )
+        }
+
+        // A wider bevel: lit along the face's top edge, shaded along its foot
+        if (kit.bevel > 0f) {
+            val bw = width * 0.035f * kit.bevel
+            scope.drawRoundRect(
+                brush = Brush.verticalGradient(
+                    0f to Color.White.copy(alpha = 0.55f), 0.18f to Color.White.copy(alpha = 0.1f),
+                    0.75f to Color.Black.copy(alpha = 0.05f), 1f to Color.Black.copy(alpha = 0.35f),
+                    startY = faceTopLeft.y, endY = faceTopLeft.y + faceSize.height,
+                ),
+                topLeft = faceTopLeft + Offset(bw / 2f, bw / 2f),
+                size = Size(faceSize.width - bw, faceSize.height - bw),
+                cornerRadius = CornerRadius(faceCorner.x - bw / 2f, faceCorner.y - bw / 2f),
+                style = Stroke(width = bw),
             )
         }
 
@@ -1152,6 +1171,7 @@ object TileRenderer {
             val surfaces = Array(TileWear.LOOKS) { look ->
                 image(width, ih) {
                     drawWear(this, look, face.topLeft, face.size, kit)
+                    drawTone(this, look, face.topLeft, face.size, kit)
                     drawGlaze(this, look, face.topLeft, face.size, w, 0f, GlazePart.FIXED)
                 }
             }
@@ -1282,6 +1302,23 @@ object TileRenderer {
                 }
             }
         }
+    }
+
+    /**
+     * Each tile's own tone ([TileKit.toneVariation]): by [look], a little warmer or cooler, lighter
+     * or darker, so a board reads as pieces of a real set rather than prints of one
+     */
+    private fun drawTone(scope: DrawScope, look: Int, topLeft: Offset, size: Size, kit: TileKit = TileKits.current) {
+        val v = kit.toneVariation
+        if (v <= 0f) return
+        val random = kotlin.random.Random(TONE_SEED + look * 104729)
+        val warm = random.nextFloat() * 2f - 1f
+        val light = random.nextFloat() * 2f - 1f
+        val corner = CornerRadius(size.width * 0.085f * 0.9f, size.width * 0.085f * 0.9f)
+        val warmth = if (warm > 0f) Color(0xFFC07A30) else Color(0xFF6A88A8)
+        scope.drawRoundRect(warmth.copy(alpha = (abs(warm) * 0.07f * v).coerceAtMost(0.3f)), topLeft, size, corner)
+        val shade = if (light > 0f) Color.White else Color.Black
+        scope.drawRoundRect(shade.copy(alpha = (abs(light) * 0.06f * v).coerceAtMost(0.3f)), topLeft, size, corner)
     }
 
     private fun drawWear(scope: DrawScope, look: Int, topLeft: Offset, size: Size, kit: TileKit = TileKits.current) {
@@ -1693,6 +1730,7 @@ object TileRenderer {
         Color(0xFF6A6863), Color(0xFF34332F), Color(0xFF7C6D60), Color(0xFF5E4E44),
     )
     private const val TERRAZZO_SEED = 4057
+    private const val TONE_SEED = 7121
     private const val CONTACT_SHADOW_ALPHA = 0.45f
     private const val CONTACT_BLUR = 0.07f
     // How far past the shape the blur reaches, in blur radii

@@ -626,7 +626,8 @@ private fun BoardContent(
                         currentTransform.tileWidth, canvasW, canvasH, flame,
                     ),
                     hintStrength = hintStrength,
-                    layerShade = ((topLayer - tile.z) * LAYER_SHADE).coerceAtMost(LAYER_SHADE_MAX),
+                    layerShade = ((topLayer - tile.z) * LAYER_SHADE * TileKits.current.layerCue)
+                        .coerceAtMost(LAYER_SHADE_MAX * TileKits.current.layerCue.coerceAtLeast(1f)),
                     seams = seams[tile.id],
                     rightAway = sideAway(px + currentTransform.tileWidth, py + currentTransform.tileHeight / 2f, canvasW, canvasH, flame, 1f, 0f),
                     belowAway = sideAway(px + currentTransform.tileWidth / 2f, py + currentTransform.tileHeight, canvasW, canvasH, flame, 0f, -1f),
