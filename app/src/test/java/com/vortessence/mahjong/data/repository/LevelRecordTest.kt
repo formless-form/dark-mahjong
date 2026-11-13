@@ -28,6 +28,16 @@ class LevelRecordTest {
     }
 
     @Test
+    fun anyRealTimeBeatsNoTime() {
+        val broken = LevelRecord(0, 0, 0, 0)
+        assertTrue(LevelRecord(400_000, 0, 0, 0).beats(broken))
+        assertTrue(!broken.beats(LevelRecord(400_000, 0, 0, 0)))
+        // Less help still wins over a real time
+        assertTrue(broken.beats(LevelRecord(400_000, 1, 0, 0)))
+        assertEquals("–", broken.time)
+    }
+
+    @Test
     fun timeReads() {
         assertEquals("3:42", LevelRecord(222_000, 0, 0, 0).time)
         assertEquals("1:05:09", LevelRecord(3_909_000, 0, 0, 0).time)

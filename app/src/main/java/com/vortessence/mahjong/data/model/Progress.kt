@@ -23,8 +23,13 @@ data class Progress(
  * those the quickest. [millis] is time spent playing, never counting time away.
  */
 data class LevelRecord(val millis: Long, val hints: Int, val reshuffles: Int, val undos: Int) {
-    /** Better than [other]: less help (hints and reshuffles), then fewer undos, then quicker. */
-    fun beats(other: LevelRecord): Boolean = compareValuesBy(this, other, { it.hints + it.reshuffles }, { it.undos }, { it.millis }) < 0
+    /**
+     * Better than [other]: less help (hints and reshuffles), then fewer undos, then quicker. A time
+     * of 0 is no time at all (test builds before 2026-11-14 saved 0 for every clear), so any real
+     * time beats it.
+     */
+    fun beats(other: LevelRecord): Boolean =
+        compareValuesBy(this, other, { it.hints + it.reshuffles }, { it.undos }, { if (it.millis > 0) it.millis else Long.MAX_VALUE }) < 0
 
     /** Stored as "millis,hints,reshuffles,undos". */
     fun encode() = "$millis,$hints,$reshuffles,$undos"
@@ -38,8 +43,9 @@ data class LevelRecord(val millis: Long, val hints: Int, val reshuffles: Int, va
 
     /** No hints, no reshuffles and no undos: the gold ribbon. */
     val clean: Boolean get() = hints == 0 && reshuffles == 0 && undos == 0
-    /** "3:42", or "1:05:09" past an hour. */
+    /** "3:42", or "1:05:09" past an hour; "–" for no time. */
     val time: String get() {
+        if (millis <= 0) return "–"
         val s = millis / 1000
         return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
     }
