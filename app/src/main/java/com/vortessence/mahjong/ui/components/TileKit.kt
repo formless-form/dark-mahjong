@@ -1,6 +1,7 @@
 package com.vortessence.mahjong.ui.components
 
 import androidx.compose.ui.graphics.Color
+import com.vortessence.mahjong.BuildConfig
 import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.ui.theme.TileBevelHighlight
 import com.vortessence.mahjong.ui.theme.TileIvoryBottom
@@ -167,11 +168,12 @@ object TileKits {
     )
 
     /**
-     * Whether Settings offers a choice of sets. Off since 1.4.14 (Gareth found an issue with
-     * Charcoal on 2026-11-13): the row is hidden and every board is drawn in Ivory, whatever was
-     * chosen before, which is kept for when the choice returns.
+     * Whether Settings offers a choice of sets. Off in Play builds since 1.4.14 (Gareth found two
+     * faces told apart only by colour looked alike in Charcoal, 2026-11-13): the row is hidden and
+     * every board is drawn in Ivory, a choice made before kept for when it returns. Test builds
+     * (perfHooks) offer it, to try Charcoal with its colour bar on a phone.
      */
-    const val OFFERED = false
+    val OFFERED: Boolean = BuildConfig.PERF_HOOKS
 
     fun of(set: TileSet): TileKit = when (set) {
         TileSet.IVORY -> IVORY
