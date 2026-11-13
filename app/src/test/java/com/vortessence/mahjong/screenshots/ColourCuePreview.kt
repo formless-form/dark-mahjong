@@ -24,6 +24,7 @@ import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 import com.vortessence.mahjong.engine.MahjongGameEngine
+import com.vortessence.mahjong.ui.components.DotPlace
 import com.vortessence.mahjong.ui.components.FaceColours
 import com.vortessence.mahjong.ui.components.LampColour
 import com.vortessence.mahjong.ui.components.PerfSwitches
@@ -119,14 +120,17 @@ class ColourCuePreview {
     private val bright = mapOf(FaceColours.RED to Color(0xFFF0645A), FaceColours.GREEN to Color(0xFF3CC85A), FaceColours.BLUE to Color(0xFF6E8CFF))
     private val pastel = mapOf(FaceColours.RED to Color(0xFFF7B1AC), FaceColours.GREEN to Color(0xFF9DE3AC), FaceColours.BLUE to Color(0xFFB6C5FF))
     private val gold = Color(0xFFE0B860)
+    // Every picture a little smaller (the same for all), so the dots have room
+    private val dots = TileKits.CHARCOAL.copy(colourDots = true, artScale = 0.8f)
     private val cream = Color(0xFFF2E6C8)
 
     @Test fun ivory() = variant(TileKits.IVORY, "0-ivory")
-    @Test fun charcoal() = variant(base, "1-charcoal-as-is")
-    @Test fun dots() = variant(base.copy(colourDots = true), "2-white-with-colour-dots")
-    @Test fun originalGold() = variant(base.copy(art = null, edgeColour = gold, edge = 1f, edgeReach = 1.1f), "3-own-colours-gold-edge")
-    @Test fun brightGold() = variant(base.copy(art = null, recolour = bright, edgeColour = gold, edge = 1f, edgeReach = 1.1f), "4-bright-colours-gold-edge")
-    @Test fun brightCream() = variant(base.copy(art = null, recolour = bright, edgeColour = cream, edge = 0.9f, edgeReach = 0.9f), "5-bright-colours-cream-edge")
-    @Test fun pastel() = variant(base.copy(art = null, recolour = pastel), "6-pastel-colours")
-    @Test fun brightPlain() = variant(base.copy(art = null, recolour = bright), "7-bright-colours")
+    @Test fun dotsAsBefore() = variant(dots, "1-dots-lower-left-small")
+    @Test fun dotsBigger() = variant(dots.copy(dotSize = 0.1f, artLift = 0.03f), "2-dots-lower-left-bigger")
+    @Test fun dotsBottom() = variant(dots.copy(dotPlace = DotPlace.BOTTOM, dotSize = 0.09f, artLift = 0.04f), "3-dots-bottom-centre")
+    @Test fun dotsColumn() = variant(dots.copy(dotPlace = DotPlace.LEFT_COLUMN, dotSize = 0.09f), "4-dots-left-column")
+    @Test fun dotsUpper() = variant(dots.copy(dotPlace = DotPlace.UPPER_LEFT, dotSize = 0.09f, artLift = -0.03f), "5-dots-upper-left")
+    @Test fun bar() = variant(dots.copy(dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artLift = 0.04f), "6-colour-bar-bottom")
+    @Test fun dotsBottomGold() = variant(dots.copy(dotPlace = DotPlace.BOTTOM, dotSize = 0.09f, artLift = 0.04f, dotRing = gold), "7-dots-bottom-gold-ring")
+    @Test fun dotsLowerLeftGold() = variant(dots.copy(dotSize = 0.1f, artLift = 0.03f, dotRing = gold), "8-dots-lower-left-gold-ring")
 }

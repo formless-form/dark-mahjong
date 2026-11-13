@@ -780,9 +780,9 @@ object TileRenderer {
         kit: TileKit = TileKits.current, colourDots: List<Color>? = null,
     ) {
         val cx = x + (width * 0.5f)
-        val cy = y + (height * 0.5f)
-        val innerW = width * 0.85f
-        val innerH = height * 0.85f
+        val cy = y + (height * (0.5f - kit.artLift))
+        val innerW = width * kit.artScale
+        val innerH = height * kit.artScale
         val e = width * 0.009f
         if (kit.raised) {
             // Embossed: standing proud of the face, its upper edges catch the light and it casts
@@ -811,14 +811,39 @@ object TileRenderer {
      * row at its lower left, each in a fine dark ring so it reads on any face.
      */
     private fun drawColourDots(scope: DrawScope, colours: List<Color>, x: Float, y: Float, width: Float, height: Float, kit: TileKit) {
-        val r = width * 0.036f
-        val cy = y + height * 0.925f
-        var cx = x + width * 0.12f
-        for (c in colours) {
-            scope.drawCircle(Color.Black.copy(alpha = 0.55f), r * 1.35f, Offset(cx + r * 0.15f, cy + r * 0.25f))
-            scope.drawCircle(kit.recolour[c] ?: DOT_COLOURS[c] ?: c, r, Offset(cx, cy))
-            scope.drawCircle(Color.White.copy(alpha = 0.35f), r * 0.4f, Offset(cx - r * 0.3f, cy - r * 0.3f))
-            cx += r * 2.7f
+        if (colours.isEmpty()) return
+        val r = width * kit.dotSize / 2f
+        val step = r * 2.7f
+        fun fill(c: Color) = kit.recolour[c] ?: DOT_COLOURS[c] ?: c
+        if (kit.dotPlace == DotPlace.BOTTOM_BAR) {
+            val barW = width * 0.46f
+            val barH = r * 1.3f
+            val left = x + (width - barW) / 2f
+            val top = y + height * 0.93f - barH / 2f
+            val corner = CornerRadius(barH / 2f, barH / 2f)
+            scope.drawRoundRect(kit.dotRing ?: Color.Black.copy(alpha = 0.55f), Offset(left - r * 0.3f, top - r * 0.3f), Size(barW + r * 0.6f, barH + r * 0.6f), CornerRadius(barH, barH))
+            val part = barW / colours.size
+            scope.clipRect(left, top, left + barW, top + barH) {
+                colours.forEachIndexed { i, c ->
+                    drawRoundRect(fill(c), Offset(left + i * part - (if (i > 0) barH else 0f), top), Size(part + (if (i > 0) barH else 0f), barH), corner)
+                }
+            }
+            return
+        }
+        val n = colours.size
+        val (startX, startY, dx, dy) = when (kit.dotPlace) {
+            DotPlace.LOWER_LEFT -> listOf(x + width * 0.12f, y + height * 0.925f, step, 0f)
+            DotPlace.BOTTOM -> listOf(x + width / 2f - (n - 1) * step / 2f, y + height * 0.925f, step, 0f)
+            DotPlace.LEFT_COLUMN -> listOf(x + width * 0.11f, y + height * 0.9f, 0f, -step)
+            DotPlace.UPPER_LEFT -> listOf(x + width * 0.12f, y + height * 0.08f, step, 0f)
+            DotPlace.BOTTOM_BAR -> listOf(0f, 0f, 0f, 0f)
+        }
+        colours.forEachIndexed { i, c ->
+            val at = Offset(startX + dx * i, startY + dy * i)
+            scope.drawCircle(Color.Black.copy(alpha = 0.5f), r * 1.3f, at + Offset(r * 0.15f, r * 0.25f))
+            kit.dotRing?.let { scope.drawCircle(it, r * 1.28f, at) }
+            scope.drawCircle(fill(c), r, at)
+            scope.drawCircle(Color.White.copy(alpha = 0.35f), r * 0.4f, at - Offset(r * 0.3f, r * 0.3f))
         }
     }
 

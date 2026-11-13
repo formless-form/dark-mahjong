@@ -52,7 +52,30 @@ data class TileKit(
     // Colour-code dots: one small disc for each of the picture's colours, at the face's lower left,
     // so faces told apart by colour stay apart when the pictures are one colour
     val colourDots: Boolean = false,
+    // Where and how the dots go, how big (a fraction of the tile's width across), and the ring
+    // round each (null: a fine dark one)
+    val dotPlace: DotPlace = DotPlace.LOWER_LEFT,
+    val dotSize: Float = 0.072f,
+    val dotRing: Color? = null,
+    // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
+    // tile's height), to leave the dots room
+    val artScale: Float = 0.85f,
+    val artLift: Float = 0f,
 )
+
+/** Where a tile's colour-code dots go. */
+enum class DotPlace {
+    // A row at the lower left
+    LOWER_LEFT,
+    // A row centred along the bottom
+    BOTTOM,
+    // A column up the left edge, from the bottom
+    LEFT_COLUMN,
+    // A row at the upper left
+    UPPER_LEFT,
+    // Not dots: one short bar along the bottom, split between the colours
+    BOTTOM_BAR,
+}
 
 /** The pictures' own colours, as the tile drawings use them. */
 object FaceColours {
