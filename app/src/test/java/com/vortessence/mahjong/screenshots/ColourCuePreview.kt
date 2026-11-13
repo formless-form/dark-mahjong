@@ -147,9 +147,15 @@ class ColourCuePreview {
     private val bar = dots.copy(dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artLift = 0.04f)
     private val cream = Color(0xFFF2E6C8)
 
-    @Test fun ivory() = variant(TileKits.IVORY, "0-ivory")
-    @Test fun raised() = variant(TileKits.CHARCOAL, "1-raised-as-is")
-    @Test fun embossLight() = variant(sharp.copy(barEmboss = 0.5f), "2-emboss-light")
-    @Test fun embossMedium() = variant(sharp.copy(barEmboss = 1f), "3-emboss-medium")
-    @Test fun embossStrong() = variant(sharp.copy(barEmboss = 1.6f), "4-emboss-strong")
+    // The bar's colours: brightness down the rows (darker, as now, brighter), saturation across
+    // (muted, as now, vivid)
+    @Test fun c1() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFBB7A75), FaceColours.GREEN to Color(0xFF5A9C69), FaceColours.BLUE to Color(0xFF8391C7))), "1-darker-muted")
+    @Test fun c2() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFBB4E46), FaceColours.GREEN to Color(0xFF2F9C46), FaceColours.BLUE to Color(0xFF566DC7))), "2-darker-as-now")
+    @Test fun c3() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFBB2D23), FaceColours.GREEN to Color(0xFF0E9C2C), FaceColours.BLUE to Color(0xFF3452C7))), "3-darker-vivid")
+    @Test fun c4() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFF09C96), FaceColours.GREEN to Color(0xFF74C886), FaceColours.BLUE to Color(0xFFA8BAFF))), "4-as-now-muted")
+    @Test fun c5() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFF0645A), FaceColours.GREEN to Color(0xFF3CC85A), FaceColours.BLUE to Color(0xFF6E8CFF))), "5-as-now-as-now")
+    @Test fun c6() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFF03A2D), FaceColours.GREEN to Color(0xFF12C839), FaceColours.BLUE to Color(0xFF426AFF))), "6-as-now-vivid")
+    @Test fun c7() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFFFB6B0), FaceColours.GREEN to Color(0xFF89EC9E), FaceColours.BLUE to Color(0xFFC1CEFF))), "7-brighter-muted")
+    @Test fun c8() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFFF857C), FaceColours.GREEN to Color(0xFF47EC6A), FaceColours.BLUE to Color(0xFF98ADFF))), "8-brighter-as-now")
+    @Test fun c9() = variant(TileKits.CHARCOAL.copy(recolour = mapOf(FaceColours.RED to Color(0xFFFF6054), FaceColours.GREEN to Color(0xFF15EC43), FaceColours.BLUE to Color(0xFF7995FF))), "9-brighter-vivid")
 }
