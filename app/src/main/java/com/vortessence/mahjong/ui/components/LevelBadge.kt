@@ -42,11 +42,17 @@ enum class BadgeState { CURRENT, CLEARED, OPEN, LOCKED }
  * otherwise.
  */
 @Composable
-fun LevelBadge(state: BadgeState, label: String, icon: ImageVector? = null, ribbon: Boolean = false) {
+fun LevelBadge(state: BadgeState, label: String, icon: ImageVector? = null, ribbon: Boolean = false, perfect: Boolean = false) {
     // A level cleared cleanly wears a small gold ribbon pinned to its badge's lower right
     Box {
         Badge(state, label, icon)
-        if (ribbon && state != BadgeState.LOCKED) {
+        if (perfect && state != BadgeState.LOCKED) {
+            // A perfect clear (no hints, reshuffles or undos): a gold star in the ribbon's place
+            Icon(
+                Icons.Rounded.Star, contentDescription = "Cleared perfectly", tint = Color(0xFFF2C14E),
+                modifier = Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.dp).size(20.dp),
+            )
+        } else if (ribbon && state != BadgeState.LOCKED) {
             GoldRibbon(Modifier.align(Alignment.BottomEnd).offset(x = 2.dp, y = 4.dp).size(width = 16.dp, height = 21.dp))
         }
     }
