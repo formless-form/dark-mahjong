@@ -871,6 +871,13 @@ object TileRenderer {
                 }
                 return
             }
+            if (kit.barEngraved) {
+                // The groove's lip: catching the light below, in shade above
+                scope.drawRoundRect(
+                    Color.White.copy(alpha = 0.22f), Offset(left - rim, top + rim * 0.8f),
+                    Size(barW + rim * 2f, barH + rim * 0.8f), CornerRadius(barH / 2f + rim, barH / 2f + rim),
+                )
+            }
             // A fine dark rim, so it reads on any face
             scope.drawRoundRect(
                 rimColour, Offset(left - rim, top - rim),
@@ -888,6 +895,15 @@ object TileRenderer {
                             Offset(left + i * part, top), Size(part, barH),
                         )
                     }
+                } else if (kit.barEngraved) {
+                    // Deeper paint in a groove: the upper wall's shadow falls across it, and its
+                    // floor catches a little light along the bottom
+                    drawRect(Color.Black.copy(alpha = 0.18f), Offset(left, top), Size(barW, barH))
+                    drawRect(
+                        Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.6f), 0.5f to Color.Transparent, startY = top, endY = top + barH),
+                        Offset(left, top), Size(barW, barH),
+                    )
+                    drawRect(Color.White.copy(alpha = 0.18f), Offset(left, top + barH * 0.8f), Size(barW, barH * 0.2f))
                 } else {
                     // A sheen along its top, so it reads as a glossy inlay
                     drawRect(Color.White.copy(alpha = 0.28f), Offset(left, top), Size(barW, barH * 0.38f))

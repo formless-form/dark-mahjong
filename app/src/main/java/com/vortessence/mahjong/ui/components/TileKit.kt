@@ -77,6 +77,9 @@ data class TileKit(
     val barOutlineWidth: Float = 0.18f,
     val barSplit: BarSplit = BarSplit.NONE,
     val barGap: Float = 0.2f,
+    // The bar cut into the face rather than set on it: shadowed along its upper inside edge, a light
+    // lip below, its colours a little deeper
+    val barEngraved: Boolean = false,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,
@@ -126,7 +129,7 @@ object TileKits {
 
     /**
      * Charcoal terrazzo, its pictures raised in white with a dark edge all round (the warm light
-     * makes the white a soft gold). Chosen by Gareth on 2026-11-13 from renders of the
+     * makes the white a soft gold), each face's colours in a bar along its bottom. Chosen by Gareth on 2026-11-13 from renders of the
      * alternatives (TileKitPreview): a cream or wood backing, carved pictures, cream, cooler
      * white, gold, and light drained of its warmth.
      */
@@ -146,6 +149,18 @@ object TileKits {
         wear = 0.35f,
         edge = 1.1f,
         terrazzo = 1f,
+        // One-colour pictures lose what told some faces apart (the six and nine of bamboo), so a
+        // colour bar along the bottom carries each face's colours, split evenly, a fine dark line
+        // between them (Gareth's pick, 2026-11-13, over dots, glows and coloured pictures)
+        colourDots = true,
+        dotPlace = DotPlace.BOTTOM_BAR,
+        dotSize = 0.09f,
+        artScale = 0.8f,
+        artLift = 0.04f,
+        barOutline = 0.4f,
+        barOutlineWidth = 0.12f,
+        barSplit = BarSplit.LINE,
+        barGap = 0.22f,
     )
 
     /**

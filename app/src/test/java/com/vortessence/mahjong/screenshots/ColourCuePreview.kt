@@ -128,8 +128,7 @@ class ColourCuePreview {
     private val cream = Color(0xFFF2E6C8)
 
     @Test fun ivory() = variant(TileKits.IVORY, "0-ivory")
-    @Test fun barEven() = variant(bar, "1-bar-as-before")
-    @Test fun lines() = variant(bar.copy(barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.LINE, barGap = 0.22f), "11-faint-outline-dividers")
-    @Test fun gaps() = variant(bar.copy(barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.GAP, barGap = 0.35f), "12-faint-outline-gaps")
-    @Test fun linesLonger() = variant(bar.copy(barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.LINE, barGap = 0.22f, barLength = 0.54f), "13-dividers-longer")
+    @Test fun charcoal() = variant(TileKits.CHARCOAL, "1-raised-bar")
+    @Test fun engraved() = variant(TileKits.CHARCOAL.copy(barEngraved = true), "2-engraved-bar")
+    @Test fun engravedBrighter() = variant(TileKits.CHARCOAL.copy(barEngraved = true, barLighten = 0.15f), "3-engraved-bar-brighter")
 }
