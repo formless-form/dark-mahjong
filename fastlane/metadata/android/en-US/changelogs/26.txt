@@ -1,0 +1,4 @@
+New in 1.4.13:
+• A new Charcoal tile set: choose it in Settings
+• Smoother play on slower phones
+• Fixes and improvements
