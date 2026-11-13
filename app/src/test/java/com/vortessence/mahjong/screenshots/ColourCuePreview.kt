@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Canvas
@@ -84,18 +85,29 @@ class ColourCuePreview {
         FileOutputStream("build/colour-cues/$name-faces.png").use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    // A few faces large: the six, seven and nine of bamboo and the nine of circles
-    private fun bigSheet(kit: TileKit, name: String, tileW: Float = 260f) {
-        val faces = listOf(Tile(TileSuit.BAMBOO, 6), Tile(TileSuit.BAMBOO, 7), Tile(TileSuit.BAMBOO, 9), Tile(TileSuit.CIRCLE, 9))
+    // Eight faces large, in two rows: bamboo, circles and a character above (one, two and three
+    // colours in their bars), a wind, a dragon, a season and the one of circles below, each in a
+    // look of its own
+    private fun bigSheet(kit: TileKit, name: String, tileW: Float = 260f, looks: List<Int> = (0..7).toList()) {
+        val faces = listOf(
+            Tile(TileSuit.BAMBOO, 6), Tile(TileSuit.BAMBOO, 9), Tile(TileSuit.CIRCLE, 9), Tile(TileSuit.CHARACTER, 5),
+            Tile(TileSuit.WIND, 1), Tile(TileSuit.DRAGON, 1), Tile(TileSuit.SEASON, 1), Tile(TileSuit.CIRCLE, 1),
+        )
+        val across = 4
         val tileH = tileW * 1.33f
         val gap = tileW * 0.15f
-        val w = (faces.size * (tileW + gap) + gap).toInt()
-        val h = (tileH + gap * 2).toInt()
+        val w = (across * (tileW + gap) + gap).toInt()
+        val h = ((faces.size / across) * (tileH + gap) + gap).toInt()
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val lamp = LampColour.tiles().let { Color(it[0], it[1], it[2]) }
         CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap.asImageBitmap()), Size(w.toFloat(), h.toFloat())) {
             drawRect(Color(0xFF3A2416))
-            faces.forEachIndexed { i, tile -> TileRenderer.drawSample(this, tile, gap + i * (tileW + gap), gap, tileW, tileH, kit, look = i) }
+            faces.forEachIndexed { i, tile ->
+                TileRenderer.drawSample(
+                    this, tile, gap + (i % across) * (tileW + gap), gap + (i / across) * (tileH + gap), tileW, tileH, kit,
+                    look = looks[i % looks.size],
+                )
+            }
             drawRect(lamp, blendMode = BlendMode.Modulate)
         }
         FileOutputStream("build/colour-cues/$name-big.png").use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -129,7 +141,9 @@ class ColourCuePreview {
             }
         }
         for (next in scenes) {
-            scene = next
+            // Applied at once: by the lamp alone nothing moves, and a change waiting on the next
+            // frame was never seen (both boards came out as the first)
+            Snapshot.withMutableSnapshot { scene = next }
             compose.mainClock.advanceTimeBy(1500)
             compose.onRoot().captureRoboImage("build/colour-cues/$name-${next.name}.png")
         }
@@ -178,10 +192,11 @@ class ColourCuePreview {
         bevelHighlight = Color(0xFFC8A880), terrazzo = 0f, woodGrain = grain, toneVariation = 0.8f, wear = 0.5f,
     )
 
-    @Test fun w1() = variant(wood(0xFF6B4A32, 0xFF553A27, 0xFF432D1E, 0xFF2A1C12), "1-walnut")
-    @Test fun w2() = variant(wood(0xFF9C6B3C, 0xFF84592F, 0xFF6A4625, 0xFF3A2614), "2-teak")
-    @Test fun w3() = variant(wood(0xFF6E3328, 0xFF5A2820, 0xFF47201A, 0xFF2A120E), "3-rosewood")
-    @Test fun w4() = variant(wood(0xFFB89A6A, 0xFFA3855A, 0xFF7E6440, 0xFF3E2E1C, grain = 1.6f), "4-olive-wood")
-    @Test fun w5() = variant(wood(0xFF3A2A20, 0xFF2C2018, 0xFF22180F, 0xFF140E08, grain = 1.3f), "5-ebony")
-    @Test fun w6() = variant(wood(0xFF6B4A32, 0xFF553A27, 0xFF432D1E, 0xFF2A1C12, grain = 1.7f), "6-walnut-strong-grain")
+    private val olive = wood(0xFFB89A6A, 0xFFA3855A, 0xFF7E6440, 0xFF3E2E1C, grain = 1.6f)
+
+    @Test fun w1() = variant(olive, "1-olive-as-mocked-up")
+    @Test fun w2() = variant(TileKits.WOOD.copy(woodFigure = 0f), "2-darker-plain-grain")
+    @Test fun w3() = variant(TileKits.WOOD.copy(woodFigure = 0.6f), "3-darker-light-figure")
+    @Test fun w4() = variant(TileKits.WOOD, "4-darker-figured-the-set")
+    @Test fun w5() = variant(TileKits.WOOD.copy(woodFigure = 1.5f), "5-darker-strong-figure")
 }

@@ -15,6 +15,7 @@ enum class TileSet(val shortName: String) {
     IVORY("Ivory"),
     CHARCOAL("Charcoal"),
     JADE("Jade"),
+    WOOD("Wood"),
 }
 
 // How a wide board (one that plays much bigger with the phone on its side) is shown: the player is

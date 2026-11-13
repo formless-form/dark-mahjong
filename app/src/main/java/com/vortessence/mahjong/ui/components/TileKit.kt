@@ -95,6 +95,9 @@ data class TileKit(
     // Wood grain in the face, as strong as this (0: none): each tile's own, flowing lines and pores,
     // now and then a knot with the grain sweeping round it
     val woodGrain: Float = 0f,
+    // Figured wood: dark heartwood streaks wandering through the grain, as olive wood's, as
+    // strong as this (0: none)
+    val woodFigure: Float = 0f,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,
@@ -194,6 +197,7 @@ object TileKits {
         TileSet.IVORY -> IVORY
         TileSet.CHARCOAL -> CHARCOAL
         TileSet.JADE -> JADE
+        TileSet.WOOD -> WOOD
     }
 
     /**
@@ -213,6 +217,25 @@ object TileKits {
         wear = 0.4f,
         bevel = 0.8f,
         toneVariation = 1.2f,
+    )
+
+    /**
+     * Figured olive wood, a little darker than olive is when new (Gareth asked for mock-up 4's
+     * olive three shades darker, 2026-11-13): wild grain of its own on every tile, dark heartwood
+     * streaks, now and then a knot, with Charcoal's white raised pictures and colour bar.
+     */
+    val WOOD = CHARCOAL.copy(
+        name = "Wood",
+        faceTop = Color(0xFF977949),
+        faceBottom = Color(0xFF826439),
+        side = Color(0xFF5D4524),
+        backing = Color(0xFF2A1D10),
+        bevelHighlight = Color(0xFFC8A880),
+        terrazzo = 0f,
+        woodGrain = 1.6f,
+        woodFigure = 1f,
+        toneVariation = 0.8f,
+        wear = 0.5f,
     )
 
     /** The set chosen in Settings (MahjongBoard keeps it up to date). */
