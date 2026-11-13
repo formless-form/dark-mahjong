@@ -44,7 +44,7 @@ class TileKitPreview {
 
     @After
     fun back() {
-        TileKits.current = TileKits.IVORY
+        TileKits.preview = null
     }
 
     private data class Scene(val layout: String, val surface: TableSurface, val fire: Boolean, val name: String)
@@ -66,7 +66,7 @@ class TileKitPreview {
         PerfSwitches.off = emptySet()
         TileWear.prepareNow()
         TileRenderer.TileAtlas.bakeInline = true
-        TileKits.current = kit
+        TileKits.preview = kit
         var scene by mutableStateOf(scenes.first())
         compose.mainClock.autoAdvance = false
         compose.setContent {

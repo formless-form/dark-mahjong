@@ -9,6 +9,12 @@ enum class TableSurface(val displayName: String, val shortName: String) {
     SLATE("Slate", "Slate"),
 }
 
+// The tiles' set (TileKits): the classic ivory, or charcoal terrazzo with soft gold pictures
+enum class TileSet(val shortName: String) {
+    IVORY("Ivory"),
+    CHARCOAL("Charcoal"),
+}
+
 // How a wide board (one that plays much bigger with the phone on its side) is shown: the player is
 // asked the first time one comes up, and the answer is kept
 enum class WideBoards(val shortName: String) {
@@ -29,6 +35,7 @@ data class GameSettings(
     val animationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val tableSurface: TableSurface = TableSurface.GREEN_MAT,
+    val tileSet: TileSet = TileSet.IVORY,
     // The lamp over the table is always lit; how brightly, 0..1, the middle its natural strength
     val lampBrightness: Float = 0.5f,
     // A fire in a hearth beside the table, lit or not, and how brightly it burns (as the lamp)

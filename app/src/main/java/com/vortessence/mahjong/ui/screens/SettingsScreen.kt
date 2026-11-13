@@ -1,6 +1,20 @@
 package com.vortessence.mahjong.ui.screens
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import com.vortessence.mahjong.data.model.Tile
+import com.vortessence.mahjong.data.model.TileSuit
+import com.vortessence.mahjong.ui.components.BoardTransform
+import com.vortessence.mahjong.ui.components.LampColour
+import com.vortessence.mahjong.ui.components.TileKit
+import com.vortessence.mahjong.ui.components.TileKits
+import com.vortessence.mahjong.ui.components.TileRenderer
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -30,6 +44,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Texture
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Fireplace
@@ -56,6 +71,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.ui.components.CheckSwitch
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
@@ -84,6 +100,8 @@ fun SettingsScreen(
     onTip: (TipOffer) -> Unit = {},
     onTipOpened: () -> Unit = {},
     onTipClosed: () -> Unit = {},
+    // The tile sets shown as sample tiles to pick from; false, a plain switch of their names
+    tileSamples: Boolean = true,
 ) {
     // Kept if the payment sheet makes Android rebuild the screen, so the thank-you still has a card
     var tipping by rememberSaveable { mutableStateOf(false) }
@@ -183,6 +201,16 @@ fun SettingsScreen(
                             shapes, Icons.Rounded.Texture, "Table surface", null,
                             TableSurface.entries, { it.shortName }, settings.tableSurface,
                         ) { onSettingsChanged(settings.copy(tableSurface = it)) }
+                    },
+                    { shapes ->
+                        if (tileSamples) {
+                            TileSetRow(shapes, settings.tileSet) { onSettingsChanged(settings.copy(tileSet = it)) }
+                        } else {
+                            ChoiceRow(
+                                shapes, Icons.Rounded.Style, "Tiles", null,
+                                TileSet.entries, { it.shortName }, settings.tileSet,
+                            ) { onSettingsChanged(settings.copy(tileSet = it)) }
+                        }
                     },
                     { shapes ->
                         SliderRow(shapes, "Lamp brightness", settings.lampBrightness, onSettingsCommit) {
@@ -435,6 +463,64 @@ private fun SliderRow(
         Text(title, modifier = fade)
     }
 }
+
+// The tile sets, each shown by a few of its tiles under the table's warm lamp, the chosen one ringed
+@Composable
+private fun TileSetRow(shapes: ListItemShapes, selected: TileSet, onSelect: (TileSet) -> Unit) {
+    Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LeadingIcon(Icons.Rounded.Style)
+                Spacer(Modifier.width(16.dp))
+                Text("Tiles", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                TileSet.entries.forEach { set ->
+                    val chosen = set == selected
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
+                        border = if (chosen) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(MaterialTheme.shapes.large)
+                            .selectable(selected = chosen, role = Role.RadioButton) { onSelect(set) },
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
+                            TileSamples(TileKits.of(set), Modifier.fillMaxWidth().height(76.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                set.shortName,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Three tiles of [kit] side by side, lit as by the lamp over the table
+@Composable
+private fun TileSamples(kit: TileKit, modifier: Modifier) {
+    val lamp = remember { LampColour.tiles().let { Color(it[0], it[1], it[2]) } }
+    Canvas(modifier.graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
+        val h = size.height * 0.84f
+        val w = h / BoardTransform.ASPECT_RATIO
+        val gap = w * 0.12f
+        val total = w * 3 + gap * 2
+        val x0 = (size.width - total) / 2f
+        SAMPLE_TILES.forEachIndexed { i, tile ->
+            TileRenderer.drawSample(this, tile, x0 + i * (w + gap), (size.height - h) / 2f, w, h, kit, look = i)
+        }
+        drawRect(lamp, blendMode = BlendMode.Modulate)
+    }
+}
+
+private val SAMPLE_TILES = listOf(Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3))
 
 // A choice of a few: a connected button group, the chosen one filled in and fully rounded
 @Composable

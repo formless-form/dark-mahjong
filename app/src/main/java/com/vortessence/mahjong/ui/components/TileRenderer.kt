@@ -483,6 +483,20 @@ object TileRenderer {
         if (isSelected) drawGoldRim(scope, x, y, width, height)
     }
 
+    /**
+     * One tile, [tile], in [kit], standing alone at ([x], [y]) [width] x [height]: for showing a set
+     * (Settings), drawn whole each time rather than from the atlas, which holds the board's set.
+     */
+    fun drawSample(scope: DrawScope, tile: Tile, x: Float, y: Float, width: Float, height: Float, kit: TileKit, look: Int = 0) {
+        drawWalls(scope, x, y, width, height, null, 0f, kit)
+        drawFace(scope, x, y, width, height, null, 0f, false, kit)
+        val face = faceRect(x, y, width, height)
+        drawTerrazzo(scope, look, face.topLeft, face.size, glints = 0f, kit = kit)
+        getTileVector(tile)?.let { drawArtwork(scope, it, x, y, width, height, kit) }
+        drawWear(scope, look, face.topLeft, face.size, kit)
+        drawGlaze(scope, look, face.topLeft, face.size, width, 0f, GlazePart.ALL)
+    }
+
     /*
      * The selected tile, in polished gold (chosen 2026-10-29 over a flat amber tint): a warm
      * golden glow behind it, its face washed with gold, and a gold rim with a fine glint.
@@ -611,8 +625,7 @@ object TileRenderer {
     }
 
     /** The tile's solid body: wooden backing, then ivory sides, swept out to its depth. */
-    private fun drawWalls(scope: DrawScope, x: Float, y: Float, width: Float, height: Float, highlightColor: Color?, tintAlpha: Float) {
-        val kit = TileKits.current
+    private fun drawWalls(scope: DrawScope, x: Float, y: Float, width: Float, height: Float, highlightColor: Color?, tintAlpha: Float, kit: TileKit = TileKits.current) {
         val depthX = width * BoardTransform.LAYER_SHIFT_FACTOR_X
         val depthY = height * BoardTransform.LAYER_SHIFT_FACTOR_Y
         val cornerR = width * 0.085f
@@ -696,6 +709,7 @@ object TileRenderer {
     private fun drawFace(
         scope: DrawScope, x: Float, y: Float, width: Float, height: Float,
         highlightColor: Color?, tintAlpha: Float, freeTint: Boolean,
+        kit: TileKit = TileKits.current,
     ) {
         val cornerR = width * 0.085f
         val corner = CornerRadius(cornerR, cornerR)
@@ -703,7 +717,6 @@ object TileRenderer {
         val faceTopLeft = face.topLeft
         val faceSize = face.size
         val faceCorner = CornerRadius(cornerR * 0.9f, cornerR * 0.9f)
-        val kit = TileKits.current
 
         val faceBrush = Brush.verticalGradient(
             colors = listOf(kit.faceTop, kit.faceBottom),
@@ -762,13 +775,12 @@ object TileRenderer {
      * Lit from above, each groove's upper wall falls into a fine shadow and its lower lip catches a
      * fine light edge.
      */
-    private fun drawArtwork(scope: DrawScope, vector: ImageVector, x: Float, y: Float, width: Float, height: Float) {
+    private fun drawArtwork(scope: DrawScope, vector: ImageVector, x: Float, y: Float, width: Float, height: Float, kit: TileKit = TileKits.current) {
         val cx = x + (width * 0.5f)
         val cy = y + (height * 0.5f)
         val innerW = width * 0.85f
         val innerH = height * 0.85f
         val e = width * 0.009f
-        val kit = TileKits.current
         if (kit.raised) {
             // Embossed: standing proud of the face, its upper edges catch the light and it casts
             // a shadow down and to the right; a faint dark edge all round keeps it clear of the face
@@ -965,32 +977,32 @@ object TileRenderer {
                 val p = pad.toFloat()
                 val colour = highlight.colour ?: if (free) FreeTint else null
                 val alpha = if (highlight == Highlight.NONE) 0.15f else 0.5f
-                drawWalls(this, p, p, w, h, colour, alpha)
-                drawFace(this, p, p, w, h, colour, alpha, free)
+                drawWalls(this, p, p, w, h, colour, alpha, kit)
+                drawFace(this, p, p, w, h, colour, alpha, free, kit)
             }
             val bodies = Array(Highlight.entries.size * 2) { body(Highlight.entries[it / 2], it % 2 == 1) }
             val ih = h.toInt()
             val face = faceRect(0f, 0f, w, h)
             val art = allTiles.associateWith { tile ->
                 image(width, ih) {
-                    getTileVector(tile)?.let { drawArtwork(this, it, 0f, 0f, w, h) }
+                    getTileVector(tile)?.let { drawArtwork(this, it, 0f, 0f, w, h, kit) }
                 }
             }
             val surfaces = Array(TileWear.LOOKS) { look ->
                 image(width, ih) {
-                    drawWear(this, look, face.topLeft, face.size)
+                    drawWear(this, look, face.topLeft, face.size, kit)
                     drawGlaze(this, look, face.topLeft, face.size, w, 0f, GlazePart.FIXED)
                 }
             }
             val glares = Array(TileWear.LOOKS) { look ->
                 image(width, ih) {
                     drawGlaze(this, look, face.topLeft, face.size, w, 1f, GlazePart.GLARE)
-                    drawTerrazzo(this, look, face.topLeft, face.size, glints = 1f, flakes = false)
+                    drawTerrazzo(this, look, face.topLeft, face.size, glints = 1f, flakes = false, kit = kit)
                 }
             }
             // Terrazzo, under the paint: each look's own
             val terrazzos = if (kit.terrazzo > 0f) Array(TileWear.LOOKS) { look ->
-                image(width, ih) { drawTerrazzo(this, look, face.topLeft, face.size, glints = 0f) }
+                image(width, ih) { drawTerrazzo(this, look, face.topLeft, face.size, glints = 0f, kit = kit) }
             } else null
             val wallRight = wallMask(right = true, bodyW, bodyH, pad.toFloat(), w, h)
             val wallBelow = wallMask(right = false, bodyW, bodyH, pad.toFloat(), w, h)
@@ -1027,8 +1039,8 @@ object TileRenderer {
      * image, stamped as each tile catches the lamp and the fire, so they twinkle with the
      * flames); [flakes] false draws only those.
      */
-    private fun drawTerrazzo(scope: DrawScope, look: Int, topLeft: Offset, size: Size, glints: Float, flakes: Boolean = true) {
-        val strength = TileKits.current.terrazzo
+    private fun drawTerrazzo(scope: DrawScope, look: Int, topLeft: Offset, size: Size, glints: Float, flakes: Boolean = true, kit: TileKit = TileKits.current) {
+        val strength = kit.terrazzo
         if (strength <= 0f || PerfSwitches.isOff("terrazzo")) return
         val random = kotlin.random.Random(TERRAZZO_SEED + look * 7919)
         val unit = size.width
@@ -1111,9 +1123,9 @@ object TileRenderer {
         }
     }
 
-    private fun drawWear(scope: DrawScope, look: Int, topLeft: Offset, size: Size) {
+    private fun drawWear(scope: DrawScope, look: Int, topLeft: Offset, size: Size, kit: TileKit = TileKits.current) {
         val wear = TileWear.overlay(look) ?: return
-        val strength = TileKits.current.wear
+        val strength = kit.wear
         if (strength <= 0f) return
         val pivot = Offset(topLeft.x + size.width / 2f, topLeft.y + size.height / 2f)
         val (sx, sy) = when (TileWear.orientation(look)) {

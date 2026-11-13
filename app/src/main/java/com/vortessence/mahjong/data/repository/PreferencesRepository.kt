@@ -22,6 +22,7 @@ import com.vortessence.mahjong.data.model.PerfCheckState
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.model.WideBoards
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -64,6 +65,7 @@ class PreferencesRepository(private val context: Context) {
         val PUZZLE_DAYS_SOLVED = stringSetPreferencesKey("puzzle_days_solved")
         val SAVED_GAME = stringPreferencesKey("saved_game")
         val TABLE_SURFACE = stringPreferencesKey("table_surface")
+        val TILE_SET = stringPreferencesKey("tile_set")
         val LAMP_BRIGHTNESS = floatPreferencesKey("lamp_brightness")
         val FIREPLACE = booleanPreferencesKey("fireplace")
         val LOW_PERFORMANCE = booleanPreferencesKey("low_performance")
@@ -116,6 +118,9 @@ class PreferencesRepository(private val context: Context) {
             tableSurface = prefs[Keys.TABLE_SURFACE]
                 ?.let { name -> TableSurface.entries.firstOrNull { it.name == name } }
                 ?: d.tableSurface,
+            tileSet = prefs[Keys.TILE_SET]
+                ?.let { name -> TileSet.entries.firstOrNull { it.name == name } }
+                ?: d.tileSet,
             lampBrightness = prefs[Keys.LAMP_BRIGHTNESS] ?: d.lampBrightness,
             fireplaceLit = prefs[Keys.FIREPLACE] ?: d.fireplaceLit,
             lowPerformance = prefs[Keys.LOW_PERFORMANCE].takeIf { onThisPhone(prefs) } ?: d.lowPerformance,
@@ -215,6 +220,7 @@ class PreferencesRepository(private val context: Context) {
             put(Keys.HIGHLIGHT_FREE_TILES) { it.highlightFreeTiles }
             put(Keys.VIBRATION) { it.vibrationEnabled }
             put(Keys.TABLE_SURFACE) { it.tableSurface.name }
+            put(Keys.TILE_SET) { it.tileSet.name }
             put(Keys.LAMP_BRIGHTNESS) { it.lampBrightness }
             put(Keys.FIREPLACE) { it.fireplaceLit }
             if (to.lowPerformance != from.lowPerformance) claimForThisPhone(prefs)

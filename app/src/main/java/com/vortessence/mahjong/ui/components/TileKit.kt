@@ -1,6 +1,7 @@
 package com.vortessence.mahjong.ui.components
 
 import androidx.compose.ui.graphics.Color
+import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.ui.theme.TileBevelHighlight
 import com.vortessence.mahjong.ui.theme.TileIvoryBottom
 import com.vortessence.mahjong.ui.theme.TileIvoryTop
@@ -83,7 +84,19 @@ object TileKits {
         terrazzo = 1f,
     )
 
-    /** The set the tiles are drawn in. A change makes the tile atlas draw its images again. */
+    fun of(set: TileSet): TileKit = when (set) {
+        TileSet.IVORY -> IVORY
+        TileSet.CHARCOAL -> CHARCOAL
+    }
+
+    /** The set chosen in Settings (MahjongBoard keeps it up to date). */
     @Volatile
-    var current: TileKit = IVORY
+    var chosen: TileKit = IVORY
+
+    /** Previews only: a set to try, over the chosen one. */
+    @Volatile
+    var preview: TileKit? = null
+
+    /** The set the tiles are drawn in. A change makes the tile atlas draw its images again. */
+    val current: TileKit get() = preview ?: chosen
 }
