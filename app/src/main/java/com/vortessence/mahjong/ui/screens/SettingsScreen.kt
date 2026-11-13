@@ -470,7 +470,8 @@ private fun SliderRow(
     }
 }
 
-// The tile sets, each shown by a few of its tiles under the table's warm lamp, the chosen one ringed
+// The tile sets, each shown by a few of its tiles under the table's warm lamp, two to a row (so
+// each set's tiles show at a size that reads), the chosen one ringed
 @Composable
 private fun TileSetRow(shapes: ListItemShapes, selected: TileSet, onSelect: (TileSet) -> Unit) {
     Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
@@ -481,30 +482,36 @@ private fun TileSetRow(shapes: ListItemShapes, selected: TileSet, onSelect: (Til
                 Text("Tiles", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             }
             Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                TileSet.entries.forEach { set ->
-                    val chosen = set == selected
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
-                        border = if (chosen) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(MaterialTheme.shapes.large)
-                            .selectable(selected = chosen, role = Role.RadioButton) { onSelect(set) },
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
-                            TileSamples(TileKits.of(set), Modifier.fillMaxWidth().height(76.dp))
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                set.shortName,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TileSet.entries.chunked(2).forEach { pair ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        pair.forEach { set -> TileSetChoice(set, set == selected, Modifier.weight(1f)) { onSelect(set) } }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TileSetChoice(set: TileSet, chosen: Boolean, modifier: Modifier, onSelect: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
+        border = if (chosen) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = modifier
+            .clip(MaterialTheme.shapes.large)
+            .selectable(selected = chosen, role = Role.RadioButton, onClick = onSelect),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
+            TileSamples(TileKits.of(set), Modifier.fillMaxWidth().height(76.dp))
+            Spacer(Modifier.height(8.dp))
+            Text(
+                set.shortName,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }

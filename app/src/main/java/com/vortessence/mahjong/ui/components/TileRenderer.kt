@@ -1182,7 +1182,7 @@ object TileRenderer {
                 }
             }
             // Terrazzo, under the paint: each look's own
-            val terrazzos = if (kit.terrazzo > 0f) Array(TileWear.LOOKS) { look ->
+            val terrazzos = if (kit.terrazzo > 0f || kit.woodGrain > 0f) Array(TileWear.LOOKS) { look ->
                 image(width, ih) { drawTerrazzo(this, look, face.topLeft, face.size, glints = 0f, kit = kit) }
             } else null
             val wallRight = wallMask(right = true, bodyW, bodyH, pad.toFloat(), w, h)
@@ -1221,6 +1221,7 @@ object TileRenderer {
      * flames); [flakes] false draws only those.
      */
     private fun drawTerrazzo(scope: DrawScope, look: Int, topLeft: Offset, size: Size, glints: Float, flakes: Boolean = true, kit: TileKit = TileKits.current) {
+        if (kit.woodGrain > 0f && flakes && !PerfSwitches.isOff("terrazzo")) drawWoodGrain(scope, look, topLeft, size, kit.woodGrain)
         val strength = kit.terrazzo
         if (strength <= 0f || PerfSwitches.isOff("terrazzo")) return
         val random = kotlin.random.Random(TERRAZZO_SEED + look * 7919)
@@ -1300,6 +1301,96 @@ object TileRenderer {
                 } else if (glints > 0f) {
                     drawCircle(Color(0xFFFFF8EA).copy(alpha = (0.8f * glints * strength).coerceAtMost(1f)), r * 1.2f, Offset(x, y))
                 }
+            }
+        }
+    }
+
+    /**
+     * Wood grain across a face ([TileKit.woodGrain], its strength), [look]'s own: the grain runs
+     * lengthwise, a little aslant, in lines that wave and crowd and thin out; dark and pale bands;
+     * fine pores along it; and on some faces a knot, the grain sweeping round it in rings.
+     */
+    private fun drawWoodGrain(scope: DrawScope, look: Int, topLeft: Offset, size: Size, strength: Float) {
+        val random = kotlin.random.Random(WOOD_SEED + look * 15485863)
+        val w = size.width
+        val h = size.height
+        fun alpha(a: Float) = (a * strength).coerceIn(0f, 1f)
+        val tilt = (random.nextFloat() - 0.5f) * 0.25f
+        val waveFreq = 2f + random.nextFloat() * 4f
+        val waveAmp = w * (0.01f + random.nextFloat() * 0.03f)
+        val phase = random.nextFloat() * 6.28f
+        val knot = random.nextFloat() < 0.35f
+        val kx = topLeft.x + w * (0.2f + random.nextFloat() * 0.6f)
+        val ky = topLeft.y + h * (0.2f + random.nextFloat() * 0.6f)
+        val kr = w * (0.06f + random.nextFloat() * 0.08f)
+        // How far the grain at (x, y) is pushed aside by the knot
+        fun push(x: Float, y: Float): Float {
+            if (!knot) return 0f
+            val dx = x - kx
+            val dy = (y - ky) * 0.6f
+            val d2 = (dx * dx + dy * dy) / (kr * kr * 4f)
+            return (if (dx >= 0f) 1f else -1f) * kr * 1.6f * kotlin.math.exp(-d2)
+        }
+        val path = Path()
+        scope.clipRect(topLeft.x, topLeft.y, topLeft.x + w, topLeft.y + h) {
+            // Broad bands of darker and paler wood
+            var bx = topLeft.x - w * 0.2f
+            while (bx < topLeft.x + w * 1.2f) {
+                val bw = w * (0.05f + random.nextFloat() * 0.18f)
+                val dark = random.nextBoolean()
+                val a = alpha(if (dark) 0.06f + random.nextFloat() * 0.1f else 0.03f + random.nextFloat() * 0.06f)
+                path.reset()
+                val steps = 24
+                for (i in 0..steps) {
+                    val y = topLeft.y + h * i / steps
+                    val x = bx + (y - topLeft.y) * tilt + sin(y / h * waveFreq + phase) * waveAmp + push(bx, y)
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                for (i in steps downTo 0) {
+                    val y = topLeft.y + h * i / steps
+                    val x = bx + bw + (y - topLeft.y) * tilt + sin(y / h * waveFreq + phase) * waveAmp + push(bx + bw, y)
+                    path.lineTo(x, y)
+                }
+                path.close()
+                drawPath(path, (if (dark) Color.Black else Color.White).copy(alpha = a))
+                bx += bw
+            }
+            // The grain's lines, crowding and thinning out
+            val lines = 34 + random.nextInt(24)
+            for (l in 0 until lines) {
+                val base = topLeft.x - w * 0.2f + w * 1.4f * (l + random.nextFloat() * 0.8f) / lines
+                val wobble = w * random.nextFloat() * 0.01f
+                path.reset()
+                val steps = 30
+                for (i in 0..steps) {
+                    val y = topLeft.y + h * i / steps
+                    val x = base + (y - topLeft.y) * tilt + sin(y / h * waveFreq + phase) * waveAmp +
+                        sin(y / h * 13f + l) * wobble + push(base, y)
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                val dark = random.nextFloat() < 0.75f
+                drawPath(
+                    path, (if (dark) Color.Black else Color.White).copy(alpha = alpha(if (dark) 0.08f + random.nextFloat() * 0.2f else 0.05f + random.nextFloat() * 0.08f)),
+                    style = Stroke(width = w * (0.002f + random.nextFloat() * random.nextFloat() * 0.012f)),
+                )
+            }
+            // The knot: rings round a dark heart
+            if (knot) {
+                for (ring in 6 downTo 1) {
+                    val rr = kr * ring / 6f * 1.5f
+                    drawOval(
+                        Color.Black.copy(alpha = alpha(0.1f + 0.04f * (6 - ring))),
+                        Offset(kx - rr * 0.7f, ky - rr), Size(rr * 1.4f, rr * 2f), style = Stroke(width = w * 0.006f),
+                    )
+                }
+                drawOval(Color(0xFF2A1608).copy(alpha = alpha(0.55f)), Offset(kx - kr * 0.35f, ky - kr * 0.5f), Size(kr * 0.7f, kr))
+            }
+            // Pores: short dashes along the grain
+            repeat(140) {
+                val x = topLeft.x + random.nextFloat() * w
+                val y = topLeft.y + random.nextFloat() * h
+                val len = h * (0.008f + random.nextFloat() * 0.02f)
+                drawLine(Color.Black.copy(alpha = alpha(0.14f)), Offset(x, y), Offset(x + len * tilt, y + len), strokeWidth = w * 0.003f)
             }
         }
     }
@@ -1731,6 +1822,7 @@ object TileRenderer {
     )
     private const val TERRAZZO_SEED = 4057
     private const val TONE_SEED = 7121
+    private const val WOOD_SEED = 9311
     private const val CONTACT_SHADOW_ALPHA = 0.45f
     private const val CONTACT_BLUR = 0.07f
     // How far past the shape the blur reaches, in blur radii

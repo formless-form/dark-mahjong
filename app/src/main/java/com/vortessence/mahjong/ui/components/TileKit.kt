@@ -92,6 +92,9 @@ data class TileKit(
     val toneVariation: Float = 0f,
     // How strongly lower layers are shaded against the top one (1: the game's own)
     val layerCue: Float = 1f,
+    // Wood grain in the face, as strong as this (0: none): each tile's own, flowing lines and pores,
+    // now and then a knot with the grain sweeping round it
+    val woodGrain: Float = 0f,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,
@@ -181,12 +184,36 @@ object TileKits {
      * every board is drawn in Ivory, a choice made before kept for when it returns. Test builds
      * (perfHooks) offer it, to try Charcoal with its colour bar on a phone.
      */
-    val OFFERED: Boolean = BuildConfig.PERF_HOOKS
+    val OFFERED: Boolean get() = BuildConfig.PERF_HOOKS || previewOffered
+
+    /** Previews only: Settings offers the sets, as a test build's does. */
+    @Volatile
+    var previewOffered = false
 
     fun of(set: TileSet): TileKit = when (set) {
         TileSet.IVORY -> IVORY
         TileSet.CHARCOAL -> CHARCOAL
+        TileSet.JADE -> JADE
     }
+
+    /**
+     * Dark jade, with Charcoal's white raised pictures and colour bar: smooth stone with a soft
+     * bevel and a little tone from tile to tile. Chosen by Gareth on 2026-11-13 (the darkest of
+     * three shades).
+     */
+    val JADE = CHARCOAL.copy(
+        name = "Jade",
+        faceTop = Color(0xFF2D5D47),
+        faceBottom = Color(0xFF1F4635),
+        side = Color(0xFF19382A),
+        backing = Color(0xFF11281A),
+        bevelHighlight = Color(0xFF9CC9B0),
+        art = Color(0xFFF4ECD6),
+        terrazzo = 0f,
+        wear = 0.4f,
+        bevel = 0.8f,
+        toneVariation = 1.2f,
+    )
 
     /** The set chosen in Settings (MahjongBoard keeps it up to date). */
     @Volatile

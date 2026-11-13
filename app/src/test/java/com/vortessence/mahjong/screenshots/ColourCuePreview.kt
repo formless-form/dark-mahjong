@@ -172,9 +172,16 @@ class ColourCuePreview {
         faceTop = Color(0xFF494846), faceBottom = Color(0xFF3D3C3A), side = Color(0xFF2F2E2C), backing = Color(0xFF201F1E),
     )
 
-    @Test fun d1() = variant(jade, "1-jade-as-before")
-    @Test fun d2() = variant(jadeDarker, "2-jade-darker")
-    @Test fun d3() = variant(jadeDarkest, "3-jade-darker-still")
-    @Test fun d4() = variant(charcoalBefore, "4-charcoal-as-before")
-    @Test fun d5() = variant(TileKits.CHARCOAL, "5-charcoal-darker")
+    // Wood sets (2026-11-13): Charcoal's white pictures and colour bar, the face in grained wood
+    private fun wood(top: Long, bottom: Long, side: Long, backing: Long, grain: Float = 1f) = TileKits.CHARCOAL.copy(
+        name = "Wood", faceTop = Color(top), faceBottom = Color(bottom), side = Color(side), backing = Color(backing),
+        bevelHighlight = Color(0xFFC8A880), terrazzo = 0f, woodGrain = grain, toneVariation = 0.8f, wear = 0.5f,
+    )
+
+    @Test fun w1() = variant(wood(0xFF6B4A32, 0xFF553A27, 0xFF432D1E, 0xFF2A1C12), "1-walnut")
+    @Test fun w2() = variant(wood(0xFF9C6B3C, 0xFF84592F, 0xFF6A4625, 0xFF3A2614), "2-teak")
+    @Test fun w3() = variant(wood(0xFF6E3328, 0xFF5A2820, 0xFF47201A, 0xFF2A120E), "3-rosewood")
+    @Test fun w4() = variant(wood(0xFFB89A6A, 0xFFA3855A, 0xFF7E6440, 0xFF3E2E1C, grain = 1.6f), "4-olive-wood")
+    @Test fun w5() = variant(wood(0xFF3A2A20, 0xFF2C2018, 0xFF22180F, 0xFF140E08, grain = 1.3f), "5-ebony")
+    @Test fun w6() = variant(wood(0xFF6B4A32, 0xFF553A27, 0xFF432D1E, 0xFF2A1C12, grain = 1.7f), "6-walnut-strong-grain")
 }

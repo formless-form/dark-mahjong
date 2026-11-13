@@ -9,10 +9,12 @@ enum class TableSurface(val displayName: String, val shortName: String) {
     SLATE("Slate", "Slate"),
 }
 
-// The tiles' set (TileKits): the classic ivory, or charcoal terrazzo with soft gold pictures
+// The tiles' set (TileKits): the classic ivory, or charcoal terrazzo or jade with soft gold pictures
+// and a colour bar
 enum class TileSet(val shortName: String) {
     IVORY("Ivory"),
     CHARCOAL("Charcoal"),
+    JADE("Jade"),
 }
 
 // How a wide board (one that plays much bigger with the phone on its side) is shown: the player is
