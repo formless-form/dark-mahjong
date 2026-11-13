@@ -165,7 +165,7 @@ fun MainMenuScreen(
                 )
             }
             MenuItem("Quick Game", menuStyle, onMenuClick = onMenuClick, onClick = { pickingQuickGame = true })
-            MenuItem("Play", menuStyle, onMenuClick = onMenuClick, onClick = onPlayLevels)
+            MenuItem("Journey", menuStyle, onMenuClick = onMenuClick, onClick = onPlayLevels)
             MenuItem("Layouts", menuStyle, onMenuClick = onMenuClick, onClick = onChooseConstellation)
             MenuItem("Settings", menuStyle, onMenuClick = onMenuClick, onClick = onSettings)
         }

@@ -32,6 +32,7 @@ import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.engine.TutorialStep
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,6 +46,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Duration
+import java.time.LocalDateTime
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
@@ -80,6 +84,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     // The day (an epoch day) whose Today's Puzzle is on the table, null for any other board
     private val _puzzleDay = MutableStateFlow<Long?>(null)
     val puzzleDay: StateFlow<Long?> = _puzzleDay.asStateFlow()
+
+    // Today's Puzzle's day (an epoch day), kept current: moved on at 4 am, and looked at again
+    // whenever the app comes back (a delay doesn't run on while the phone sleeps)
+    private val _today = MutableStateFlow(TodaysPuzzle.today())
+    val today: StateFlow<Long> = _today.asStateFlow()
 
     // Index into TutorialScript.steps while the guided tutorial runs, null otherwise
     private val _tutorialStepIndex = MutableStateFlow<Int?>(null)
@@ -157,24 +166,24 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _savedGame = MutableStateFlow<SavedGameState?>(null)
 
     /** Today's Puzzle started (a move made) and not yet solved: Continue rather than Play. */
-    val todaysPuzzleStarted: StateFlow<Boolean> = combine(_gameState, _puzzleDay, _savedGame) { state, day, saved ->
-        val today = TodaysPuzzle.today()
+    val todaysPuzzleStarted: StateFlow<Boolean> = combine(_gameState, _puzzleDay, _savedGame, _today) { state, day, saved, today ->
         (day == today && state != null && !state.isWon && state.moveHistory.isNotEmpty()) ||
             (state == null && saved?.puzzleDay == today && saved.moveHistory.isNotEmpty())
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     // A day's puzzle left unfinished is gone once its day is over
-    private fun puzzleGone(day: Long?) = day != null && day != TodaysPuzzle.today()
+    private fun puzzleGone(day: Long?, today: Long = TodaysPuzzle.today()) = day != null && day != today
 
     val continueInfo: StateFlow<ContinueInfo?> = combine(
         _gameState,
         _savedGame,
         _currentLevelIndex,
         _puzzleDay,
-    ) { state, saved, levelIdx, day ->
-        if (state != null && !state.isWon && (state.remainingTilesCount > 0) && !puzzleGone(day)) {
+        _today,
+    ) { state, saved, levelIdx, day, today ->
+        if (state != null && !state.isWon && (state.remainingTilesCount > 0) && !puzzleGone(day, today)) {
             ContinueInfo(title = if (day != null) TODAYS_PUZZLE else continueTitle(levelIdx, state.constellation.name))
-        } else if (saved != null && saved.tiles.any { !it.isRemoved } && !puzzleGone(saved.puzzleDay)) {
+        } else if (saved != null && saved.tiles.any { !it.isRemoved } && !puzzleGone(saved.puzzleDay, today)) {
             ConstellationRepository.getById(saved.constellationId)?.let { constellation ->
                 ContinueInfo(title = if (saved.puzzleDay != null) TODAYS_PUZZLE else continueTitle(savedLevelIndex(saved), constellation.name))
             }
@@ -251,6 +260,14 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 _savedGame.value = saved
             }
         }
+        // Today's Puzzle moves on at 4 am, even with the app left open on a menu
+        viewModelScope.launch {
+            while (true) {
+                val wait = Duration.between(LocalDateTime.now(), TodaysPuzzle.nextDayStarts(_today.value)).toMillis()
+                delay(wait.coerceAtLeast(0L).milliseconds)
+                _today.value = TodaysPuzzle.today()
+            }
+        }
     }
 
     // Where the game on the table was started from, which Back returns to: Levels, Layouts, or the
@@ -260,6 +277,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun navigateTo(screen: Screen) {
         perfAutoplay?.cancel()
+        // Leaving for another screen drops a deal still being worked out
+        cancelDeal()
         if (screen != Screen.Game) {
             saveCurrentGame()
         }
@@ -272,6 +291,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun continueGame() {
         perfAutoplay?.cancel()
+        cancelDeal()
         val current = _gameState.value
         if (current != null && !current.isWon && current.remainingTilesCount > 0 && !puzzleGone(_puzzleDay.value)) {
             _gameOrigin.value = Screen.MainMenu
@@ -294,16 +314,18 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun startLevel(levelIndex: Int) {
-        _gameOrigin.value = Screen.LevelSelect
-        beginLevel(levelIndex)
+        beginLevel(levelIndex, origin = Screen.LevelSelect)
     }
 
     // Also the next level from the win card, which keeps where the first was started from
-    private fun beginLevel(levelIndex: Int) {
-        _currentLevelIndex.value = levelIndex
+    private fun beginLevel(levelIndex: Int, origin: Screen? = null) {
         val constellation = ConstellationRepository.getLevel(levelIndex)
-        initGame(constellation)
-        _currentScreen.value = Screen.Game
+        dealThen({ MahjongGameEngine.startNewGame(constellation) }) { state ->
+            origin?.let { _gameOrigin.value = it }
+            _currentLevelIndex.value = levelIndex
+            beginGame(state)
+            _currentScreen.value = Screen.Game
+        }
     }
 
     /**
@@ -312,33 +334,32 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
      */
     fun startTodaysPuzzle() {
         perfAutoplay?.cancel()
+        cancelDeal()
         val today = TodaysPuzzle.today()
-        _gameOrigin.value = Screen.TodaysPuzzle
         val current = _gameState.value
         val saved = _savedGame.value
-        when {
-            current != null && _puzzleDay.value == today && !current.isWon && current.remainingTilesCount > 0 -> Unit
-            saved != null && saved.puzzleDay == today && saved.tiles.any { !it.isRemoved } -> {
-                _gameState.value = saved.toGameState()
+        // Puts [state] on the table (null: carries on with the one there)
+        fun open(state: GameState?) {
+            _gameOrigin.value = Screen.TodaysPuzzle
+            if (state != null) {
+                _gameState.value = state
                 _winMessage.value = null
                 _firstRibbon.value = false
                 _tutorialStepIndex.value = null
                 newDeal()
             }
-            else -> {
-                _gameState.value = TodaysPuzzle.dealOn(today)
-                _winMessage.value = null
-                _firstRibbon.value = false
-                _tutorialStepIndex.value = null
-                newDeal()
-            }
+            // Today's Puzzle, not a Quick Game: its win card offers no "Another?"
+            _quickGame.value = false
+            _currentLevelIndex.value = null
+            _puzzleDay.value = today
+            saveCurrentGame()
+            _currentScreen.value = Screen.Game
         }
-        // Today's Puzzle, not a Quick Game: its win card offers no "Another?"
-        _quickGame.value = false
-        _currentLevelIndex.value = null
-        _puzzleDay.value = today
-        saveCurrentGame()
-        _currentScreen.value = Screen.Game
+        when {
+            current != null && _puzzleDay.value == today && !current.isWon && current.remainingTilesCount > 0 -> open(null)
+            saved != null && saved.puzzleDay == today && saved.tiles.any { !it.isRemoved } -> open(saved.toGameState())
+            else -> dealThen({ TodaysPuzzle.dealOn(today) }) { open(it) }
+        }
     }
 
     // The last Quick Game's layout, so the next one is different
@@ -355,11 +376,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             .filter { difficulty == null || it.difficulty == difficulty }
         val choice = (pool.filter { it.id != lastQuickGame }.ifEmpty { pool }).randomOrNull() ?: return
         lastQuickGame = choice.id
-        _gameOrigin.value = Screen.MainMenu
-        _currentLevelIndex.value = null
-        initGame(choice)
-        _quickGame.value = true
-        _currentScreen.value = Screen.Game
+        dealThen({ MahjongGameEngine.startNewGame(choice) }) { state ->
+            _gameOrigin.value = Screen.MainMenu
+            _currentLevelIndex.value = null
+            beginGame(state)
+            _quickGame.value = true
+            _currentScreen.value = Screen.Game
+        }
     }
 
     /** From a Quick Game's win card: another random layout as hard as the one just cleared. */
@@ -368,10 +391,12 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun startConstellation(constellation: Constellation) {
-        _gameOrigin.value = Screen.ConstellationSelect
-        _currentLevelIndex.value = null
-        initGame(constellation)
-        _currentScreen.value = Screen.Game
+        dealThen({ MahjongGameEngine.startNewGame(constellation) }) { state ->
+            _gameOrigin.value = Screen.ConstellationSelect
+            _currentLevelIndex.value = null
+            beginGame(state)
+            _currentScreen.value = Screen.Game
+        }
     }
 
     /**
@@ -388,29 +413,54 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
         // Kept out of the first-game check, unless the check is what's being tried
         _perfScene.value = !countsForCheck
-        _currentLevelIndex.value = null
-        _gameOrigin.value = Screen.MainMenu
-        initGame(constellation, Random(7))
-        _currentScreen.value = Screen.Game
-        // Matches a free pair every two seconds, so match animations can be timed alike
-        if (autoplay) perfAutoplay = viewModelScope.launch {
-            delay(3000.milliseconds)
-            while (true) {
-                val state = _gameState.value ?: break
-                val (a, b) = MahjongGameEngine.findAvailablePairs(state.tiles).firstOrNull() ?: break
-                onTileTapped(a)
-                delay(250.milliseconds)
-                onTileTapped(b)
-                delay(1750.milliseconds)
+        dealThen({ MahjongGameEngine.startNewGame(constellation, Random(7)) }) { state ->
+            _currentLevelIndex.value = null
+            _gameOrigin.value = Screen.MainMenu
+            beginGame(state)
+            _currentScreen.value = Screen.Game
+            // Matches a free pair every two seconds, so match animations can be timed alike
+            if (autoplay) perfAutoplay = viewModelScope.launch {
+                delay(3000.milliseconds)
+                while (true) {
+                    val game = _gameState.value ?: break
+                    val (a, b) = MahjongGameEngine.findAvailablePairs(game.tiles).firstOrNull() ?: break
+                    onTileTapped(a)
+                    delay(250.milliseconds)
+                    onTileTapped(b)
+                    delay(1750.milliseconds)
+                }
             }
         }
     }
 
     private var perfAutoplay: Job? = null
 
-    private fun initGame(constellation: Constellation, random: Random = Random) {
+    // A deal being worked out. Dealing can take a moment (a layout that opens with few free pairs
+    // has each opening checked, BoardSolvabilityGenerator.openingIsSafe), so it's done off the main
+    // thread, and nothing changes until it's ready: the screen the player is on stays responsive.
+    // A newer deal, or leaving for another screen or game, drops it
+    private var dealJob: Job? = null
+
+    private fun cancelDeal() {
+        dealJob?.cancel()
+        dealJob = null
+    }
+
+    /** Works out a new game with [make] off the main thread, then hands it to [start] on it. */
+    private fun dealThen(make: () -> GameState, start: (GameState) -> Unit) {
         perfAutoplay?.cancel()
-        val state = MahjongGameEngine.startNewGame(constellation, random)
+        cancelDeal()
+        val job = viewModelScope.launch {
+            val state = withContext(dealContext) { make() }
+            dealJob = null
+            start(state)
+        }
+        // Dealt inline (tests), it's already done
+        if (job.isActive) dealJob = job
+    }
+
+    /** A fresh deal on the table, nothing chosen yet, and saved. */
+    private fun beginGame(state: GameState) {
         _puzzleDay.value = null
         _quickGame.value = false
         _winMessage.value = null
@@ -606,8 +656,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         if (current.hintPair != null) return
         val free = TutorialScript.isTutorial(current)
         if (!free && _progress.value.hints <= 0) return
-        // A second tap while the same board's hint is still being found is the same request:
-        // cancelling the first could lose a hint it had just spent
+        // A second tap while the same board's hint is still being found is the same request
         if (hintSearch?.isActive == true && hintSearchTiles === current.tiles) return
         audioManager.playTileSelect()
         // Finding a plan can take a moment on a big board, so it's done in the background, and
@@ -616,26 +665,33 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         hintSearchTiles = current.tiles
         hintSearch = viewModelScope.launch {
             val hint = withContext(Dispatchers.Default) { MahjongGameEngine.findHint(current) } ?: return@launch
-            if (_gameState.value?.tiles !== current.tiles || !(free || prefsRepo.spendHint())) return@launch
-            _gameState.update { state ->
-                if (state?.tiles === current.tiles) {
-                    state.copy(hintPair = hint.pair, plan = hint.plan.ifEmpty { state.plan }, blockedTileId = null, usedHelp = true)
-                } else {
-                    state
-                }
-            }
+            // Shown first, then paid for: a hint is never spent on a board that changed while it
+            // was being found (nothing suspends between this check and the hint appearing)
+            val state = _gameState.value
+            if (state == null || state.tiles !== current.tiles) return@launch
+            _gameState.value = state.copy(hintPair = hint.pair, plan = hint.plan.ifEmpty { state.plan }, blockedTileId = null, usedHelp = true)
+            if (free) return@launch
+            // Paid for even if a new deal comes meanwhile: it was seen
+            val paid = withContext(NonCancellable) { prefsRepo.spendHint() }
+            // None left after all (two boards' requests racing for the last one): taken back
+            if (!paid) _gameState.update { s -> if (s?.hintPair == hint.pair) s.copy(hintPair = null) else s }
         }
     }
 
     fun restartGame() {
         val current = _gameState.value ?: return
         // Today's Puzzle is one deal: starting again is that deal again
-        if (_puzzleDay.value != null) replayDeal() else initGame(current.constellation)
+        if (_puzzleDay.value != null) {
+            replayDeal()
+        } else {
+            dealThen({ MahjongGameEngine.startNewGame(current.constellation) }) { beginGame(it) }
+        }
     }
 
     /** Restart with the same deal: the tiles back as they were first laid out. */
     fun replayDeal() {
         val current = _gameState.value ?: return
+        cancelDeal()
         hintSearch?.cancel()
         perfAutoplay?.cancel()
         _winMessage.value = null
@@ -743,6 +799,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onResume() {
+        _today.value = TodaysPuzzle.today()
         audioManager.onResume()
     }
 
@@ -755,6 +812,12 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         super.onCleared()
         resolver.unregisterContentObserver(animationScaleObserver)
         audioManager.release()
+    }
+
+    companion object {
+        /** Where new deals are worked out: off the main thread; tests deal inline (EmptyCoroutineContext). */
+        @Volatile
+        internal var dealContext: CoroutineContext = Dispatchers.Default
     }
 }
 

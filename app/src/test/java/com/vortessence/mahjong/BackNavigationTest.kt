@@ -10,6 +10,7 @@ import com.vortessence.mahjong.ui.components.MenuFire
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
 import com.vortessence.mahjong.ui.viewmodel.Screen
 import com.vortessence.mahjong.update.AppUpdates
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -17,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.coroutines.EmptyCoroutineContext
 
 // Back from a game goes to where it was started from, by the game's own back button
 @RunWith(RobolectricTestRunner::class)
@@ -29,18 +31,24 @@ class BackNavigationTest {
         // The menus' firelight never settles: the clock is stepped by hand
         MenuFire.flickers = false
         compose.mainClock.autoAdvance = false
-        // Updates made before the activity starts, as in its onCreate: the Play build's register then
-        val controller = Robolectric.buildActivity(ComponentActivity::class.java).create()
-        val activity = controller.get()
-        val viewModel = MahjongViewModel(activity.application)
-        val updates = AppUpdates(activity)
-        controller.start().resume().visible()
-        activity.setContent { MahjongApp(viewModel, updates) }
-        compose.runOnIdle { start(viewModel) }
-        compose.mainClock.advanceTimeBy(2000)
-        compose.onAllNodesWithContentDescription("Back")[0].performClick()
-        compose.mainClock.advanceTimeBy(2000)
-        return viewModel.currentScreen.value
+        // Deals made at once, on the test's thread, so the game is on the table when it's looked at
+        MahjongViewModel.dealContext = EmptyCoroutineContext
+        try {
+            // Updates made before the activity starts, as in its onCreate: the Play build's register then
+            val controller = Robolectric.buildActivity(ComponentActivity::class.java).create()
+            val activity = controller.get()
+            val viewModel = MahjongViewModel(activity.application)
+            val updates = AppUpdates(activity)
+            controller.start().resume().visible()
+            activity.setContent { MahjongApp(viewModel, updates) }
+            compose.runOnIdle { start(viewModel) }
+            compose.mainClock.advanceTimeBy(2000)
+            compose.onAllNodesWithContentDescription("Back")[0].performClick()
+            compose.mainClock.advanceTimeBy(2000)
+            return viewModel.currentScreen.value
+        } finally {
+            MahjongViewModel.dealContext = Dispatchers.Default
+        }
     }
 
     @Test

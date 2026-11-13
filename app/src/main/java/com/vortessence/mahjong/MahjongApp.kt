@@ -68,6 +68,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     val perfQuestion by viewModel.perfQuestion.collectAsStateWithLifecycle()
     val boardFresh by viewModel.boardFresh.collectAsStateWithLifecycle()
     val deal by viewModel.deal.collectAsStateWithLifecycle()
+    // Today's Puzzle's day, moving on at 4 am even with the app left open
+    val today by viewModel.today.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
@@ -84,8 +86,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
         MainMenuScreen(
             continueInfo = continueInfo,
             onContinue = { viewModel.continueGame() },
-            todaysPuzzle = remember(currentScreen) { todaysPuzzleLine() },
-            todaysPuzzleSolved = TodaysPuzzle.today() in progress.puzzleDaysSolved,
+            todaysPuzzle = remember(today) { todaysPuzzleLine(today) },
+            todaysPuzzleSolved = today in progress.puzzleDaysSolved,
             onTodaysPuzzle = { viewModel.navigateTo(Screen.TodaysPuzzle) },
             onQuickGame = { viewModel.startQuickGame(it) },
             onPlayLevels = { viewModel.navigateTo(Screen.LevelSelect) },
@@ -139,6 +141,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
 
                 is Screen.TodaysPuzzle -> {
                     TodaysPuzzleScreen(
+                        today = today,
                         progress = progress,
                         inProgress = puzzleStarted,
                         onPlay = { viewModel.startTodaysPuzzle() },
@@ -253,8 +256,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
 }
 
 // Today's Puzzle's line on the title screen: "Saturday · Expert"
-private fun todaysPuzzleLine(): String {
-    val today = TodaysPuzzle.today()
+private fun todaysPuzzleLine(today: Long): String {
     val weekday = LocalDate.ofEpochDay(today).dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
     return "$weekday · ${TodaysPuzzle.layoutOn(today).difficulty.displayName}"
 }

@@ -21,6 +21,9 @@ object TodaysPuzzle {
     /** Today's puzzle day, as an epoch day: a day runs from 4 am, as the game's others do. */
     fun today(now: LocalDateTime = LocalDateTime.now()): Long = now.minusHours(4).toLocalDate().toEpochDay()
 
+    /** When [day]'s puzzle gives way to the next: 4 am the morning after. */
+    fun nextDayStarts(day: Long): LocalDateTime = LocalDate.ofEpochDay(day + 1).atTime(4, 0)
+
     fun difficultyOn(day: Long): Difficulty = difficultyOn(LocalDate.ofEpochDay(day).dayOfWeek)
 
     private fun difficultyOn(weekday: DayOfWeek): Difficulty = when (weekday) {
