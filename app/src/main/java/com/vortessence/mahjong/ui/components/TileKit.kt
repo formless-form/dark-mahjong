@@ -80,6 +80,9 @@ data class TileKit(
     // The bar cut into the face rather than set on it: shadowed along its upper inside edge, a light
     // lip below, its colours a little deeper
     val barEngraved: Boolean = false,
+    // How strongly a raised bar is embossed (0: the soft sheen alone): a crisp shadow cast below it,
+    // a hard highlight along its top edge and shade along its underside, all sharp-edged
+    val barEmboss: Float = 0f,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,

@@ -84,6 +84,23 @@ class ColourCuePreview {
         FileOutputStream("build/colour-cues/$name-faces.png").use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    // A few faces large: the six, seven and nine of bamboo and the nine of circles
+    private fun bigSheet(kit: TileKit, name: String, tileW: Float = 260f) {
+        val faces = listOf(Tile(TileSuit.BAMBOO, 6), Tile(TileSuit.BAMBOO, 7), Tile(TileSuit.BAMBOO, 9), Tile(TileSuit.CIRCLE, 9))
+        val tileH = tileW * 1.33f
+        val gap = tileW * 0.15f
+        val w = (faces.size * (tileW + gap) + gap).toInt()
+        val h = (tileH + gap * 2).toInt()
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val lamp = LampColour.tiles().let { Color(it[0], it[1], it[2]) }
+        CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap.asImageBitmap()), Size(w.toFloat(), h.toFloat())) {
+            drawRect(Color(0xFF3A2416))
+            faces.forEachIndexed { i, tile -> TileRenderer.drawSample(this, tile, gap + i * (tileW + gap), gap, tileW, tileH, kit, look = i) }
+            drawRect(lamp, blendMode = BlendMode.Modulate)
+        }
+        FileOutputStream("build/colour-cues/$name-big.png").use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
     private data class Scene(val surface: TableSurface, val fire: Boolean, val name: String)
 
     private fun variant(kit: TileKit, name: String) {
@@ -91,6 +108,7 @@ class ColourCuePreview {
         TileWear.prepareNow()
         TileRenderer.TileAtlas.bakeInline = true
         sheet(kit, name)
+        bigSheet(kit, name)
         TileKits.preview = kit
         val layout = ConstellationRepository.getById("mah_773823936")!!
         val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(layout, Random(7)))
@@ -124,11 +142,14 @@ class ColourCuePreview {
     // Every picture a little smaller (the same for all), so the dots have room
     private val dots = TileKits.CHARCOAL.copy(colourDots = true, artScale = 0.8f)
     // The colour bar along the bottom (Gareth's pick, 2026-11-13)
+    // A crisper outline for the embossed bars
+    private val sharp = TileKits.CHARCOAL.copy(barOutline = 0.6f, barOutlineWidth = 0.08f)
     private val bar = dots.copy(dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artLift = 0.04f)
     private val cream = Color(0xFFF2E6C8)
 
     @Test fun ivory() = variant(TileKits.IVORY, "0-ivory")
-    @Test fun charcoal() = variant(TileKits.CHARCOAL, "1-raised-bar")
-    @Test fun engraved() = variant(TileKits.CHARCOAL.copy(barEngraved = true), "2-engraved-bar")
-    @Test fun engravedBrighter() = variant(TileKits.CHARCOAL.copy(barEngraved = true, barLighten = 0.15f), "3-engraved-bar-brighter")
+    @Test fun raised() = variant(TileKits.CHARCOAL, "1-raised-as-is")
+    @Test fun embossLight() = variant(sharp.copy(barEmboss = 0.5f), "2-emboss-light")
+    @Test fun embossMedium() = variant(sharp.copy(barEmboss = 1f), "3-emboss-medium")
+    @Test fun embossStrong() = variant(sharp.copy(barEmboss = 1.6f), "4-emboss-strong")
 }

@@ -871,6 +871,15 @@ object TileRenderer {
                 }
                 return
             }
+            if (kit.barEmboss > 0f) {
+                // Standing proud of the face: its shadow, cast down and a little right
+                val drop = barH * 0.32f * kit.barEmboss
+                scope.drawRoundRect(
+                    Color.Black.copy(alpha = (0.45f + 0.15f * kit.barEmboss).coerceAtMost(0.8f)),
+                    Offset(left - rim + drop * 0.3f, top - rim + drop),
+                    Size(barW + rim * 2f, barH + rim * 2f), CornerRadius(barH / 2f + rim, barH / 2f + rim),
+                )
+            }
             if (kit.barEngraved) {
                 // The groove's lip: catching the light below, in shade above
                 scope.drawRoundRect(
@@ -904,6 +913,11 @@ object TileRenderer {
                         Offset(left, top), Size(barW, barH),
                     )
                     drawRect(Color.White.copy(alpha = 0.18f), Offset(left, top + barH * 0.8f), Size(barW, barH * 0.2f))
+                } else if (kit.barEmboss > 0f) {
+                    // Sharp-edged relief: a hard highlight along the top, shade along the underside
+                    val e = kit.barEmboss
+                    drawRect(Color.White.copy(alpha = (0.3f + 0.2f * e).coerceAtMost(0.7f)), Offset(left, top), Size(barW, barH * (0.12f + 0.08f * e)))
+                    drawRect(Color.Black.copy(alpha = (0.18f * e).coerceAtMost(0.45f)), Offset(left, top + barH * (1f - 0.12f - 0.1f * e)), Size(barW, barH * (0.12f + 0.1f * e)))
                 } else {
                     // A sheen along its top, so it reads as a glossy inlay
                     drawRect(Color.White.copy(alpha = 0.28f), Offset(left, top), Size(barW, barH * 0.38f))
