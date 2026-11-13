@@ -10,13 +10,13 @@ enum class TableSurface(val displayName: String, val shortName: String) {
 }
 
 // The tiles' set (TileKits): the classic ivory, or charcoal terrazzo, jade or wood with soft gold
-// pictures and a colour bar. CHARCOAL is shown as "Terrazzo" (named 2026-11-13); its stored name
-// stays, so a choice already made carries over
+// pictures and a colour bar. CHARCOAL is shown as "Terrazzo" and WOOD as "Olivewood" (named
+// 2026-11-13); their stored names stay, so a choice already made carries over
 enum class TileSet(val shortName: String) {
     IVORY("Ivory"),
     CHARCOAL("Terrazzo"),
     JADE("Jade"),
-    WOOD("Wood"),
+    WOOD("Olivewood"),
 }
 
 // How a wide board (one that plays much bigger with the phone on its side) is shown: the player is

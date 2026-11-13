@@ -225,7 +225,7 @@ object TileKits {
      * streaks, now and then a knot, with Charcoal's white raised pictures and colour bar.
      */
     val WOOD = CHARCOAL.copy(
-        name = "Wood",
+        name = "Olivewood",
         faceTop = Color(0xFF977949),
         faceBottom = Color(0xFF826439),
         side = Color(0xFF5D4524),
