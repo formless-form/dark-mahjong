@@ -233,7 +233,8 @@ object TileKits {
         bevelHighlight = Color(0xFFC8A880),
         terrazzo = 0f,
         woodGrain = 1.6f,
-        woodFigure = 1f,
+        // Light figure: Gareth's pick of three strengths (2026-11-13)
+        woodFigure = 0.6f,
         toneVariation = 0.8f,
         wear = 0.5f,
     )
