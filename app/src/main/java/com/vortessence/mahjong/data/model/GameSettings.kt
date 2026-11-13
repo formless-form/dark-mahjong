@@ -9,11 +9,12 @@ enum class TableSurface(val displayName: String, val shortName: String) {
     SLATE("Slate", "Slate"),
 }
 
-// The tiles' set (TileKits): the classic ivory, or charcoal terrazzo or jade with soft gold pictures
-// and a colour bar
+// The tiles' set (TileKits): the classic ivory, or charcoal terrazzo, jade or wood with soft gold
+// pictures and a colour bar. CHARCOAL is shown as "Terrazzo" (named 2026-11-13); its stored name
+// stays, so a choice already made carries over
 enum class TileSet(val shortName: String) {
     IVORY("Ivory"),
-    CHARCOAL("Charcoal"),
+    CHARCOAL("Terrazzo"),
     JADE("Jade"),
     WOOD("Wood"),
 }

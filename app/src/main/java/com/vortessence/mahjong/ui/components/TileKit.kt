@@ -152,7 +152,7 @@ object TileKits {
      * white, gold, and light drained of its warmth.
      */
     val CHARCOAL = TileKit(
-        name = "Charcoal",
+        name = "Terrazzo",
         faceTop = Color(0xFF3F3E3C),
         faceBottom = Color(0xFF343331),
         bevelHighlight = Color(0xFF9A9894),
