@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.VectorGroup
@@ -816,16 +817,48 @@ object TileRenderer {
         val step = r * 2.7f
         fun fill(c: Color) = kit.recolour[c] ?: DOT_COLOURS[c] ?: c
         if (kit.dotPlace == DotPlace.BOTTOM_BAR) {
-            val barW = width * 0.46f
+            // One bar, split evenly: halves for two colours, thirds for three
+            val barW = width * kit.barLength
             val barH = r * 1.3f
             val left = x + (width - barW) / 2f
             val top = y + height * 0.93f - barH / 2f
-            val corner = CornerRadius(barH / 2f, barH / 2f)
-            scope.drawRoundRect(kit.dotRing ?: Color.Black.copy(alpha = 0.55f), Offset(left - r * 0.3f, top - r * 0.3f), Size(barW + r * 0.6f, barH + r * 0.6f), CornerRadius(barH, barH))
             val part = barW / colours.size
-            scope.clipRect(left, top, left + barW, top + barH) {
-                colours.forEachIndexed { i, c ->
-                    drawRoundRect(fill(c), Offset(left + i * part - (if (i > 0) barH else 0f), top), Size(part + (if (i > 0) barH else 0f), barH), corner)
+            val canvas = scope.drawContext.canvas.nativeCanvas
+            // A glow round each part, in its own colour
+            if (kit.glow > 0f) {
+                // A tight glow and a broad one (an LED's adds its light to the face)
+                val halos = if (kit.led) listOf(0.8f to 1f, 2.2f to 1f, 4f to 0.7f) else listOf(0.9f to 1f, 2.4f to 0.8f)
+                for ((spread, strength) in halos) {
+                    val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        maskFilter = android.graphics.BlurMaskFilter(barH * spread, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                        if (kit.led) blendMode = android.graphics.BlendMode.PLUS
+                    }
+                    colours.forEachIndexed { i, c ->
+                        glowPaint.color = fill(c).copy(alpha = (strength * kit.glow).coerceIn(0f, 1f)).toArgb()
+                        canvas.drawRoundRect(left + i * part, top - barH * 0.3f, left + (i + 1) * part, top + barH * 1.3f, barH, barH, glowPaint)
+                    }
+                }
+            }
+            val pill = Path().apply { addRoundRect(RoundRect(left, top, left + barW, top + barH, CornerRadius(barH / 2f, barH / 2f))) }
+            // A fine dark rim, so it reads on any face
+            scope.drawRoundRect(
+                Color.Black.copy(alpha = 0.5f), Offset(left - barH * 0.18f, top - barH * 0.18f),
+                Size(barW + barH * 0.36f, barH * 1.36f), CornerRadius(barH * 0.68f, barH * 0.68f),
+            )
+            scope.clipPath(pill) {
+                colours.forEachIndexed { i, c -> drawRect(fill(c), Offset(left + i * part, top), Size(part, barH)) }
+                if (kit.led) {
+                    // Lit from within: each colour's hot core, near white, fading to its edges
+                    colours.forEachIndexed { i, c ->
+                        val core = lerp(fill(c), Color.White, 0.65f)
+                        drawRect(
+                            Brush.verticalGradient(0f to Color.Transparent, 0.5f to core, 1f to Color.Transparent, startY = top, endY = top + barH),
+                            Offset(left + i * part, top), Size(part, barH),
+                        )
+                    }
+                } else {
+                    // A sheen along its top, so it reads as a glossy inlay
+                    drawRect(Color.White.copy(alpha = 0.28f), Offset(left, top), Size(barW, barH * 0.38f))
                 }
             }
             return

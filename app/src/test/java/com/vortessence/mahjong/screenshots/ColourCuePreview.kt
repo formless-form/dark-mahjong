@@ -122,15 +122,15 @@ class ColourCuePreview {
     private val gold = Color(0xFFE0B860)
     // Every picture a little smaller (the same for all), so the dots have room
     private val dots = TileKits.CHARCOAL.copy(colourDots = true, artScale = 0.8f)
+    // The colour bar along the bottom (Gareth's pick, 2026-11-13)
+    private val bar = dots.copy(dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artLift = 0.04f)
     private val cream = Color(0xFFF2E6C8)
 
     @Test fun ivory() = variant(TileKits.IVORY, "0-ivory")
-    @Test fun dotsAsBefore() = variant(dots, "1-dots-lower-left-small")
-    @Test fun dotsBigger() = variant(dots.copy(dotSize = 0.1f, artLift = 0.03f), "2-dots-lower-left-bigger")
-    @Test fun dotsBottom() = variant(dots.copy(dotPlace = DotPlace.BOTTOM, dotSize = 0.09f, artLift = 0.04f), "3-dots-bottom-centre")
-    @Test fun dotsColumn() = variant(dots.copy(dotPlace = DotPlace.LEFT_COLUMN, dotSize = 0.09f), "4-dots-left-column")
-    @Test fun dotsUpper() = variant(dots.copy(dotPlace = DotPlace.UPPER_LEFT, dotSize = 0.09f, artLift = -0.03f), "5-dots-upper-left")
-    @Test fun bar() = variant(dots.copy(dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artLift = 0.04f), "6-colour-bar-bottom")
-    @Test fun dotsBottomGold() = variant(dots.copy(dotPlace = DotPlace.BOTTOM, dotSize = 0.09f, artLift = 0.04f, dotRing = gold), "7-dots-bottom-gold-ring")
-    @Test fun dotsLowerLeftGold() = variant(dots.copy(dotSize = 0.1f, artLift = 0.03f, dotRing = gold), "8-dots-lower-left-gold-ring")
+    @Test fun bar() = variant(bar, "1-bar-even")
+    @Test fun barSoftGlow() = variant(bar.copy(glow = 0.5f), "2-bar-soft-glow")
+    @Test fun barGlow() = variant(bar.copy(glow = 1f), "3-bar-glow")
+    @Test fun barLongerGlow() = variant(bar.copy(glow = 1f, barLength = 0.56f, dotSize = 0.11f), "4-bar-longer-thicker-glow")
+    @Test fun led() = variant(bar.copy(glow = 1f, led = true), "5-led")
+    @Test fun ledLonger() = variant(bar.copy(glow = 1f, led = true, barLength = 0.56f, dotSize = 0.11f), "6-led-longer-thicker")
 }

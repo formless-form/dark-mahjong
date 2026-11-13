@@ -57,6 +57,13 @@ data class TileKit(
     val dotPlace: DotPlace = DotPlace.LOWER_LEFT,
     val dotSize: Float = 0.072f,
     val dotRing: Color? = null,
+    // The bar's length (a fraction of the tile's width), and how strongly it glows in its own
+    // colours (0: none)
+    val barLength: Float = 0.46f,
+    val glow: Float = 0f,
+    // The bar lit like a coloured LED: a near-white core down each colour, its halo adding light
+    // to the face around it
+    val led: Boolean = false,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,
