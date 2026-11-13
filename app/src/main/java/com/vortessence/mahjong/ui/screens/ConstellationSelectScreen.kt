@@ -38,6 +38,7 @@ import com.vortessence.mahjong.ui.components.ExpressiveScreen
 import com.vortessence.mahjong.ui.components.MenuBackdrop
 import com.vortessence.mahjong.ui.components.LevelBadge
 import com.vortessence.mahjong.ui.components.SegmentGap
+import com.vortessence.mahjong.ui.components.LayoutShape
 import com.vortessence.mahjong.ui.components.layoutShape
 import com.vortessence.mahjong.ui.components.segmentColors
 
@@ -120,7 +121,7 @@ fun ConstellationSelectScreen(
 // "Wide", or just "Animals"
 private fun layoutLabel(constellation: Constellation): String = when {
     constellation.id == ConstellationRepository.TUTORIAL_ID -> "Guided lesson"
-    else -> listOfNotNull(layoutShape(constellation.positions).label, constellation.category).joinToString(" · ")
+    else -> listOfNotNull((if (constellation.onSide) LayoutShape.WIDE else layoutShape(constellation.positions)).label, constellation.category).joinToString(" · ")
 }
 
 @Composable

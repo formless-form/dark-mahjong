@@ -241,7 +241,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                 val between = when (currentScreen) {
                     is Screen.Settings -> false
                     is Screen.Game -> game != null && !game.isWon && game.moveHistory.isEmpty() && boardFresh && tutorialStep == null &&
-                        !(settings.wideBoards == WideBoards.ASK && isWideBoard(game.tiles))
+                        !(settings.wideBoards == WideBoards.ASK && isWideBoard(game.tiles, game.constellation.onSide))
                     else -> true
                 }
                 if (between) {

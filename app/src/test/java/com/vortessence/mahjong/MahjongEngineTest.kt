@@ -495,18 +495,22 @@ class MahjongEngineTest {
         assertTrue(MahjongGameEngine.planHolds(replayed.tiles, replayed.plan))
     }
 
-    // After the reorder no layout a player could play is locked: a player who had reached old
-    // level 10 (Fence) can still play Heart (old 9, now 22), so 22 becomes the highest
+    // After a reorder no layout a player could play is locked: whatever level they had reached in
+    // the old numbering, every layout up to it is open in today's (the measured order of 1.3.7, and
+    // again when Mah's wide boards joined in 1.4.16); one who had cleared them all goes on past
+    // the furthest of them
     @Test
     fun testUnlockedLevelsCarryOverToTheMeasuredOrder() {
-        val old = LayoutDifficulty.levelsBeforeMeasuredOrder
         val newLevel = { id: String -> ConstellationRepository.levelIndexOf(id) }
-        for (highest in 1..old.size) {
-            val after = LayoutDifficulty.highestAfterReorder(highest, newLevel)
-            for (id in old.take(highest)) assertTrue("$id locked after $highest", newLevel(id)!! <= after)
+        for (old in listOf(LayoutDifficulty.levelsBeforeMeasuredOrder, LayoutDifficulty.levelsBeforeWideMah)) {
+            for (highest in 1..old.size) {
+                val after = LayoutDifficulty.highestAfterReorder(highest, newLevel, old)
+                for (id in old.take(highest)) assertTrue("$id locked after $highest", newLevel(id)!! <= after)
+            }
+            assertEquals(old.mapNotNull(newLevel).max() + 1, LayoutDifficulty.highestAfterReorder(old.size + 1, newLevel, old))
         }
-        assertEquals(22, LayoutDifficulty.highestAfterReorder(10, newLevel))
-        assertEquals(old.size + 1, LayoutDifficulty.highestAfterReorder(old.size + 1, newLevel))
-        assertEquals(1, LayoutDifficulty.highestAfterReorder(1, newLevel))
+        // Old level 10 (Fence) reached: Heart (old 9) stays open wherever it now is
+        val heart = newLevel("mah_2283982827")!!
+        assertTrue(LayoutDifficulty.highestAfterReorder(10, newLevel) >= heart)
     }
 }

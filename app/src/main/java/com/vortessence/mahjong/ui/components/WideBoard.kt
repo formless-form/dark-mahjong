@@ -13,7 +13,9 @@ import com.vortessence.mahjong.data.model.TilePosition
  * come out at least [WIDE_GAIN] times larger in landscape. Worked out from the board's shape, so a
  * new layout counts as soon as it's added.
  */
-fun isWideBoard(tiles: List<BoardTile>): Boolean {
+fun isWideBoard(tiles: List<BoardTile>, onSide: Boolean = false): Boolean {
+    // A layout made to be played on its side always is (Constellation.onSide)
+    if (onSide) return true
     if (tiles.isEmpty()) return false
     val upright = computeBoardTransform(tiles, 412f, 740f, PADDING).unitX
     val onItsSide = computeBoardTransform(tiles, 753f, 388f, PADDING).unitX

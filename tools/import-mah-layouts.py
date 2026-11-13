@@ -43,8 +43,29 @@ TILT_DEGREES, CAMERA_DISTANCE = 20.0, 2.2
 LAYER_SHIFT_X, LAYER_SHIFT_Y, TILE_ASPECT = 0.03, 0.13, 1.333
 BOARD_W, BOARD_H, PADDING = 427.0, 792.0, 16.0
 
-# Spelling fixes to Mah's board names
-RENAMES = {"Teotihucan": "Teotihuacan", "Potted": "Potted Plant"}
+# On its side (the board area of a Pixel 9 Pro held sideways, beside the game's side rail): a board
+# too small upright is kept if its tiles reach MIN_SIDE_TILE_DP there, and the game plays it on its
+# side (WideBoard.kt). Added in 1.4.16, when the game had learned to play wide boards
+SIDE_W, SIDE_H = 830.0, 410.0
+MIN_SIDE_TILE_DP = 27.5
+
+# Spelling fixes to Mah's board names, and names for the boards kept since 1.4.16: Dark Mahjong's
+# own, so none clashes with or reads like another layout's (Mah's "Pikachu" is a trademark), and the
+# Chinese zodiac's animals named as such (chosen with Gareth, 2026-11-13)
+RENAMES = {
+    "Teotihucan": "Teotihuacan", "Potted": "Potted Plant",
+    "Checkers": "Go Board", "Leaf": "Willow Leaf", "Bridge": "Lattice Gate", "Arena": "Courtyard",
+    "Turtle": "Sea Turtle", "OX": "Year of the Ox", "Boar": "Year of the Boar", "Hourglass": "Hourglass Gate",
+    "Crawler": "Stag Beetle", "Fly": "Dragonfly", "Ram": "Year of the Goat", "Snake": "Year of the Snake",
+    "Tiger": "Year of the Tiger", "Farandole": "Ripple Pool", "Temple": "Temple Gate", "Pikachu": "Year of the Rat",
+    "Bug": "Ladybird", "Dragon": "Year of the Dragon", "Monkey": "Year of the Monkey",
+    "Rooster": "Year of the Rooster", "Hare": "Year of the Rabbit", "Ceremonial": "Ceremony Hall",
+    "Butterfly": "Silk Moth", "Fire": "Bonfire", "Center Point": "Compass Rose", "Borders": "Picture Frame",
+    "Castle": "Watchtower", "Inca": "Sun Temple", "Flowers": "Chrysanthemum", "Kitty": "Lucky Cat",
+    "Gloom": "Drum Tower", "Pantheon": "Pavilion", "Boxed": "Twin Seals", "Roro": "Window Lattice",
+    "Flakes": "Ice Crystals", "London Bridge": "Stone Gateway", "Taurus": "Bull's Head", "Amaze": "Labyrinth",
+    "Three Pyramids": "Three Mountains", "Fish": "Goldfish",
+}
 
 
 def decode(board_map):
@@ -63,15 +84,15 @@ def decode(board_map):
     return tiles
 
 
-def fitted_tile_dp(tiles):
+def fitted_tile_dp(tiles, board_w=BOARD_W, board_h=BOARD_H):
     """Tile width when the whole board is fitted to the board area (as computeBoardTransform)."""
     left = min(x - z * 2 * LAYER_SHIFT_X for x, y, z in tiles)
     right = max(x + 2 - z * 2 * LAYER_SHIFT_X + 2 * LAYER_SHIFT_X for x, y, z in tiles)
     top = min(y * TILE_ASPECT - z * 2 * TILE_ASPECT * LAYER_SHIFT_Y for x, y, z in tiles)
     bottom = max((y + 2) * TILE_ASPECT - z * 2 * TILE_ASPECT * LAYER_SHIFT_Y + 2 * TILE_ASPECT * LAYER_SHIFT_Y for x, y, z in tiles)
     near_edge = CAMERA_DISTANCE / (CAMERA_DISTANCE - 0.5 * math.sin(math.radians(TILT_DEGREES)))
-    content_w = (BOARD_W - 2 * PADDING) / near_edge
-    content_h = BOARD_H - 2 * PADDING
+    content_w = (board_w - 2 * PADDING) / near_edge
+    content_h = board_h - 2 * PADDING
     unit = min(content_w / (right - left), content_h / (bottom - top))
     return 2 * unit, (bottom - top) / (right - left)
 
@@ -131,7 +152,9 @@ def main():
     for board in boards:
         tiles = decode(board["map"])
         tile_dp, _ = fitted_tile_dp(tiles)
-        if tile_dp < MIN_TILE_DP or not fully_supported(tiles):
+        side_dp, _ = fitted_tile_dp(tiles, SIDE_W, SIDE_H)
+        on_side = tile_dp < MIN_TILE_DP
+        if (on_side and side_dp < MIN_SIDE_TILE_DP) or not fully_supported(tiles):
             continue
         level, free = difficulty(tiles)
         kept.append({
@@ -142,7 +165,8 @@ def main():
             "map": json.dumps(board["map"], separators=(",", ":")),
             "count": len(tiles),
             "free": free,
-            "tile_dp": tile_dp,
+            "tile_dp": side_dp if on_side else tile_dp,
+            "on_side": on_side,
         })
     order = {"EASY": 0, "MEDIUM": 1, "HARD": 2, "EXPERT": 3}
     kept.sort(key=lambda b: (order[b["difficulty"]], b["name"]))
@@ -156,8 +180,8 @@ def main():
         "",
         "/**",
         f" * {len(kept)} of Mah's {len(boards)} boards: those that fit a phone held upright with tiles at least",
-        f" * {MIN_TILE_DP:.0f} dp wide, and whose tiles all rest fully on the layer below. Each map is in Mah's",
-        " * own compact format, decoded by [MahBoard].",
+        f" * {MIN_TILE_DP:.0f} dp wide, or on its side with tiles at least {MIN_SIDE_TILE_DP:.0f} dp, and whose tiles all rest",
+        " * fully on the layer below. Each map is in Mah's own compact format, decoded by [MahBoard].",
         " */",
         "internal object MahLayouts {",
         f"    const val SOURCE_COMMIT = \"{MAH_COMMIT}\"",
@@ -167,18 +191,20 @@ def main():
     for b in kept:
         lines.append(
             f"        // {b['count']} tiles, {b['free'] * 100:.0f}% free at the start, {b['tile_dp']:.0f} dp tiles when fitted"
+            + (" on its side" if b["on_side"] else "")
         )
         lines.append(
             f"        MahBoard(\"{b['id']}\", \"{b['name']}\", \"{b['category']}\", Difficulty.{b['difficulty']},"
         )
-        lines.append(f"            \"{b['map']}\"),")
+        lines.append(f"            \"{b['map']}\"" + (", onSide = true)," if b["on_side"] else "),"))
     lines += ["    )", "}", ""]
-    with open(OUT, "w") as f:
+    out = os.environ.get("MAH_OUT", OUT)
+    with open(out, "w") as f:
         f.write("\n".join(lines))
     counts = {}
     for b in kept:
         counts[b["difficulty"]] = counts.get(b["difficulty"], 0) + 1
-    print(f"Kept {len(kept)} of {len(boards)} boards: {counts}; wrote {os.path.relpath(OUT, ROOT)}")
+    print(f"Kept {len(kept)} of {len(boards)} boards: {counts}; wrote {out}")
 
 
 if __name__ == "__main__":

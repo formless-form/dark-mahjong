@@ -15,7 +15,7 @@ class MahLayoutsTest {
 
     @Test
     fun everyBoardIsAFullSetWithNoOverlappingTiles() {
-        assertEquals(29, mah.size)
+        assertEquals(76, mah.size)
         assertEquals(mah.size, mah.map { it.id }.toSet().size)
         for (layout in mah) {
             assertEquals(layout.name, 144, layout.positions.size)

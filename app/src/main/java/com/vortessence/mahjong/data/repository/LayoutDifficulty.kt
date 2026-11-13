@@ -6,7 +6,7 @@ import com.vortessence.mahjong.data.model.Difficulty
  * How hard each layout really is: the share of its deals cleared without hints, undo or
  * reshuffles, averaged over a player taking any free pair at random and one taking the highest
  * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30; the wide and themed layouts
- * 2026-10-31, ten more themed 2026-11-11). Levels and the Layouts list run from the highest to
+ * 2026-10-31, ten more themed 2026-11-11; Mah's boards that play on their side 2026-11-13). Levels and the Layouts list run from the highest to
  * the lowest, and the difficulty labels come from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
  */
 internal object LayoutDifficulty {
@@ -98,6 +98,54 @@ internal object LayoutDifficulty {
         "mah_2838350141" to 0.1930f, // Apple
         "mah_702162641" to 0.1930f, // Red Dragon
         "pagoda" to 0.1395f, // Nine Dragon Pagoda
+        // Mah's boards played on their side (1.4.16), 2026-11-13
+        "mah_4277830847" to 0.7767f, // Lattice Gate
+        "mah_1830783848" to 0.7384f, // Dragonfly
+        "mah_1492921254" to 0.6667f, // Ceremony Hall
+        "mah_544607066" to 0.6433f, // Broken Wall
+        "mah_709938609" to 0.6283f, // Courtyard
+        "mah_852527327" to 0.6134f, // Plum Blossom
+        "mah_2485677966" to 0.6067f, // Peacock
+        "mah_2390420165" to 0.5933f, // Year of the Snake
+        "mah_588942537" to 0.5900f, // Lucky Cat
+        "mah_679913014" to 0.5467f, // Ice Crystals
+        "mah_1861655803" to 0.5466f, // Labyrinth
+        "mah_2257355141" to 0.5400f, // Temple Gate
+        "mah_1566704849" to 0.5300f, // Year of the Boar
+        "mah_1344148453" to 0.5167f, // Stone Gateway
+        "mah_1752166124" to 0.5016f, // Silk Moth
+        "mah_399933105" to 0.4934f, // Stag Beetle
+        "mah_1901484058" to 0.4867f, // Sun Temple
+        "mah_2866125446" to 0.4733f, // Snowflake
+        "mah_3878481316" to 0.4600f, // Year of the Monkey
+        "mah_2680421030" to 0.4567f, // Year of the Goat
+        "mah_1378681582" to 0.4550f, // Drum Tower
+        "mah_2674681711" to 0.4516f, // Compass Rose
+        "mah_3354968048" to 0.4484f, // Window Lattice
+        "mah_1504777776" to 0.4450f, // Year of the Rat
+        "mah_3262148258" to 0.4367f, // Chrysanthemum
+        "mah_2951481859" to 0.4284f, // Bonfire
+        "mah_2038574563" to 0.4133f, // Year of the Rabbit
+        "mah_2650995104" to 0.4100f, // Three Mountains
+        "mah_1001794235" to 0.4083f, // Twin Seals
+        "mah_2219513689" to 0.3933f, // Spider
+        "mah_1488318675" to 0.3866f, // Year of the Tiger
+        "mah_2842823842" to 0.3817f, // Watchtower
+        "mah_1953985656" to 0.3783f, // Goldfish
+        "mah_3955482880" to 0.3783f, // Year of the Dragon
+        "mah_113014417" to 0.3716f, // Scorpion
+        "mah_2683869356" to 0.3667f, // Ripple Pool
+        "mah_2810552848" to 0.3500f, // Year of the Rooster
+        "mah_2175883231" to 0.3483f, // Sea Turtle
+        "mah_2579333550" to 0.3334f, // Pavilion
+        "mah_2072264091" to 0.2917f, // Ladybird
+        "mah_4047697972" to 0.2600f, // Year of the Ox
+        "mah_2971925539" to 0.2183f, // Bull's Head
+        "mah_2410278133" to 0.2117f, // Orchid
+        "mah_1463206324" to 0.1900f, // Hourglass Gate
+        "mah_3707661927" to 0.1817f, // Willow Leaf
+        "mah_1647425443" to 0.1784f, // Go Board
+        "mah_2206664028" to 0.1600f, // Picture Frame
     )
 
     /** The label for a clear rate: Easy from 90%, Medium from 60%, Hard from 35%, Expert below. */
@@ -114,11 +162,61 @@ internal object LayoutDifficulty {
      * those layouts moved to (which may also open some levels between). Past the last level means
      * all were cleared, and stays so.
      */
-    fun highestAfterReorder(highest: Int, newLevelOf: (String) -> Int?): Int {
-        if (highest > levelsBeforeMeasuredOrder.size) return highest
-        val reached = levelsBeforeMeasuredOrder.take(highest).mapNotNull(newLevelOf).maxOrNull() ?: return highest
+    fun highestAfterReorder(highest: Int, newLevelOf: (String) -> Int?, before: List<String> = levelsBeforeMeasuredOrder): Int {
+        // All cleared: the level after the furthest any of them moved to
+        if (highest > before.size) return before.mapNotNull(newLevelOf).maxOrNull()?.plus(1)?.coerceAtLeast(highest) ?: highest
+        val reached = before.take(highest).mapNotNull(newLevelOf).maxOrNull() ?: return highest
         return maxOf(highest, reached)
     }
+
+    /**
+     * The levels as they were numbered in 1.4.15 and earlier (after the measured reorder), before
+     * the 47 boards from Mah that play on their side joined them in 1.4.16, so a player's unlocked
+     * levels are carried over once more.
+     */
+    val levelsBeforeWideMah: List<String> = listOf(
+        "jade_pillar",
+        "bamboo_spire",
+        "dragon_saber",
+        "celestial_lantern",
+        "torii_arch",
+        "celadon_hourglass",
+        "cascading_falls",
+        "phoenix_tower",
+        "imperial_monolith",
+        "ruyi_scepter",
+        "pillar_of_heaven",
+        "mah_828570775",
+        "pagoda_spire",
+        "mah_1088330854",
+        "mah_3101065593",
+        "mah_2232624362",
+        "mah_3316304069",
+        "mah_2036373485",
+        "mah_2005925237",
+        "mah_979337589",
+        "mah_554306016",
+        "mah_2283982827",
+        "mah_2788427354",
+        "mah_1048565772",
+        "mah_179167734",
+        "mah_130253071",
+        "mah_773823936",
+        "mah_1593808196",
+        "mah_2756835802",
+        "mah_2926596175",
+        "mah_450647981",
+        "mah_3906642412",
+        "mah_2881142435",
+        "mah_738084013",
+        "mah_1870648008",
+        "mah_2770595719",
+        "mah_2630082713",
+        "mah_2215397839",
+        "mah_1843357205",
+        "mah_2838350141",
+        "mah_702162641",
+    )
 
     /**
      * The levels as they were numbered before they were ordered by clear rate (1.3.6 and earlier),

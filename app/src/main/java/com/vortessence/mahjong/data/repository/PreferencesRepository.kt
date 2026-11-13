@@ -41,7 +41,10 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
 )
 
+// Which level numbering the stored highest level is in: 2 after levels were ordered by measured
+// difficulty (1.3.7), 3 after Mah's wide boards joined them (1.4.16)
 private const val MEASURED_LEVEL_ORDER = 2
+private const val WIDE_MAH_LEVEL_ORDER = 3
 
 // The first-game check's version (Keys.PERF_CHECK_VERSION)
 private const val PERF_CHECK_VERSION = 2
@@ -268,10 +271,13 @@ class PreferencesRepository(private val context: Context) {
      */
     suspend fun migrateLevelOrder() {
         write { prefs ->
-            if ((prefs[Keys.LEVEL_ORDER] ?: 1) >= MEASURED_LEVEL_ORDER) return@write
-            prefs[Keys.LEVEL_ORDER] = MEASURED_LEVEL_ORDER
+            val order = prefs[Keys.LEVEL_ORDER] ?: 1
+            if (order >= WIDE_MAH_LEVEL_ORDER) return@write
+            prefs[Keys.LEVEL_ORDER] = WIDE_MAH_LEVEL_ORDER
             val highest = prefs[Keys.HIGHEST_LEVEL] ?: return@write
-            prefs[Keys.HIGHEST_LEVEL] = LayoutDifficulty.highestAfterReorder(highest.coerceAtLeast(0)) { ConstellationRepository.levelIndexOf(it) }
+            // Straight from whichever numbering it was stored in to today's
+            val before = if (order >= MEASURED_LEVEL_ORDER) LayoutDifficulty.levelsBeforeWideMah else LayoutDifficulty.levelsBeforeMeasuredOrder
+            prefs[Keys.HIGHEST_LEVEL] = LayoutDifficulty.highestAfterReorder(highest.coerceAtLeast(0), { ConstellationRepository.levelIndexOf(it) }, before)
         }
     }
 

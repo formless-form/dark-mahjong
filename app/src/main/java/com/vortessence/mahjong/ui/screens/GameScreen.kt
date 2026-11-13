@@ -157,7 +157,7 @@ fun GameScreen(
 
     // A wide board is held on its side if the player chose so; the first one asks. On its side the
     // header and toolbar become a rail beside the board (the tutorial, never wide, keeps its card)
-    val wide = remember(gameState.constellation.id) { isWideBoard(gameState.tiles) }
+    val wide = remember(gameState.constellation.id) { isWideBoard(gameState.tiles, gameState.constellation.onSide) }
     HoldOrientation(landscape = wide && settings.wideBoards == WideBoards.LANDSCAPE)
     var askedSideways by rememberSaveable(gameState.constellation.id) { mutableStateOf(false) }
     val sideways = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && tutorialStep == null

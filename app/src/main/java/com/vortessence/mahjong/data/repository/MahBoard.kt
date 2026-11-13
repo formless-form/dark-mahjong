@@ -15,6 +15,8 @@ internal class MahBoard(
     val category: String,
     val difficulty: Difficulty,
     val map: String,
+    // Played on its side (Constellation.onSide)
+    val onSide: Boolean = false,
 ) {
     fun toConstellation() = Constellation(
         id = id,
@@ -23,6 +25,7 @@ internal class MahBoard(
         description = MahDescriptions[id] ?: "",
         positions = positions(),
         category = category,
+        onSide = onSide,
     )
 
     fun positions(): List<TilePosition> {
