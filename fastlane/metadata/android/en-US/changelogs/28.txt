@@ -1,0 +1,3 @@
+New in 1.4.15:
+• Three new tile sets: Terrazzo, Jade and Olivewood. Choose them in Settings
+• Fixes and improvements
