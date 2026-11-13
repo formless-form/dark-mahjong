@@ -45,6 +45,43 @@ class LevelRecordTest {
         assertEquals(LevelRecord(400_000, 0, 0, 0), repo.progressFlow.first().records[id])
     }
 
+    // The bug in the first test build: the win stopped the clock and its time was lost (0:00)
+    @Test
+    fun aWinRecordsTheTimePlayed() {
+        com.vortessence.mahjong.ui.viewmodel.MahjongViewModel.dealContext = kotlin.coroutines.EmptyCoroutineContext
+        try {
+            val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+            val looper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+            val vm = com.vortessence.mahjong.ui.viewmodel.MahjongViewModel(app)
+            looper.idle()
+            vm.startLevel(1)
+            looper.idle()
+            looper.idleFor(java.time.Duration.ofSeconds(42))
+            val state = vm.gameState.value!!
+            for (m in state.plan) {
+                vm.onTileTapped(m.tileId1)
+                vm.onTileTapped(m.tileId2)
+                looper.idle()
+            }
+            assertTrue(vm.gameState.value!!.isWon)
+            val id = state.constellation.id
+            // The win is written in the background: the main thread is let run while it's awaited
+            val repo = PreferencesRepository(app)
+            var record: LevelRecord? = null
+            repeat(100) {
+                if (record == null) {
+                    looper.idle()
+                    record = runBlocking { kotlinx.coroutines.withTimeoutOrNull(100) { repo.progressFlow.first { p -> p.records.containsKey(id) } } }?.records?.get(id)
+                }
+            }
+            val found = record!!
+            assertTrue("recorded ${found.millis} ms", found.millis >= 42_000)
+            assertTrue(found.perfect)
+        } finally {
+            com.vortessence.mahjong.ui.viewmodel.MahjongViewModel.dealContext = kotlinx.coroutines.Dispatchers.Default
+        }
+    }
+
     @Test
     fun aSaveCarriesTheCountsAndTime() {
         val layout = com.vortessence.mahjong.data.repository.ConstellationRepository.levelConstellations.first()

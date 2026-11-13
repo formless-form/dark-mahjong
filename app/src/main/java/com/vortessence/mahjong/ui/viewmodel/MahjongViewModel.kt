@@ -623,7 +623,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                     val day = _puzzleDay.value
                     // The best-clear record (none for the tutorial, whose hints are free)
                     val record = if (TutorialScript.isTutorial(current)) null else LevelRecord(
-                        millis = playedMillis(newState),
+                        // From the board as it is now: the win just stopped the clock (its collector
+                        // runs at once) and added its time there, not to newState
+                        millis = playedMillis(_gameState.value ?: newState),
                         hints = newState.hintsUsed,
                         reshuffles = newState.reshufflesUsed,
                         undos = newState.undosUsed,

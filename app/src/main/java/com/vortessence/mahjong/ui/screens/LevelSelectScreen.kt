@@ -12,9 +12,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.vortessence.mahjong.data.model.LevelRecord
 import androidx.compose.foundation.layout.PaddingValues
@@ -100,7 +102,6 @@ fun LevelSelectScreen(
                             label = levelIndex.toString(),
                             icon = if (isTutorial) Icons.Rounded.School else null,
                             ribbon = constellation.id in progress.cleanConstellations,
-                            perfect = progress.records[constellation.id]?.perfect == true,
                         )
                     },
                     overlineContent = {
@@ -137,6 +138,13 @@ fun LevelSelectScreen(
 @Composable
 private fun RecordChips(record: LevelRecord) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // A perfect clear (no hints, reshuffles or undos): a gold star first; the badge keeps its ribbon
+        if (record.perfect) {
+            Icon(
+                Icons.Rounded.Star, contentDescription = "Cleared perfectly", tint = Color(0xFFF2C14E),
+                modifier = Modifier.size(20.dp).align(Alignment.CenterVertically),
+            )
+        }
         Chip(Icons.Rounded.Timer, record.time, true)
         Chip(Icons.Rounded.Lightbulb, "${record.hints}", record.hints > 0)
         Chip(Icons.Rounded.Shuffle, "${record.reshuffles}", record.reshuffles > 0)
