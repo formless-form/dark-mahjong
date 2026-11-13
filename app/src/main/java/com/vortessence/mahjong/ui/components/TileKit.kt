@@ -42,7 +42,25 @@ data class TileKit(
     // How far the lamp and firelight on these tiles lose their warmth (0 to 1), so pale pictures
     // stay white by the fire. The table keeps its own warm light
     val neutralLight: Float = 0f,
+    // With [art] null: each of the pictures' own colours (blue, green, red) shown as another, a
+    // brighter or paler one for a dark face (missing ones kept)
+    val recolour: Map<Color, Color> = emptyMap(),
+    // The edge round raised pictures in a colour of its own (gold, say), rather than [cutShadow]'s
+    val edgeColour: Color? = null,
+    // How far the edge reaches beyond the picture, in the cut's depths (0.7 its own)
+    val edgeReach: Float = 0.7f,
+    // Colour-code dots: one small disc for each of the picture's colours, at the face's lower left,
+    // so faces told apart by colour stay apart when the pictures are one colour
+    val colourDots: Boolean = false,
 )
+
+/** The pictures' own colours, as the tile drawings use them. */
+object FaceColours {
+    val BLUE = Color(0xFF1E39CD)
+    val GREEN = Color(0xFF006F00)
+    val RED = Color(0xFFB93C3C)
+    val ALL = listOf(RED, GREEN, BLUE)
+}
 
 object TileKits {
     val IVORY = TileKit(

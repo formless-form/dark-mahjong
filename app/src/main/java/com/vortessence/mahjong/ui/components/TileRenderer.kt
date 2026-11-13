@@ -468,7 +468,7 @@ object TileRenderer {
         drawTerrazzo(scope, TileWear.look(boardTile.id), faceRect(x, y, width, height).topLeft, faceRect(x, y, width, height).size, glints = glare)
         // 6. Detailed Classic Mahjong Artwork
         if (!PerfSwitches.isOff("art")) getTileVector(tile)?.let { vector ->
-            drawArtwork(scope, vector, x, y, width, height)
+            drawArtwork(scope, vector, x, y, width, height, colourDots = faceColours(tile))
         }
 
         // 7. Wear from years of play: grime, hairline scratches, dings, fingerprint haze
@@ -492,7 +492,7 @@ object TileRenderer {
         drawFace(scope, x, y, width, height, null, 0f, false, kit)
         val face = faceRect(x, y, width, height)
         drawTerrazzo(scope, look, face.topLeft, face.size, glints = 0f, kit = kit)
-        getTileVector(tile)?.let { drawArtwork(scope, it, x, y, width, height, kit) }
+        getTileVector(tile)?.let { drawArtwork(scope, it, x, y, width, height, kit, faceColours(tile)) }
         drawWear(scope, look, face.topLeft, face.size, kit)
         drawGlaze(scope, look, face.topLeft, face.size, width, 0f, GlazePart.ALL)
     }
@@ -775,7 +775,10 @@ object TileRenderer {
      * Lit from above, each groove's upper wall falls into a fine shadow and its lower lip catches a
      * fine light edge.
      */
-    private fun drawArtwork(scope: DrawScope, vector: ImageVector, x: Float, y: Float, width: Float, height: Float, kit: TileKit = TileKits.current) {
+    private fun drawArtwork(
+        scope: DrawScope, vector: ImageVector, x: Float, y: Float, width: Float, height: Float,
+        kit: TileKit = TileKits.current, colourDots: List<Color>? = null,
+    ) {
         val cx = x + (width * 0.5f)
         val cy = y + (height * 0.5f)
         val innerW = width * 0.85f
@@ -785,10 +788,12 @@ object TileRenderer {
             // Embossed: standing proud of the face, its upper edges catch the light and it casts
             // a shadow down and to the right; a faint dark edge all round keeps it clear of the face
             if (kit.edge > 0f) {
-                val edgeTint = kit.cutShadow.copy(alpha = (kit.cutShadow.alpha * kit.edge).coerceAtMost(1f))
-                for (i in 0 until 8) {
-                    val a = i * (PI.toFloat() / 4f)
-                    drawVectorTile(scope, vector, cx + cos(a) * e * 0.7f, cy + sin(a) * e * 0.7f, innerW, innerH, tint = edgeTint)
+                val edgeBase = kit.edgeColour ?: kit.cutShadow
+                val edgeTint = edgeBase.copy(alpha = (edgeBase.alpha * kit.edge).coerceAtMost(1f))
+                val steps = if (kit.edgeReach > 0.9f) 16 else 8
+                for (i in 0 until steps) {
+                    val a = i * (2f * PI.toFloat() / steps)
+                    drawVectorTile(scope, vector, cx + cos(a) * e * kit.edgeReach, cy + sin(a) * e * kit.edgeReach, innerW, innerH, tint = edgeTint)
                 }
             }
             drawVectorTile(scope, vector, cx + e * 0.5f, cy + e * 1.4f, innerW, innerH, tint = kit.cutShadow)
@@ -797,8 +802,32 @@ object TileRenderer {
             drawVectorTile(scope, vector, cx, cy - e * 0.7f, innerW, innerH, tint = kit.cutShadow)
             drawVectorTile(scope, vector, cx, cy + e, innerW, innerH, tint = kit.cutLight)
         }
-        drawVectorTile(scope, vector, cx, cy, innerW, innerH, tint = kit.art)
+        drawVectorTile(scope, vector, cx, cy, innerW, innerH, tint = kit.art, recolour = kit.recolour)
+        if (kit.colourDots) colourDots?.let { drawColourDots(scope, it, x, y, width, height, kit) }
     }
+
+    /**
+     * Colour-code dots ([TileKit.colourDots]): a small disc of each of the face's [colours] in a
+     * row at its lower left, each in a fine dark ring so it reads on any face.
+     */
+    private fun drawColourDots(scope: DrawScope, colours: List<Color>, x: Float, y: Float, width: Float, height: Float, kit: TileKit) {
+        val r = width * 0.036f
+        val cy = y + height * 0.925f
+        var cx = x + width * 0.12f
+        for (c in colours) {
+            scope.drawCircle(Color.Black.copy(alpha = 0.55f), r * 1.35f, Offset(cx + r * 0.15f, cy + r * 0.25f))
+            scope.drawCircle(kit.recolour[c] ?: DOT_COLOURS[c] ?: c, r, Offset(cx, cy))
+            scope.drawCircle(Color.White.copy(alpha = 0.35f), r * 0.4f, Offset(cx - r * 0.3f, cy - r * 0.3f))
+            cx += r * 2.7f
+        }
+    }
+
+    // The dots' colours: the pictures' own, brightened to read on a dark face
+    private val DOT_COLOURS = mapOf(
+        FaceColours.RED to Color(0xFFF0645A),
+        FaceColours.GREEN to Color(0xFF3CC85A),
+        FaceColours.BLUE to Color(0xFF6E8CFF),
+    )
 
     /**
      * Each tile drawn from a few images made once, rather than from some fifty shapes, gradients
@@ -985,7 +1014,7 @@ object TileRenderer {
             val face = faceRect(0f, 0f, w, h)
             val art = allTiles.associateWith { tile ->
                 image(width, ih) {
-                    getTileVector(tile)?.let { drawArtwork(this, it, 0f, 0f, w, h, kit) }
+                    getTileVector(tile)?.let { drawArtwork(this, it, 0f, 0f, w, h, kit, faceColours(tile)) }
                 }
             }
             val surfaces = Array(TileWear.LOOKS) { look ->
@@ -1322,7 +1351,7 @@ object TileRenderer {
         }
     }
 
-    private fun getTileVector(tile: Tile): ImageVector? = when (tile.suit) {
+    internal fun getTileVector(tile: Tile): ImageVector? = when (tile.suit) {
         TileSuit.CHARACTER -> when (tile.value) {
             1 -> MahjongTiles.`08Characters1`
             2 -> MahjongTiles.`09Characters2`
@@ -1463,7 +1492,12 @@ object TileRenderer {
     }
 
     /** Draws a cached vector; with [tint], every fill and stroke is drawn in that one colour. */
-    private fun drawCachedNode(scope: DrawScope, node: CachedVectorNode, tint: Color? = null) {
+    private fun drawCachedNode(scope: DrawScope, node: CachedVectorNode, tint: Color? = null, recolour: Map<Color, Color> = emptyMap()) {
+        fun paint(brush: Brush): Brush = when {
+            tint != null -> SolidColor(tint)
+            recolour.isNotEmpty() && brush is SolidColor -> recolour[brush.value]?.let { SolidColor(it) } ?: brush
+            else -> brush
+        }
         when (node) {
             is CachedGroupNode -> {
                 scope.withTransform(
@@ -1483,7 +1517,7 @@ object TileRenderer {
                     },
                     drawBlock = {
                         for (child in node.children) {
-                            drawCachedNode(this, child, tint)
+                            drawCachedNode(this, child, tint, recolour)
                         }
                     }
                 )
@@ -1492,14 +1526,14 @@ object TileRenderer {
                 if (node.fill != null) {
                     scope.drawPath(
                         path = node.path,
-                        brush = if (tint != null) SolidColor(tint) else node.fill,
+                        brush = paint(node.fill),
                         alpha = node.fillAlpha
                     )
                 }
                 if (node.stroke != null) {
                     scope.drawPath(
                         path = node.path,
-                        brush = if (tint != null) SolidColor(tint) else node.stroke,
+                        brush = paint(node.stroke),
                         alpha = node.strokeAlpha,
                         style = Stroke(
                             width = node.strokeLineWidth,
@@ -1538,7 +1572,7 @@ object TileRenderer {
     private var contactBitmap: Bitmap? = null
     private var contactWidth = 0f
 
-    private fun drawVectorTile(
+    internal fun drawVectorTile(
         scope: DrawScope,
         imageVector: ImageVector,
         cx: Float,
@@ -1546,6 +1580,7 @@ object TileRenderer {
         maxW: Float,
         maxH: Float,
         tint: Color? = null,
+        recolour: Map<Color, Color> = emptyMap(),
     ) {
         val scale = minOf(maxW / imageVector.viewportWidth, maxH / imageVector.viewportHeight)
         val targetW = imageVector.viewportWidth * scale
@@ -1560,9 +1595,28 @@ object TileRenderer {
                 scale(scale, scale, Offset.Zero)
             },
             drawBlock = {
-                drawCachedNode(this, cached, tint)
+                drawCachedNode(this, cached, tint, recolour)
             }
         )
+    }
+
+    // Each face's colours, found once
+    private val faceColourCache = java.util.concurrent.ConcurrentHashMap<Tile, List<Color>>()
+
+    /** The pictures' own colours that [tile]'s face uses, red, green, blue in that order. */
+    internal fun faceColours(tile: Tile): List<Color> = faceColourCache.getOrPut(tile) { findFaceColours(tile) }
+
+    private fun findFaceColours(tile: Tile): List<Color> {
+        val vector = getTileVector(tile) ?: return emptyList()
+        val found = HashSet<Color>()
+        fun walk(node: CachedVectorNode) {
+            when (node) {
+                is CachedGroupNode -> node.children.forEach { walk(it) }
+                is CachedPathNode -> listOf(node.fill, node.stroke).forEach { b -> (b as? SolidColor)?.let { found += it.value } }
+            }
+        }
+        walk(getOrCreateCachedVector(vector))
+        return FaceColours.ALL.filter { it in found }
     }
 }
 
