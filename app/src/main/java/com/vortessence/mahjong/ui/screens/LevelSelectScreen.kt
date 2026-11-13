@@ -53,9 +53,6 @@ fun LevelSelectScreen(
     fireIntensity: Float = 0.5f,
     // The menus' fire goes out with the phone's Remove animations
     fire: Boolean = true,
-    // Mock-ups only: how a cleared level's best clear is shown (0: not at all, as before)
-    statsStyle: Int = 2,
-    title: String = "Journey",
     // Previews: the row the list opens at (by default, near the level reached)
     openAt: Int? = null,
 ) {
@@ -65,7 +62,7 @@ fun LevelSelectScreen(
     // Open near the level you're up to rather than at level 1
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (openAt ?: (highestUnlocked - 1)).coerceIn(0, rows.lastIndex))
 
-    ExpressiveScreen(title = title, onBack = onBack, backdrop = { MenuBackdrop(fireIntensity, fire) }) { padding ->
+    ExpressiveScreen(title = "Journey", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity, fire) }) { padding ->
         // Below the title bar, as on Layouts, so the list never shows through it
         LazyColumn(
             state = listState,
@@ -103,7 +100,7 @@ fun LevelSelectScreen(
                             label = levelIndex.toString(),
                             icon = if (isTutorial) Icons.Rounded.School else null,
                             ribbon = constellation.id in progress.cleanConstellations,
-                            perfect = statsStyle > 0 && progress.records[constellation.id]?.perfect == true,
+                            perfect = progress.records[constellation.id]?.perfect == true,
                         )
                     },
                     overlineContent = {
@@ -112,63 +109,25 @@ fun LevelSelectScreen(
                             color = if (unlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
+                    // A cleared level's best clear beneath (Gareth's pick of four designs, 2026-11-13):
+                    // its time, then the hints, reshuffles and undos it took
                     supportingContent = {
-                        val record = progress.records[constellation.id].takeIf { statsStyle > 0 }
                         val line = "${constellation.difficulty.displayName} · ${constellation.tileCount} tiles"
-                        when {
-                            record == null -> Text(line)
-                            statsStyle == 2 -> Text("$line · Best ${record.time}")
-                            statsStyle == 3 -> Column {
-                                Text(line)
-                                Text(recordLine(record), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            else -> Column {
+                        val record = progress.records[constellation.id]
+                        if (record == null) {
+                            Text(line)
+                        } else {
+                            Column {
                                 Text(line)
                                 Spacer(Modifier.height(6.dp))
                                 RecordChips(record)
                             }
                         }
                     },
-                    trailingContent = {
-                        val record = progress.records[constellation.id]
-                        if (statsStyle == 2 && record != null) {
-                            Column(horizontalAlignment = Alignment.End) {
-                                DifficultyStars(constellation.difficulty.stars, dimmed = !unlocked)
-                                Spacer(Modifier.height(6.dp))
-                                HelpCounts(record)
-                            }
-                        } else {
-                            DifficultyStars(constellation.difficulty.stars, dimmed = !unlocked)
-                        }
-                    },
+                    trailingContent = { DifficultyStars(constellation.difficulty.stars, dimmed = !unlocked) },
                 ) {
                     Text(constellation.name)
                 }
-            }
-        }
-    }
-}
-
-// "Best 3:42 · no hints · 2 undos": the best clear in words, naming only the help used
-private fun recordLine(record: LevelRecord): String {
-    fun count(n: Int, one: String, many: String) = if (n == 1) "1 $one" else "$n $many"
-    val help = listOfNotNull(
-        count(record.hints, "hint", "hints").takeIf { record.hints > 0 },
-        count(record.reshuffles, "reshuffle", "reshuffles").takeIf { record.reshuffles > 0 },
-        count(record.undos, "undo", "undos").takeIf { record.undos > 0 },
-    ).ifEmpty { listOf("no help") }
-    return (listOf("Best ${record.time}") + help).joinToString(" · ")
-}
-
-// The help a best clear used, each as its icon and count, only those used; a perfect clear none
-@Composable
-private fun HelpCounts(record: LevelRecord) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        for ((icon, n) in listOf(Icons.Rounded.Lightbulb to record.hints, Icons.Rounded.Shuffle to record.reshuffles, Icons.AutoMirrored.Rounded.Undo to record.undos)) {
-            if (n == 0) continue
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
-                Text("$n", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

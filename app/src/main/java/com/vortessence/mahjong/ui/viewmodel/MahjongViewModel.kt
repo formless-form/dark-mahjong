@@ -4,6 +4,7 @@ import android.app.Application
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,6 +16,7 @@ import com.vortessence.mahjong.data.model.Constellation
 import com.vortessence.mahjong.data.model.ContinueInfo
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
+import com.vortessence.mahjong.data.model.LevelRecord
 import com.vortessence.mahjong.data.model.PerfCheck
 import com.vortessence.mahjong.data.model.PerfCheckState
 import com.vortessence.mahjong.perf.FrameVerdict
@@ -164,6 +166,27 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     val progress: StateFlow<Progress> = _progress.asStateFlow()
 
     private val _savedGame = MutableStateFlow<SavedGameState?>(null)
+    // The play clock, for each deal's best-clear time: it runs while a game in play is on the table
+    // and the app is in front, and stops whenever the board is away (a menu, Settings, another
+    // app). [clockSince] is when it last started (elapsedRealtime; 0 while stopped), for the deal
+    // [clockDeal]; time up to then is in GameState.playMillis
+    private val _resumed = MutableStateFlow(true)
+    private var clockSince = 0L
+    private var clockDeal = -1
+
+    /** Time spent playing [state] so far, counting the clock now running. */
+    private fun playedMillis(state: GameState): Long =
+        state.playMillis + if (clockSince > 0L && clockDeal == _deal.value) SystemClock.elapsedRealtime() - clockSince else 0L
+
+    // Stops the clock, adding the time since it started to the deal it was running for (if that
+    // deal is still on the table: a new one has its own)
+    private fun settleClock() {
+        if (clockSince == 0L) return
+        val ran = SystemClock.elapsedRealtime() - clockSince
+        clockSince = 0L
+        if (clockDeal == _deal.value) _gameState.update { it?.copy(playMillis = it.playMillis + ran) }
+    }
+
     // The game has saved or cleared its save itself since launch (savedGameFlow's collector);
     // declared before init, which starts that collector
     private var savedLocally = false
@@ -265,6 +288,19 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 // off the main thread, so it can land late) must not bring back a board just won
                 if (!savedLocally) _savedGame.value = saved
             }
+        }
+        // The play clock follows the board: on the table, in play and in front
+        viewModelScope.launch {
+            combine(
+                _currentScreen, _resumed, _deal, _gameState.map { it != null && !it.isWon }.distinctUntilChanged(),
+            ) { screen, resumed, _, inPlay -> screen is Screen.Game && resumed && inPlay }
+                .collect { running ->
+                    settleClock()
+                    if (running) {
+                        clockSince = SystemClock.elapsedRealtime()
+                        clockDeal = _deal.value
+                    }
+                }
         }
         // Today's Puzzle moves on at 4 am, even with the app left open on a menu
         viewModelScope.launch {
@@ -481,7 +517,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val current = _gameState.value ?: return
         if (current.isWon || current.remainingTilesCount == 0) return
         val step = if (TutorialScript.isTutorial(current)) _tutorialStepIndex.value ?: SavedGameState.FREE_PLAY else null
-        val saved = SavedGameState.fromGameState(current, _currentLevelIndex.value, step, _puzzleDay.value)
+        // With the time played up to now, the clock still running
+        val saved = SavedGameState.fromGameState(current.copy(playMillis = playedMillis(current)), _currentLevelIndex.value, step, _puzzleDay.value)
         savedLocally = true
         _savedGame.value = saved
         viewModelScope.launch {
@@ -584,6 +621,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                     clearSavedGame()
                     val levelIndex = _currentLevelIndex.value
                     val day = _puzzleDay.value
+                    // The best-clear record (none for the tutorial, whose hints are free)
+                    val record = if (TutorialScript.isTutorial(current)) null else LevelRecord(
+                        millis = playedMillis(newState),
+                        hints = newState.hintsUsed,
+                        reshuffles = newState.reshufflesUsed,
+                        undos = newState.undosUsed,
+                    )
                     viewModelScope.launch {
                         if (day != null) prefsRepo.recordPuzzleSolved(day)
                         _firstRibbon.value = prefsRepo.recordGameWon(
@@ -591,6 +635,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                             levelIndex = levelIndex,
                             clean = !newState.usedHelp && !TutorialScript.isTutorial(current),
                             puzzleDay = day,
+                            record = record,
                         )
                         _winMessage.value = prefsRepo.nextCongratsMessage(
                             isTutorial = TutorialScript.isTutorial(current),
@@ -643,7 +688,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         // A cleared board stays cleared: Replay or Play again deal afresh
         if (current.isWon) return
         if (current.moveHistory.isNotEmpty()) {
-            val updated = MahjongGameEngine.undo(current)
+            val updated = MahjongGameEngine.undo(current).copy(undosUsed = current.undosUsed + 1)
             _gameState.value = updated
             saveCurrentGame()
             audioManager.playTileSelect()
@@ -677,13 +722,18 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             // was being found (nothing suspends between this check and the hint appearing)
             val state = _gameState.value
             if (state == null || state.tiles !== current.tiles) return@launch
-            _gameState.value = state.copy(hintPair = hint.pair, plan = hint.plan.ifEmpty { state.plan }, blockedTileId = null, usedHelp = true)
+            _gameState.value = state.copy(
+                hintPair = hint.pair, plan = hint.plan.ifEmpty { state.plan }, blockedTileId = null, usedHelp = true,
+                hintsUsed = state.hintsUsed + 1,
+            )
             if (free) return@launch
             // Paid for even if a new deal comes meanwhile: it was seen
             val paid = withContext(NonCancellable) { prefsRepo.spendHint() }
             // None left after all (two boards' requests racing for the last one): taken back
             // (and the board no longer counts as helped, so a clean clear keeps its ribbon)
-            if (!paid) _gameState.update { s -> if (s?.hintPair == hint.pair) s.copy(hintPair = null, usedHelp = state.usedHelp) else s }
+            if (!paid) _gameState.update { s ->
+                if (s?.hintPair == hint.pair) s.copy(hintPair = null, usedHelp = state.usedHelp, hintsUsed = state.hintsUsed) else s
+            }
         }
     }
 
@@ -715,7 +765,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     fun reshuffle() {
         val current = _gameState.value ?: return
         _boardFresh.value = false
-        val updated = MahjongGameEngine.reshuffleRemaining(current).copy(usedHelp = true)
+        val updated = MahjongGameEngine.reshuffleRemaining(current).copy(usedHelp = true, reshufflesUsed = current.reshufflesUsed + 1)
         _gameState.value = updated
         saveCurrentGame()
         audioManager.playTileSelect()
@@ -808,12 +858,14 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onResume() {
+        _resumed.value = true
         _today.value = TodaysPuzzle.today()
         audioManager.onResume()
     }
 
     fun onPause() {
         saveCurrentGame()
+        _resumed.value = false
         audioManager.onPause()
     }
 

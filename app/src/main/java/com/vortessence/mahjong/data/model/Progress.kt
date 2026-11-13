@@ -22,6 +22,19 @@ data class Progress(
  * those the quickest. [millis] is time spent playing, never counting time away.
  */
 data class LevelRecord(val millis: Long, val hints: Int, val reshuffles: Int, val undos: Int) {
+    /** Better than [other]: less help (hints and reshuffles), then fewer undos, then quicker. */
+    fun beats(other: LevelRecord): Boolean = compareValuesBy(this, other, { it.hints + it.reshuffles }, { it.undos }, { it.millis }) < 0
+
+    /** Stored as "millis,hints,reshuffles,undos". */
+    fun encode() = "$millis,$hints,$reshuffles,$undos"
+
+    companion object {
+        fun decode(raw: String): LevelRecord? {
+            val p = raw.split(",").mapNotNull { it.toLongOrNull() }.takeIf { it.size == 4 } ?: return null
+            return LevelRecord(p[0], p[1].toInt(), p[2].toInt(), p[3].toInt())
+        }
+    }
+
     /** No hints and no reshuffles: the gold ribbon. */
     val clean: Boolean get() = hints == 0 && reshuffles == 0
     /** Clean, and not one move undone either. */

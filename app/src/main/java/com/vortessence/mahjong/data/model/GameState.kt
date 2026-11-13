@@ -17,6 +17,13 @@ data class GameState(
     val blockedTileId: Int? = null,
     // A hint was shown or the tiles reshuffled this game, so a win won't count as clean (undo is fine)
     val usedHelp: Boolean = false,
+    // This deal so far, for its best-clear record (LevelRecord): hints shown, reshuffles and moves
+    // undone, and time spent playing it up to the last time the clock was settled (the view model
+    // keeps the clock, which stops while the board is away)
+    val hintsUsed: Int = 0,
+    val reshufflesUsed: Int = 0,
+    val undosUsed: Int = 0,
+    val playMillis: Long = 0L,
     // An order the pairs can be taken in to clear the board, which hints follow: from the deal or
     // the reshuffle, or found by the hint solver. Not saved; a restored game finds one again
     val plan: List<Move> = emptyList(),

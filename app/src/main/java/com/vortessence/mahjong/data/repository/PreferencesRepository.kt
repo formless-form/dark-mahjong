@@ -16,6 +16,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vortessence.mahjong.data.model.GameSettings
+import com.vortessence.mahjong.data.model.LevelRecord
 import com.vortessence.mahjong.data.model.MAX_HINTS
 import com.vortessence.mahjong.data.model.PerfCheck
 import com.vortessence.mahjong.data.model.PerfCheckState
@@ -70,6 +71,8 @@ class PreferencesRepository(private val context: Context) {
         val FIREPLACE = booleanPreferencesKey("fireplace")
         val LOW_PERFORMANCE = booleanPreferencesKey("low_performance")
         val CLEAN_CONSTELLATIONS = stringSetPreferencesKey("clean_constellations")
+        // Each layout's best clear (LevelRecord), as "id=millis,hints,reshuffles,undos" entries
+        val LEVEL_RECORDS = stringSetPreferencesKey("level_records")
         val HINTS = intPreferencesKey("hints")
         val FIRE_VOLUME = floatPreferencesKey("fire_volume")
         val FIRE_INTENSITY = floatPreferencesKey("fire_intensity")
@@ -139,6 +142,7 @@ class PreferencesRepository(private val context: Context) {
             cleanConstellations = prefs[Keys.CLEAN_CONSTELLATIONS] ?: emptySet(),
             hints = prefs[Keys.HINTS] ?: 0,
             puzzleDaysSolved = prefs[Keys.PUZZLE_DAYS_SOLVED]?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet(),
+            records = records(prefs),
         )
     }.distinctUntilChanged()
 
@@ -279,9 +283,26 @@ class PreferencesRepository(private val context: Context) {
     }
 
     /** Records a win; true if it was the player's first clean clear (their first gold ribbon). */
-    suspend fun recordGameWon(constellationId: String, levelIndex: Int?, clean: Boolean = false, puzzleDay: Long? = null): Boolean {
+    private fun records(prefs: Preferences): Map<String, LevelRecord> =
+        prefs[Keys.LEVEL_RECORDS].orEmpty().mapNotNull { entry ->
+            val at = entry.lastIndexOf('=')
+            if (at <= 0) return@mapNotNull null
+            LevelRecord.decode(entry.substring(at + 1))?.let { entry.substring(0, at) to it }
+        }.toMap()
+
+    suspend fun recordGameWon(
+        constellationId: String, levelIndex: Int?, clean: Boolean = false, puzzleDay: Long? = null, record: LevelRecord? = null,
+    ): Boolean {
         var firstRibbon = false
         write { prefs ->
+            // The layout's best clear, if this one beats it
+            if (record != null) {
+                val best = records(prefs)[constellationId]
+                if (best == null || record.beats(best)) {
+                    prefs[Keys.LEVEL_RECORDS] = prefs[Keys.LEVEL_RECORDS].orEmpty()
+                        .filterNot { it.substringBeforeLast('=') == constellationId }.toSet() + "$constellationId=${record.encode()}"
+                }
+            }
             if (clean) {
                 val cleaned = prefs[Keys.CLEAN_CONSTELLATIONS] ?: emptySet()
                 // Today's Puzzle is cleaned per day (no ribbon on the layout itself); anything else

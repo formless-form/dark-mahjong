@@ -31,6 +31,11 @@ data class SavedGameState(
     // Today's Puzzle's day (an epoch day) for that puzzle, null for any other board
     val puzzleDay: Long? = null,
     val usedHelp: Boolean = false,
+    // The deal's counts and play time so far (GameState); 0 in saves from before they were kept
+    val hintsUsed: Int = 0,
+    val reshufflesUsed: Int = 0,
+    val undosUsed: Int = 0,
+    val playMillis: Long = 0L,
 ) {
     // deserialize only accepts saves on a layout that exists
     fun toGameState(): GameState {
@@ -45,7 +50,10 @@ data class SavedGameState(
             )
         }
         return MahjongGameEngine.stateOf(constellation, boardTiles, moveHistory, plan)
-            .copy(dealt = dealt.takeIf { it.size == boardTiles.size } ?: emptyList(), dealtPlan = dealtPlan, usedHelp = usedHelp)
+            .copy(
+                dealt = dealt.takeIf { it.size == boardTiles.size } ?: emptyList(), dealtPlan = dealtPlan, usedHelp = usedHelp,
+                hintsUsed = hintsUsed, reshufflesUsed = reshufflesUsed, undosUsed = undosUsed, playMillis = playMillis,
+            )
     }
 
     fun serialize(): String {
@@ -70,6 +78,10 @@ data class SavedGameState(
             movesOf(dealtPlan),
             puzzleDay?.toString() ?: "",
             if (usedHelp) "1" else "",
+            hintsUsed.toString(),
+            reshufflesUsed.toString(),
+            undosUsed.toString(),
+            playMillis.toString(),
         ).joinToString("|")
     }
 
@@ -96,6 +108,10 @@ data class SavedGameState(
                 dealtPlan = state.dealtPlan,
                 puzzleDay = puzzleDay,
                 usedHelp = state.usedHelp,
+                hintsUsed = state.hintsUsed,
+                reshufflesUsed = state.reshufflesUsed,
+                undosUsed = state.undosUsed,
+                playMillis = state.playMillis,
             )
         }
 
@@ -166,6 +182,10 @@ data class SavedGameState(
                     puzzleDay = parts.getOrNull(10)?.toLongOrNull(),
                     // Saves from before this was kept count as clean so far
                     usedHelp = parts.getOrNull(11) == "1",
+                    hintsUsed = parts.getOrNull(12)?.toIntOrNull() ?: 0,
+                    reshufflesUsed = parts.getOrNull(13)?.toIntOrNull() ?: 0,
+                    undosUsed = parts.getOrNull(14)?.toIntOrNull() ?: 0,
+                    playMillis = parts.getOrNull(15)?.toLongOrNull() ?: 0L,
                 )
             } catch (_: Exception) {
                 return null

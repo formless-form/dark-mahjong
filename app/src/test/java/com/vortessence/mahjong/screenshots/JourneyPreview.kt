@@ -16,9 +16,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The Journey (the levels) with each cleared level's best clear shown in a few ways, over sample
- * records: perfect, clean with undos, helped, and cleared before records were kept.
- * Into build/journey/<style>.png. Run: ./gradlew testFossDebugUnitTest --tests '*JourneyPreview*'
+ * The Journey (the levels) with each cleared level's best clear, over sample records: perfect,
+ * clean with undos, helped, and cleared before records were kept. Into build/journey/journey.png. Run: ./gradlew testFossDebugUnitTest --tests '*JourneyPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")
@@ -41,21 +40,18 @@ class JourneyPreview {
         ),
     )
 
-    private fun shoot(style: Int, name: String) {
+    private fun shoot(name: String) {
         MenuFire.flickers = false
         compose.setContent {
             MahjongTheme {
                 LevelSelectScreen(
                     progress = progress, onLevelSelected = {}, onBack = {},
-                    statsStyle = style, title = if (style == 0) "Levels" else "Journey", openAt = 0,
+                    openAt = 0,
                 )
             }
         }
         compose.onRoot().captureRoboImage("build/journey/$name.png")
     }
 
-    @Test fun s1() = shoot(0, "1-as-now")
-    @Test fun s2() = shoot(2, "2-time-in-line-help-icons")
-    @Test fun s3() = shoot(3, "3-record-in-words")
-    @Test fun s4() = shoot(4, "4-record-chips")
+    @Test fun journey() = shoot("journey")
 }
