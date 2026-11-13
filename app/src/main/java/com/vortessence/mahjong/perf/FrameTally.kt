@@ -15,6 +15,7 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
     private var late = 0
     private var veryLate = 0
     private var stutters = 0
+    private var near = 0
     private var playedNs = 0L
     // How many frames came this many milliseconds after the one before (the last, a second or more)
     private val gapsMs = IntArray(MAX_GAP_MS + 1)
@@ -32,6 +33,7 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
         if (totalNs > deadline) late++
         if (totalNs > deadline + refreshNs) veryLate++
         if (totalNs > deadline && gapNs > STUTTER_GAP_NS) stutters++
+        if (totalNs > deadline && gapNs > NEAR_GAP_NS) near++
         if (gapNs > 0) {
             playedNs += minOf(gapNs, MAX_GAP_MS * 1_000_000L)
             gapsMs[(gapNs / 1_000_000L).toInt().coerceIn(0, MAX_GAP_MS)]++
@@ -47,13 +49,17 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
         val lateShare = late.toFloat() / frames
         val veryLateShare = veryLate.toFloat() / frames
         val stutterShare = stutters.toFloat() / frames
+        val nearShare = near.toFloat() / frames
+        val struggling = stutterShare >= STUTTER_SHARE
         return FrameVerdict(
-            struggling = stutterShare >= STUTTER_SHARE,
+            struggling = struggling,
             stutterShare = stutterShare,
             fps = fps(),
             frames = frames,
             lateShare = lateShare,
             veryLateShare = veryLateShare,
+            nearShare = nearShare,
+            close = !struggling && nearShare >= NEAR_SHARE,
         )
     }
 
@@ -81,6 +87,11 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
         // itself, fire lit, looks perfectly smooth with 17% of frames late and 6% more than a
         // refresh late (2026-11-12)
         const val STUTTER_SHARE = 0.15f
+        // Near the line: a late frame after a picture up over 40 ms (below 25 frames a second), in
+        // as many frames as would be stutters. Alex's moto g05, a steady 20 a second by the fire
+        // with no stutters at all, is near it; a phone at 30 has a decent margin (2026-11-13)
+        const val NEAR_GAP_NS = 40_000_000L
+        const val NEAR_SHARE = 0.15f
         private const val MAX_GAP_MS = 1000
     }
 }
@@ -94,4 +105,8 @@ data class FrameVerdict(
     val frames: Int,
     val lateShare: Float,
     val veryLateShare: Float,
+    // Frames that came late after a picture up over 40 ms: near a stutter
+    val nearShare: Float = 0f,
+    // Kept up, but near the line: lighter fire shadows by itself
+    val close: Boolean = false,
 )

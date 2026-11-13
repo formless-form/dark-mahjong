@@ -137,6 +137,15 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _boardFresh.value = true
     }
 
+    /**
+     * The fire's shadows traced lighter (FireShadows), by itself: on a phone the check found near
+     * the line, or struggling (before its question is answered, and after a no thanks). A phone
+     * with a decent margin keeps the full trace.
+     */
+    val lightFireShadows: StateFlow<Boolean> = _perfCheck
+        .map { it?.check == PerfCheck.PASSED_CLOSE || it?.check == PerfCheck.SLOW || it?.check == PerfCheck.DECLINED }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** The check found this phone struggling: the question of Low-performance mode is due. */
     val perfQuestion: StateFlow<Boolean> = _perfCheck
         .map { it?.check == PerfCheck.SLOW }
@@ -699,7 +708,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     /** The first-game check is done: a phone that kept up is left alone; one that didn't gets its card. */
     fun onFrameVerdict(verdict: FrameVerdict) {
         if (_perfCheck.value?.check != PerfCheck.PENDING) return
-        val state = if (verdict.struggling) PerfCheck.SLOW else PerfCheck.PASSED
+        val state = when {
+            verdict.struggling -> PerfCheck.SLOW
+            verdict.close -> PerfCheck.PASSED_CLOSE
+            else -> PerfCheck.PASSED
+        }
         val stutterPercent = (verdict.stutterShare * 100).roundToInt()
         _perfCheck.value = PerfCheckState(state, stutterPercent)
         // Reached on the board being played: the question waits for the next

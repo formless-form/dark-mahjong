@@ -9,7 +9,10 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import java.util.concurrent.Executors
+import kotlin.math.PI
 import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.max
 import kotlin.math.min
 import androidx.compose.ui.graphics.asAndroidPath
@@ -28,6 +31,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.unit.IntOffset
@@ -46,11 +51,6 @@ import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TileSuit
 import com.vortessence.mahjong.ui.theme.GoldHighlight
-import com.vortessence.mahjong.ui.theme.TileBevelHighlight
-import com.vortessence.mahjong.ui.theme.TileIvoryBottom
-import com.vortessence.mahjong.ui.theme.TileIvoryTop
-import com.vortessence.mahjong.ui.theme.TileSideIvoryBottom
-import com.vortessence.mahjong.ui.theme.TileSideWoodBacking
 import com.vortessence.mahjong.ui.theme.TutorialHighlight
 
 object TileRenderer {
@@ -464,6 +464,8 @@ object TileRenderer {
         if (isSelected) drawGoldFace(scope, x, y, width, height)
 
         val tile = boardTile.tile
+        // 5. Terrazzo in the face, under the paint
+        drawTerrazzo(scope, TileWear.look(boardTile.id), faceRect(x, y, width, height).topLeft, faceRect(x, y, width, height).size, glints = glare)
         // 6. Detailed Classic Mahjong Artwork
         if (!PerfSwitches.isOff("art")) getTileVector(tile)?.let { vector ->
             drawArtwork(scope, vector, x, y, width, height)
@@ -610,6 +612,7 @@ object TileRenderer {
 
     /** The tile's solid body: wooden backing, then ivory sides, swept out to its depth. */
     private fun drawWalls(scope: DrawScope, x: Float, y: Float, width: Float, height: Float, highlightColor: Color?, tintAlpha: Float) {
+        val kit = TileKits.current
         val depthX = width * BoardTransform.LAYER_SHIFT_FACTOR_X
         val depthY = height * BoardTransform.LAYER_SHIFT_FACTOR_Y
         val cornerR = width * 0.085f
@@ -620,7 +623,7 @@ object TileRenderer {
         for (i in woodSteps downTo 0) {
             val stepDepth = woodDepthStart + ((1f - woodDepthStart) * (i / woodSteps.toFloat()))
             scope.drawRoundRect(
-                color = TileSideWoodBacking,
+                color = kit.backing,
                 topLeft = Offset(x + (depthX * stepDepth), y + (depthY * stepDepth)),
                 size = Size(width, height),
                 cornerRadius = corner,
@@ -643,7 +646,7 @@ object TileRenderer {
             val stepY = depthY * progress
 
             scope.drawRoundRect(
-                color = TileSideIvoryBottom,
+                color = kit.side,
                 topLeft = Offset(x + stepX, y + stepY),
                 size = Size(width, height),
                 cornerRadius = corner,
@@ -700,9 +703,10 @@ object TileRenderer {
         val faceTopLeft = face.topLeft
         val faceSize = face.size
         val faceCorner = CornerRadius(cornerR * 0.9f, cornerR * 0.9f)
+        val kit = TileKits.current
 
         val faceBrush = Brush.verticalGradient(
-            colors = listOf(TileIvoryTop, TileIvoryBottom),
+            colors = listOf(kit.faceTop, kit.faceBottom),
             startY = y,
             endY = y + height,
         )
@@ -723,7 +727,7 @@ object TileRenderer {
             )
         } else {
             scope.drawRoundRect(
-                color = TileBevelHighlight.copy(alpha = 0.6f),
+                color = kit.bevelHighlight.copy(alpha = kit.bevelAlpha),
                 topLeft = faceTopLeft,
                 size = faceSize,
                 cornerRadius = faceCorner,
@@ -745,7 +749,7 @@ object TileRenderer {
         val ageing = TileWear.ageing(0)
         if (ageing > 0.01f) {
             scope.drawRoundRect(
-                color = Color(0xFFB08A4A).copy(alpha = ageing),
+                color = kit.ageing.copy(alpha = ageing),
                 topLeft = faceTopLeft,
                 size = faceSize,
                 cornerRadius = faceCorner,
@@ -764,9 +768,24 @@ object TileRenderer {
         val innerW = width * 0.85f
         val innerH = height * 0.85f
         val e = width * 0.009f
-        drawVectorTile(scope, vector, cx, cy - e * 0.7f, innerW, innerH, tint = EngraveShadow)
-        drawVectorTile(scope, vector, cx, cy + e, innerW, innerH, tint = EngraveLight)
-        drawVectorTile(scope, vector, cx, cy, innerW, innerH)
+        val kit = TileKits.current
+        if (kit.raised) {
+            // Embossed: standing proud of the face, its upper edges catch the light and it casts
+            // a shadow down and to the right; a faint dark edge all round keeps it clear of the face
+            if (kit.edge > 0f) {
+                val edgeTint = kit.cutShadow.copy(alpha = (kit.cutShadow.alpha * kit.edge).coerceAtMost(1f))
+                for (i in 0 until 8) {
+                    val a = i * (PI.toFloat() / 4f)
+                    drawVectorTile(scope, vector, cx + cos(a) * e * 0.7f, cy + sin(a) * e * 0.7f, innerW, innerH, tint = edgeTint)
+                }
+            }
+            drawVectorTile(scope, vector, cx + e * 0.5f, cy + e * 1.4f, innerW, innerH, tint = kit.cutShadow)
+            drawVectorTile(scope, vector, cx, cy - e * 0.7f, innerW, innerH, tint = kit.cutLight)
+        } else {
+            drawVectorTile(scope, vector, cx, cy - e * 0.7f, innerW, innerH, tint = kit.cutShadow)
+            drawVectorTile(scope, vector, cx, cy + e, innerW, innerH, tint = kit.cutLight)
+        }
+        drawVectorTile(scope, vector, cx, cy, innerW, innerH, tint = kit.art)
     }
 
     /**
@@ -796,10 +815,14 @@ object TileRenderer {
 
         class Baked internal constructor(
             internal val width: Int,
+            // The set its images are of
+            internal val kit: TileKit,
             private val pad: Int,
             // Each Highlight's, untinted first, each followed by the same with free tiles' green
             private val bodies: Array<Bitmap>,
             private val art: Map<Tile, Bitmap>,
+            // Each look's terrazzo, for a set that has it
+            private val terrazzos: Array<Bitmap>?,
             private val surfaces: Array<Bitmap>,
             private val glares: Array<Bitmap>,
             // The right and lower walls' masks (wallMask), over the body's image
@@ -873,8 +896,9 @@ object TileRenderer {
                 }
                 if (goldFace) drawGoldFace(scope, x, y, width, height)
                 stampRect.set(x, y, x + width, y + height)
-                canvas.drawBitmap(art, null, stampRect, stampPaint)
                 val look = TileWear.look(tile.id)
+                if (terrazzos != null) canvas.drawBitmap(terrazzos[look], null, stampRect, stampPaint)
+                canvas.drawBitmap(art, null, stampRect, stampPaint)
                 canvas.drawBitmap(surfaces[look], null, stampRect, stampPaint)
                 val g = glare.coerceIn(0f, 1f)
                 if (g > 0.01f) {
@@ -893,6 +917,8 @@ object TileRenderer {
 
         @Volatile
         private var wanted = 0
+        @Volatile
+        private var wantedKit: TileKit? = null
         private val worker = Executors.newSingleThreadExecutor { Thread(it, "tile-atlas").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
 
         /**
@@ -904,15 +930,19 @@ object TileRenderer {
             // Rounded up to whole steps, so a growing board asks for new images only now and then
             val want = (ceil(width * screenScale / STEP) * STEP).toInt().coerceIn(STEP, MAX_WIDTH)
             val now = baked
-            val suits = now != null && want <= now.width && want >= now.width * 0.6f
-            if (!suits && wanted != want) {
+            val kit = TileKits.current
+            // Images of another set (just changed in Settings) are not shown while new ones are made
+            if (now != null && now.kit !== kit) baked = null
+            val suits = now != null && now.kit === kit && want <= now.width && want >= now.width * 0.6f
+            if (!suits && (wanted != want || wantedKit !== kit)) {
                 wanted = want
-                if (bakeInline) bake(want) else worker.execute { if (wanted == want) bake(want) }
+                wantedKit = kit
+                if (bakeInline) bake(want, kit) else worker.execute { if (wanted == want && wantedKit === kit) bake(want, kit) }
             }
             return baked
         }
 
-        private fun bake(width: Int) {
+        private fun bake(width: Int, kit: TileKit) {
             val w = width.toFloat()
             val h = ceil(w * BoardTransform.ASPECT_RATIO)
             val pad = 2
@@ -953,11 +983,20 @@ object TileRenderer {
                 }
             }
             val glares = Array(TileWear.LOOKS) { look ->
-                image(width, ih) { drawGlaze(this, look, face.topLeft, face.size, w, 1f, GlazePart.GLARE) }
+                image(width, ih) {
+                    drawGlaze(this, look, face.topLeft, face.size, w, 1f, GlazePart.GLARE)
+                    drawTerrazzo(this, look, face.topLeft, face.size, glints = 1f, flakes = false)
+                }
             }
+            // Terrazzo, under the paint: each look's own
+            val terrazzos = if (kit.terrazzo > 0f) Array(TileWear.LOOKS) { look ->
+                image(width, ih) { drawTerrazzo(this, look, face.topLeft, face.size, glints = 0f) }
+            } else null
             val wallRight = wallMask(right = true, bodyW, bodyH, pad.toFloat(), w, h)
             val wallBelow = wallMask(right = false, bodyW, bodyH, pad.toFloat(), w, h)
-            baked = Baked(width, pad, bodies, art, surfaces, glares, wallRight, wallBelow)
+            // A set changed meanwhile: these images are of the old one
+            if (kit !== TileKits.current) return
+            baked = Baked(width, kit, pad, bodies, art, terrazzos, surfaces, glares, wallRight, wallBelow)
         }
 
         // Every face once: a Season or Flower of each kind, a dragon of each colour, and so on
@@ -981,8 +1020,101 @@ object TileRenderer {
     /** Which parts of the glaze to draw: all of it, or (for the atlas) its fixed parts or its glare. */
     private enum class GlazePart { ALL, FIXED, GLARE }
 
+    /**
+     * A terrazzo face (the tile set's [TileKit.terrazzo], its strength): stone chips of many sizes and
+     * tones set in a finely speckled ground, [look]'s own scatter. With [glints] a few flecks of
+     * mica among them catch the light as strongly as that (the atlas keeps those in the glare's
+     * image, stamped as each tile catches the lamp and the fire, so they twinkle with the
+     * flames); [flakes] false draws only those.
+     */
+    private fun drawTerrazzo(scope: DrawScope, look: Int, topLeft: Offset, size: Size, glints: Float, flakes: Boolean = true) {
+        val strength = TileKits.current.terrazzo
+        if (strength <= 0f || PerfSwitches.isOff("terrazzo")) return
+        val random = kotlin.random.Random(TERRAZZO_SEED + look * 7919)
+        val unit = size.width
+        fun alpha(a: Float) = (a * strength).coerceIn(0f, 1f)
+        val path = Path()
+        scope.clipRect(topLeft.x, topLeft.y, topLeft.x + size.width, topLeft.y + size.height) {
+            // Chips: angular broken stones, a few large and many small, covering about two fifths
+            // of the face. Most are paler than the ground, some darker, a few warm; each has its own
+            // mottling, and some a vein
+            fun chip(cx: Float, cy: Float, r: Float) {
+                val tone = TERRAZZO_TONES[random.nextInt(TERRAZZO_TONES.size)]
+                val a = alpha(0.30f + random.nextFloat() * 0.25f)
+                val corners = 4 + random.nextInt(4)
+                val turn = random.nextFloat() * 6.2832f
+                val stretch = 0.45f + random.nextFloat() * 0.55f
+                val tilt = random.nextFloat() * 6.2832f
+                val ct = cos(tilt)
+                val st = sin(tilt)
+                path.reset()
+                for (c in 0 until corners) {
+                    val t = turn + c * 6.2832f / corners + (random.nextFloat() - 0.5f) * 0.9f
+                    val reach = r * (0.55f + random.nextFloat() * 0.45f)
+                    val lx = cos(t) * reach
+                    val ly = sin(t) * reach * stretch
+                    val px = cx + lx * ct - ly * st
+                    val py = cy + lx * st + ly * ct
+                    if (c == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                }
+                path.close()
+                val mottle = random.nextFloat()
+                val vein = random.nextFloat() < 0.3f
+                val vt = random.nextFloat() * 6.2832f
+                val specks = if (r > unit * 0.02f) (r / unit * 160f).toInt() else 0
+                if (flakes) drawPath(path, tone.copy(alpha = a))
+                // Mottling and grain inside the chip, kept within it
+                if (r > unit * 0.02f) {
+                    val inside = mutableListOf<Triple<Float, Float, Boolean>>()
+                    repeat(specks) {
+                        inside += Triple(cx + (random.nextFloat() - 0.5f) * r * 1.4f, cy + (random.nextFloat() - 0.5f) * r * 1.4f, random.nextBoolean())
+                    }
+                    if (flakes) clipPath(path) {
+                        drawCircle(
+                            (if (mottle > 0.5f) Color.White else Color.Black).copy(alpha = alpha(0.10f)),
+                            r * (0.3f + mottle * 0.4f), Offset(cx + r * 0.25f * cos(vt), cy + r * 0.25f * sin(vt)),
+                        )
+                        if (vein) drawLine(
+                            Color.White.copy(alpha = alpha(0.16f)),
+                            Offset(cx - cos(vt) * r, cy - sin(vt) * r), Offset(cx + cos(vt) * r, cy + sin(vt) * r * 0.6f),
+                            strokeWidth = unit * 0.004f,
+                        )
+                        for ((sx, sy, pale) in inside) {
+                            drawCircle((if (pale) Color.White else Color.Black).copy(alpha = alpha(0.13f)), unit * 0.0035f, Offset(sx, sy))
+                        }
+                    }
+                }
+            }
+            for (i in 0 until TERRAZZO_CHIPS) {
+                val big = random.nextFloat()
+                // Sizes on a steep curve: grit to the odd stone a fifth of the face across
+                val r = unit * (0.006f + big * big * big * big * 0.105f)
+                chip(topLeft.x + random.nextFloat() * size.width, topLeft.y + random.nextFloat() * size.height, r)
+            }
+            // The ground's fine speckle
+            for (i in 0 until TERRAZZO_SPECKS) {
+                val x = topLeft.x + random.nextFloat() * size.width
+                val y = topLeft.y + random.nextFloat() * size.height
+                val r = unit * (0.0015f + random.nextFloat() * 0.003f)
+                val kind = random.nextFloat()
+                val colour = when {
+                    kind < 0.4f -> Color.Black.copy(alpha = alpha(0.25f))
+                    kind < 0.94f -> Color(0xFFCFCBC4).copy(alpha = alpha(0.08f + random.nextFloat() * 0.16f))
+                    else -> null // mica
+                }
+                if (colour != null) {
+                    if (flakes) drawCircle(colour, r, Offset(x, y))
+                } else if (glints > 0f) {
+                    drawCircle(Color(0xFFFFF8EA).copy(alpha = (0.8f * glints * strength).coerceAtMost(1f)), r * 1.2f, Offset(x, y))
+                }
+            }
+        }
+    }
+
     private fun drawWear(scope: DrawScope, look: Int, topLeft: Offset, size: Size) {
         val wear = TileWear.overlay(look) ?: return
+        val strength = TileKits.current.wear
+        if (strength <= 0f) return
         val pivot = Offset(topLeft.x + size.width / 2f, topLeft.y + size.height / 2f)
         val (sx, sy) = when (TileWear.orientation(look)) {
             1 -> -1f to 1f
@@ -999,6 +1131,7 @@ object TileRenderer {
                     srcSize = IntSize(TileWear.WIDTH, TileWear.HEIGHT),
                     dstOffset = IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()),
                     dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                    alpha = strength.coerceAtMost(1f),
                     filterQuality = FilterQuality.Medium,
                 )
             },
@@ -1370,9 +1503,18 @@ object TileRenderer {
 
     // Free tiles' green, when they are highlighted
     private val FreeTint = Color(0xFF0F6B38)
-    private val EngraveShadow = Color(0x5A3A2A18)
 
     private const val WALL_SHADE_ALPHA = 0.6f
+    // Terrazzo on a face: its chips, its ground's specks, the chips' tones (charcoal's own
+    // range, with a little warm taupe and pale stone), and the seed each look's scatter is drawn from
+    private const val TERRAZZO_CHIPS = 150
+    private const val TERRAZZO_SPECKS = 900
+    // Mostly paler than the ground, some darker, a little warm taupe and brown
+    private val TERRAZZO_TONES = listOf(
+        Color(0xFF8E8C88), Color(0xFFA9A6A0), Color(0xFF9A9894), Color(0xFFB9B5AE), Color(0xFF7D7B77),
+        Color(0xFF6A6863), Color(0xFF34332F), Color(0xFF7C6D60), Color(0xFF5E4E44),
+    )
+    private const val TERRAZZO_SEED = 4057
     private const val CONTACT_SHADOW_ALPHA = 0.45f
     private const val CONTACT_BLUR = 0.07f
     // How far past the shape the blur reaches, in blur radii
@@ -1383,7 +1525,6 @@ object TileRenderer {
     private val contactRect = RectF()
     private var contactBitmap: Bitmap? = null
     private var contactWidth = 0f
-    private val EngraveLight = Color(0x99FFFDF6)
 
     private fun drawVectorTile(
         scope: DrawScope,

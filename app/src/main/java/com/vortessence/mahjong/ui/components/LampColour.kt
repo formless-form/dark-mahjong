@@ -39,6 +39,20 @@ object LampColour {
         s.setFloatUniform("LAMP_ON_TILES", c.tiles)
     }
 
+    /**
+     * The menus' slate, by a lamp a little less warm than the table's: [MENU_KELVIN] (Gareth,
+     * 2026-11-13, after a render at 2000 K), or the previews' [kelvin] where they set one.
+     */
+    fun setMenuUniform(s: RuntimeShader) {
+        val k = if (kelvin == DEFAULT_KELVIN) MENU_KELVIN else kelvin
+        val c = menuColour?.takeIf { it.first == k } ?: (k to table(k)).also { menuColour = it }
+        s.setFloatUniform("lampColour", c.second)
+    }
+
+    const val MENU_KELVIN = 2200f
+    @Volatile
+    private var menuColour: Pair<Float, FloatArray>? = null
+
     // Each channel's shortfall from white, scaled by how far the blackbody's own falls short at [k]
     // against at 2700 K
     private fun shifted(tuned: FloatArray, k: Float): FloatArray {

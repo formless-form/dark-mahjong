@@ -104,6 +104,7 @@ fun SlateBackdrop(modifier: Modifier = Modifier, fire: Boolean = true, fireInten
                 }
                 shader.setFloatUniform("res", this.size.width, this.size.height)
                 shader.setFloatUniform("props", props.toFloat())
+                LampColour.setMenuUniform(shader)
                 if (shader === direct) shader.setFloatUniform("unit", density.density)
                 if (fire) {
                     val flame = FlameLight.at(flameSeconds, 0.5f, true, fireIntensity)
@@ -357,6 +358,8 @@ uniform float3 fireAt;
 uniform float3 fireColour;
 uniform float firePower;
 uniform float props;
+// The lamp's colour, as at the table (LampColour)
+uniform float3 lampColour;
 $PROPS_AGSL
 half4 menuLight(float3 a, float3 n, float2 p) {
     float3 view = float3(0.0, 0.0, 1.0);
@@ -367,7 +370,7 @@ half4 menuLight(float3 a, float3 n, float2 p) {
     float lampGlint = pow(max(dot(n, normalize(l + view)), 0.0), 40.0) * 0.05;
     float2 q = p / res;
     float sheen = exp(-dot(q - float2(0.25, 0.15), q - float2(0.25, 0.15)) * 3.0) * 0.03;
-    float3 c = a * lamp + (lampGlint + sheen) * 0.72;
+    float3 c = (a * lamp + (lampGlint + sheen) * 0.72) * lampColour;
 
     // The fire: low and to the side, so it rakes across the stone and finds its edges, past the
     // things in its way

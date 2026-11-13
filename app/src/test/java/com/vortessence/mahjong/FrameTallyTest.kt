@@ -50,6 +50,38 @@ class FrameTallyTest {
     }
 
     @Test
+    fun aSteady20FramesASecondIsNearTheLine() {
+        // Alex's moto g05 by the fire: no stutters, but every picture up 50 ms
+        val v = tally(frames(600) { Triple(70L, 33L, 50L) }).verdict()!!
+        assertFalse(v.struggling)
+        assertTrue(v.close)
+    }
+
+    @Test
+    fun aSteady30FramesASecondHasAMargin() {
+        val v = tally(frames(600) { Triple(45L, 33L, 33L) }).verdict()!!
+        assertFalse(v.struggling)
+        assertFalse(v.close)
+    }
+
+    @Test
+    fun aPixelLikeMixHasAMargin() {
+        val v = tally(frames(600) { i ->
+            when (i % 10) {
+                0 -> Triple(90L, 50L, 50L)
+                1 -> Triple(55L, 50L, 33L)
+                else -> Triple(40L, 50L, 17L)
+            }
+        }).verdict()!!
+        assertFalse(v.close)
+    }
+
+    @Test
+    fun strugglingIsNeverCalledClose() {
+        assertFalse(tally(frames(600) { Triple(100L, 33L, 83L) }).verdict()!!.close)
+    }
+
+    @Test
     fun aSteady12FramesASecondIsStruggling() {
         val v = tally(frames(600) { Triple(100L, 33L, 83L) }).verdict()!!
         assertTrue(v.struggling)

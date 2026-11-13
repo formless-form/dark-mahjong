@@ -57,6 +57,8 @@ enum class PerfCheck {
     PENDING,
     // The phone kept up
     PASSED,
+    // It kept up, but near the line: the fire's shadows are traced lighter (FireShadows), by itself
+    PASSED_CLOSE,
     // It didn't: the player is to be asked about Low-performance mode
     SLOW,
     // They said yes, and the mode went on

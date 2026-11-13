@@ -59,6 +59,18 @@ class PerfPhoneTest {
     }
 
     @Test
+    fun aPassFromTheFirstCheckIsCheckedAgain() = runBlocking {
+        repo.resetPerfCheck()
+        repo.setPerfCheck(PerfCheck.PASSED, 0)
+        assertEquals(PerfCheck.PASSED, repo.perfCheckFlow.first().check)
+        // As 1.4.11 and 1.4.12 stored it, before passes near the line were told apart
+        repo.storedCheckVersion(null)
+        assertEquals(PerfCheck.PENDING, repo.perfCheckFlow.first().check)
+        repo.setPerfCheck(PerfCheck.PASSED_CLOSE, 0)
+        assertEquals(PerfCheck.PASSED_CLOSE, repo.perfCheckFlow.first().check)
+    }
+
+    @Test
     fun storedBeforePhonesWereNamedIsThisPhones() = runBlocking {
         slowAndSwitched()
         assertEquals(PerfCheck.SWITCHED, repo.perfCheckFlow.first().check)

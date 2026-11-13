@@ -412,6 +412,7 @@ half4 main(float2 p) {
     ): ShaderBrush {
         val s = flameShader ?: RuntimeShader(FLAME_TILE_AGSL).also { flameShader = it }
         s.setFloatUniform("res", width, height)
+        s.setFloatUniform("neutralLight", TileKits.current.neutralLight)
         flame.setUniforms(s)
         setShadowUniforms(s, shadowMap, fireShadows, fresh)
         return ShaderBrush(s)
@@ -426,6 +427,7 @@ half4 main(float2 p) {
     fun raisedTileLight(width: Float, height: Float, flame: FlameLight): ShaderBrush {
         val s = raisedShader ?: RuntimeShader(FLAME_TILE_AGSL).also { raisedShader = it }
         s.setFloatUniform("res", width, height)
+        s.setFloatUniform("neutralLight", TileKits.current.neutralLight)
         flame.setUniforms(s)
         setShadowUniforms(s, null, fireShadows = false, cull = false)
         return ShaderBrush(s)
@@ -555,6 +557,9 @@ uniform float aoStrength;   // how deep the table's ambient occlusion goes (0 wi
 uniform float flameHeight;  // how high the flames stand above the table this frame, in table heights
 uniform float flameSpread;  // how much wider than round the fire's pool spreads across the table (FlameLight.spread)
 const int SHADOW_STEPS = 40;
+// Steps actually taken along each ray, SHADOW_STEPS at most (FireShadows: fewer on a phone near
+// the line)
+uniform float shadowSteps;
 // Brings an over-bright colour back within range whole, keeping its hue. Clamping each channel
 // on its own would clip red first, so a bright orange flare would drift towards yellow-green.
 float3 keepHue(float3 c) {
@@ -623,11 +628,12 @@ float fireShadow(float2 q, float h0) {
     if (span.x > span.y) return 1.0;
     // A different start for each pixel, so the steps don't show as bands
     float jitter = fract(52.9829189 * fract(dot(q * res.y, float2(0.06711056, 0.00583715))));
-    float stride = reach / float(SHADOW_STEPS);
-    // Step i lies (i + jitter) / SHADOW_STEPS of the way along: the first and last over the board,
+    float steps = clamp(shadowSteps, 1.0, float(SHADOW_STEPS));
+    float stride = reach / steps;
+    // Step i lies (i + jitter) / steps of the way along: the first and last over the board,
     // a step to spare each side
-    float first = max(ceil(span.x * float(SHADOW_STEPS) - jitter) - 1.0, 0.0);
-    float last = min(span.y * float(SHADOW_STEPS) - jitter + 1.0, float(SHADOW_STEPS) - 1.0);
+    float first = max(ceil(span.x * steps - jitter) - 1.0, 0.0);
+    float last = min(span.y * steps - jitter + 1.0, steps - 1.0);
     float occluded = 0.0;
     for (int k = 0; k < SHADOW_STEPS; k++) {
         float i = first + float(k);
@@ -644,6 +650,9 @@ float fireShadow(float2 q, float h0) {
 
 private const val FLAME_TILE_AGSL = """
 uniform float2 res;
+// How far the light on the tiles is drained of its colour, towards a white of the same strength
+// (the tile set's TileKit.neutralLight): its pale pictures stay whiter by the fire
+uniform float neutralLight;
 $FLAME_AGSL
 half4 main(float2 p) {
     float2 q = float2((p.x - 0.5 * res.x) / res.y, (0.5 * res.y - p.y) / res.y);
@@ -658,6 +667,7 @@ half4 main(float2 p) {
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
     float3 c = (lampLevel * lamp * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TILES + flameLight(q) * fire)
         * 0.81;
+    c = mix(c, float3(dot(c, float3(0.2126, 0.7152, 0.0722))), neutralLight);
     return half4(half3(keepHue(c)), 1.0);
 }
 """

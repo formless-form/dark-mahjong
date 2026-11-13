@@ -28,6 +28,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
+import com.vortessence.mahjong.ui.components.FireShadows
 import com.vortessence.mahjong.ui.components.PerfSwitches
 import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
@@ -74,12 +75,16 @@ class MainActivity : ComponentActivity() {
             viewModel.onFrameVerdict(verdict)
             // Test builds say how it went, so a phone that passes (and gets no card) shows it too
             if (BuildConfig.PERF_HOOKS) {
-                val result = if (verdict.struggling) "struggling" else "passed"
+                val result = when {
+                    verdict.struggling -> "struggling"
+                    verdict.close -> "passed, near the line (lighter fire shadows)"
+                    else -> "passed"
+                }
                 fun pct(share: Float) = "${(share * 100).toInt()}%"
                 Toast.makeText(
                     this,
                     "Frame check: $result. Stutters ${pct(verdict.stutterShare)}, late ${pct(verdict.lateShare)}, " +
-                        "very late ${pct(verdict.veryLateShare)}",
+                        "very late ${pct(verdict.veryLateShare)}, near ${pct(verdict.nearShare)}",
                     Toast.LENGTH_LONG,
                 ).show()
             }
@@ -92,6 +97,10 @@ class MainActivity : ComponentActivity() {
                     frameWatch.setRecording(false)
                 }
             }
+        }
+        // A phone near the line traces the fire's shadows lighter, by itself
+        lifecycleScope.launch {
+            viewModel.lightFireShadows.collect { FireShadows.light = it }
         }
         // Only on a fresh start: a recreated activity (a dark-mode switch) keeps the game in play
         if (savedInstanceState == null) openPerfScene(intent)

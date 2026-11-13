@@ -65,6 +65,7 @@ class BoardShadowMap private constructor(
             s.setInputShader("aoMap", occlusion)
             s.setFloatUniform("mapXform", scale, scale, offsetX, offsetY)
             s.setFloatUniform("shade", if (fireShadows) 1f else 0f, AO_SCALE, layer, layers * layer)
+            s.setFloatUniform("shadowSteps", FireShadows.steps)
             s.setFloatUniform("aoStrength", AMBIENT_OCCLUSION)
             s.setFloatUniform("boardBox", box)
         }
@@ -88,6 +89,7 @@ class BoardShadowMap private constructor(
             s.setInputShader("aoMap", none)
             s.setFloatUniform("mapXform", 1f, 1f, 0f, 0f)
             s.setFloatUniform("shade", 0f, AO_SCALE, 1f, 1f)
+            s.setFloatUniform("shadowSteps", FireShadows.FULL)
             s.setFloatUniform("aoStrength", 0f)
             s.setFloatUniform("boardBox", 1f, 1f, 0f, 0f)
         }

@@ -118,8 +118,15 @@ object BoardSolvabilityGenerator {
         // Prepare matching pairs of tiles
         val tilePairs = generateTilePairs(pairCount, random)
 
-        // Try reverse simulation to guarantee a valid solution path
-        val assigned = assignSolvable(constellation.positions, tilePairs, random)
+        // Try reverse simulation to guarantee a valid solution path. A deal with an opening match
+        // that loses the board is dealt again (on Quad, with about three free pairs to start, a
+        // quarter of deals had one), as many times as it takes, within reason
+        var assigned = assignSolvable(constellation.positions, tilePairs, random)
+        var tries = 1
+        while (assigned != null && tries < SAFE_OPENING_TRIES && !openingIsSafe(constellation.positions, assigned)) {
+            assigned = assignSolvable(constellation.positions, generateTilePairs(pairCount, random), random)
+            tries++
+        }
         if (assigned != null) {
             val ids = constellation.positions.withIndex().associate { (index, pos) -> pos to index }
             return Deal(
@@ -139,6 +146,36 @@ object BoardSolvabilityGenerator {
         // Fallback: direct pairing if constellation is unusually constrained
         return Deal(fallbackAssignment(constellation.positions, tilePairs, random), plan = emptyList())
     }
+
+    /**
+     * Whether every match open at the start of [assignment] leaves a board that can still be
+     * cleared (checked where few are open, [NARROW_OPENING]): each is tried, and the rest solved (the deal's own order guides the search, so a
+     * board that can be cleared is found so in a moment). A search that runs out of [budget]
+     * counts as lost.
+     */
+    internal fun openingIsSafe(positions: List<TilePosition>, assignment: Assignment, budget: Int = OPENING_BUDGET): Boolean {
+        val ids = positions.withIndex().associate { (index, pos) -> pos to index }
+        val tiles = MahjongGameEngine.recalculateFreedom(
+            positions.mapIndexed { index, pos -> BoardTile(id = index, tile = assignment.tiles.getValue(pos), position = pos) },
+        )
+        val plan = assignment.order.map { (a, b) -> Move(ids.getValue(a), ids.getValue(b)) }
+        val openings = MahjongGameEngine.findAvailablePairs(tiles)
+        // With plenty of matches open, one poor first choice is rarely fatal and quickly seen; the
+        // check (a search per opening) is kept for boards that open narrow, like Quad
+        if (openings.size > NARROW_OPENING) return true
+        for ((a, b) in openings) {
+            val after = tiles.map { if (it.id == a || it.id == b) it.copy(isRemoved = true) else it }
+            if (HintSolver.solve(MahjongGameEngine.recalculateFreedom(after), budget, hint = plan) == null) return false
+        }
+        return true
+    }
+
+    // Deals tried for one whose every opening match can still be cleared, and the search each
+    // opening is given
+    private const val SAFE_OPENING_TRIES = 12
+    // At most this many matches open at the start: a narrow opening, checked
+    private const val NARROW_OPENING = 5
+    private const val OPENING_BUDGET = 20_000
 
     /**
      * Redistributes [tiles] over [positions] so that the resulting board is solvable.

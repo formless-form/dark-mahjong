@@ -41,6 +41,9 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 
 private const val MEASURED_LEVEL_ORDER = 2
 
+// The first-game check's version (Keys.PERF_CHECK_VERSION)
+private const val PERF_CHECK_VERSION = 2
+
 // This phone, as the performance check knows it: a new phone of the same model would measure alike
 private val thisPhone = "${Build.MANUFACTURER}/${Build.MODEL}"
 
@@ -80,6 +83,9 @@ class PreferencesRepository(private val context: Context) {
         // The phone the check and Low-performance mode belong to (its maker and model). Backups
         // carry everything to a new phone, where neither applies: the check runs again there
         val PERF_DEVICE = stringPreferencesKey("perf_device")
+        // Which check gave the stored verdict: 2 since it tells a phone near the line from one
+        // with a margin (1.4.13). A pass from before is checked again, once
+        val PERF_CHECK_VERSION = intPreferencesKey("perf_check_version")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
@@ -137,8 +143,9 @@ class PreferencesRepository(private val context: Context) {
      */
     val perfCheckFlow: Flow<PerfCheckState> = data.map { prefs ->
         if (!onThisPhone(prefs)) return@map PerfCheckState(PerfCheck.PENDING, 0)
-        val state = prefs[Keys.PERF_CHECK]?.let { name -> PerfCheck.entries.firstOrNull { it.name == name } }
+        val stored = prefs[Keys.PERF_CHECK]?.let { name -> PerfCheck.entries.firstOrNull { it.name == name } }
             ?: if (prefs[Keys.LOW_PERFORMANCE] != null) PerfCheck.MANUAL else PerfCheck.PENDING
+        val state = if (stored == PerfCheck.PASSED && (prefs[Keys.PERF_CHECK_VERSION] ?: 1) < PERF_CHECK_VERSION) PerfCheck.PENDING else stored
         PerfCheckState(state, prefs[Keys.PERF_CHECK_STUTTERS] ?: 0)
     }.distinctUntilChanged()
 
@@ -160,6 +167,11 @@ class PreferencesRepository(private val context: Context) {
         write { prefs -> if (phone != null) prefs[Keys.PERF_DEVICE] = phone else prefs.remove(Keys.PERF_DEVICE) }
     }
 
+    /** Tests: the check's version as stored (null: none, as before 1.4.13). */
+    internal suspend fun storedCheckVersion(version: Int?) {
+        write { prefs -> if (version != null) prefs[Keys.PERF_CHECK_VERSION] = version else prefs.remove(Keys.PERF_CHECK_VERSION) }
+    }
+
     /** Once per launch: what's stored from before phones were named is this phone's. */
     suspend fun namePerfPhone() {
         write { prefs -> if (prefs[Keys.PERF_DEVICE] == null) prefs[Keys.PERF_DEVICE] = thisPhone }
@@ -170,6 +182,7 @@ class PreferencesRepository(private val context: Context) {
         write { prefs ->
             claimForThisPhone(prefs)
             prefs[Keys.PERF_CHECK] = state.name
+            prefs[Keys.PERF_CHECK_VERSION] = PERF_CHECK_VERSION
             if (stutterPercent != null) prefs[Keys.PERF_CHECK_STUTTERS] = stutterPercent
         }
     }
