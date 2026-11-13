@@ -23,13 +23,16 @@ class BoardFitTest {
     private val canvases = listOf(1280f to 2240f, 1080f to 1500f, 1080f to 2400f)
     private val padding = 48f
 
-    // Every level suits a phone held upright: on a Pixel 9 Pro's board area (in dp), no level's
-    // tiles are smaller than 30 dp, so none needs constant zooming and panning
+    // Every level suits a phone: on a Pixel 9 Pro's board area (in dp), held upright no level's tiles
+    // are smaller than 30 dp, so none needs constant zooming and panning; a level played on its side
+    // (Mah's boards since 1.4.16) has tiles at least 27.5 dp there, as tools/import-mah-layouts.py kept
     @Test
     fun everyLevelHasPhoneSizedTiles() {
         for (level in ConstellationRepository.levelConstellations) {
-            val t = computeBoardTransform(level.positions.map { BoardTile(0, Tile(TileSuit.DRAGON, 1), it) }, 427f, 792f, 16f)
-            assertTrue("${level.name}: tiles are ${t.tileWidth} dp wide", t.tileWidth >= 30f)
+            val tiles = level.positions.map { BoardTile(0, Tile(TileSuit.DRAGON, 1), it) }
+            val t = if (level.onSide) computeBoardTransform(tiles, 830f, 410f, 16f) else computeBoardTransform(tiles, 427f, 792f, 16f)
+            val least = if (level.onSide) 27.5f else 30f
+            assertTrue("${level.name}: tiles are ${t.tileWidth} dp wide", t.tileWidth >= least)
         }
     }
 
