@@ -176,11 +176,6 @@ class AudioManager(private val context: Context) {
         releaseWinPlayer()
     }
 
-    /**
-     * Where the player is: at the table, the fireplace is heard as set; on the menu screens
-     * (Settings, Levels, Layouts), whose stone it lights faintly, softly (a fifth as loud); on
-     * the title screen not at all.
-     */
     /** The Fire sound slider is being dragged ([on]), or has been let go. */
     fun auditionFire(on: Boolean) {
         auditioningFire = on
@@ -188,6 +183,11 @@ class AudioManager(private val context: Context) {
         if (isInForeground) fireplace.play(fireLevel(settings))
     }
 
+    /**
+     * Where the player is: at the table, the fireplace is heard as set; on the menu screens
+     * (Settings, Levels, Layouts), whose stone it lights faintly, softly (a fifth as loud); on
+     * the title screen not at all.
+     */
     fun setFireRoom(room: FireRoom) {
         this.room = room
         // At the table the fireworks are made ready for a win; anywhere else they aren't needed

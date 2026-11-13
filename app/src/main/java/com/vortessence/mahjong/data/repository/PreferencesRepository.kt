@@ -232,10 +232,6 @@ class PreferencesRepository(private val context: Context) {
     }
 
     /**
-     * Once, after levels were ordered by measured difficulty: the stored highest level is carried
-     * over to the new numbering, so no layout a player could play becomes locked.
-     */
-    /**
      * Hints became earned in 1.4.6: a player who had already played starts with 2, a new one
      * with none. Settled once, on the first launch that has hints.
      */
@@ -262,6 +258,10 @@ class PreferencesRepository(private val context: Context) {
         return spent
     }
 
+    /**
+     * Once, after levels were ordered by measured difficulty: the stored highest level is carried
+     * over to the new numbering, so no layout a player could play becomes locked.
+     */
     suspend fun migrateLevelOrder() {
         write { prefs ->
             if ((prefs[Keys.LEVEL_ORDER] ?: 1) >= MEASURED_LEVEL_ORDER) return@write

@@ -164,6 +164,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     val progress: StateFlow<Progress> = _progress.asStateFlow()
 
     private val _savedGame = MutableStateFlow<SavedGameState?>(null)
+    // The game has saved or cleared its save itself since launch (savedGameFlow's collector);
+    // declared before init, which starts that collector
+    private var savedLocally = false
 
     /** Today's Puzzle started (a move made) and not yet solved: Continue rather than Play. */
     val todaysPuzzleStarted: StateFlow<Boolean> = combine(_gameState, _puzzleDay, _savedGame, _today) { state, day, saved, today ->
@@ -257,7 +260,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         // Collect saved game
         viewModelScope.launch {
             prefsRepo.savedGameFlow.collect { saved ->
-                _savedGame.value = saved
+                // Read from storage only until the game first saves or clears it itself: from then
+                // on the game's own copy is the newest, and a read back of an earlier write (parsed
+                // off the main thread, so it can land late) must not bring back a board just won
+                if (!savedLocally) _savedGame.value = saved
             }
         }
         // Today's Puzzle moves on at 4 am, even with the app left open on a menu
@@ -476,6 +482,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         if (current.isWon || current.remainingTilesCount == 0) return
         val step = if (TutorialScript.isTutorial(current)) _tutorialStepIndex.value ?: SavedGameState.FREE_PLAY else null
         val saved = SavedGameState.fromGameState(current, _currentLevelIndex.value, step, _puzzleDay.value)
+        savedLocally = true
         _savedGame.value = saved
         viewModelScope.launch {
             prefsRepo.saveGame(saved)
@@ -483,6 +490,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun clearSavedGame() {
+        savedLocally = true
         _savedGame.value = null
         viewModelScope.launch {
             prefsRepo.clearSavedGame()
@@ -674,7 +682,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             // Paid for even if a new deal comes meanwhile: it was seen
             val paid = withContext(NonCancellable) { prefsRepo.spendHint() }
             // None left after all (two boards' requests racing for the last one): taken back
-            if (!paid) _gameState.update { s -> if (s?.hintPair == hint.pair) s.copy(hintPair = null) else s }
+            // (and the board no longer counts as helped, so a clean clear keeps its ribbon)
+            if (!paid) _gameState.update { s -> if (s?.hintPair == hint.pair) s.copy(hintPair = null, usedHelp = state.usedHelp) else s }
         }
     }
 

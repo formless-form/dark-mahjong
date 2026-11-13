@@ -6,7 +6,6 @@ import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.HintSolver
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -94,14 +93,5 @@ class HintTest {
         assertEquals(pair, picked.hintPair)
         val other = hinted.tiles.first { it.isFree && it.id != pair.first && it.id != pair.second }
         assertNull(MahjongGameEngine.handleTileTap(hinted, other.id).first.hintPair)
-    }
-
-    @Test
-    fun repeatedHintsMoveOnToAnotherSafePair() {
-        val state = MahjongGameEngine.startNewGame(layouts.last(), Random(5))
-        val first = MahjongGameEngine.findHint(state)!!.pair
-        val second = MahjongGameEngine.findHint(state.copy(hintPair = first))!!.pair
-        val safe = state.plan.count { m -> state.tiles.filter { it.isFree }.map { it.id }.let { m.tileId1 in it && m.tileId2 in it } }
-        if (safe > 1) assertFalse(first == second)
     }
 }

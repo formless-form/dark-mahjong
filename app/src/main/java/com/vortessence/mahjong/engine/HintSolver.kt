@@ -2,6 +2,7 @@ package com.vortessence.mahjong.engine
 
 import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.Move
+import com.vortessence.mahjong.data.model.TilePosition
 import java.util.BitSet
 
 /**
@@ -18,10 +19,11 @@ object HintSolver {
      * tried first.
      */
     fun solve(tiles: List<BoardTile>, budget: Int = 20_000, hint: List<Move> = emptyList()): List<Move>? {
-        val active = tiles.filter { !it.isRemoved }
+        val activeAt = tiles.indices.filter { !tiles[it].isRemoved }
+        val active = activeAt.map { tiles[it] }
         val n = active.size
         if (n == 0) return emptyList()
-        val board = Board(active, turns(hint))
+        val board = Board(active, activeAt, Relations.of(tiles), turns(hint))
 
         val present = BitSet(n).apply { set(0, n) }
         val deadEnds = HashSet<BitSet>()
@@ -68,9 +70,11 @@ object HintSolver {
 
     /** The free pairs of [tiles], the most promising first: the best guess when no plan is found. */
     fun rank(tiles: List<BoardTile>): List<Pair<Int, Int>> {
-        val active = tiles.filter { !it.isRemoved }
+        val activeAt = tiles.indices.filter { !tiles[it].isRemoved }
+        val active = activeAt.map { tiles[it] }
         val present = BitSet(active.size).apply { set(0, active.size) }
-        return Board(active, emptyMap()).rankedPairs(present).map { active[Board.first(it)].id to active[Board.second(it)].id }
+        return Board(active, activeAt, Relations.of(tiles), emptyMap()).rankedPairs(present)
+            .map { active[Board.first(it)].id to active[Board.second(it)].id }
     }
 
     // Each tile's turn in [plan]
@@ -83,7 +87,53 @@ object HintSolver {
         return turns
     }
 
-    private class Board(active: List<BoardTile>, turns: Map<Int, Int>) {
+    /**
+     * Which tiles of a whole layout lie on each tile, and flank it on the left and on the right
+     * (by index in its tile list): the same however many tiles are left, so worked out once per
+     * layout rather than for every search. A deal checks each of its openings with a search of
+     * the same layout (BoardSolvabilityGenerator.openingIsSafe), and each would otherwise scan
+     * every pair of tiles again.
+     */
+    private class Relations(val positions: List<TilePosition>) {
+        val above: Array<IntArray>
+        val left: Array<IntArray>
+        val right: Array<IntArray>
+
+        init {
+            val n = positions.size
+            val a = Array(n) { ArrayList<Int>() }
+            val l = Array(n) { ArrayList<Int>() }
+            val r = Array(n) { ArrayList<Int>() }
+            for (i in 0 until n) {
+                for (j in 0 until n) {
+                    if (i == j) continue
+                    val p = positions[i]
+                    val q = listOf(positions[j])
+                    if (BoardSolvabilityGenerator.isCovered(p, q)) a[i].add(j)
+                    if (BoardSolvabilityGenerator.isBlockedLeft(p, q)) l[i].add(j)
+                    if (BoardSolvabilityGenerator.isBlockedRight(p, q)) r[i].add(j)
+                }
+            }
+            above = Array(n) { a[it].toIntArray() }
+            left = Array(n) { l[it].toIntArray() }
+            right = Array(n) { r[it].toIntArray() }
+        }
+
+        companion object {
+            // The last layout's, kept for the next search (hints and deals search from more than
+            // one thread, each reading or replacing the whole entry)
+            @Volatile
+            private var last: Relations? = null
+
+            fun of(tiles: List<BoardTile>): Relations {
+                val positions = tiles.map { it.position }
+                last?.takeIf { it.positions == positions }?.let { return it }
+                return Relations(positions).also { last = it }
+            }
+        }
+    }
+
+    private class Board(active: List<BoardTile>, activeAt: List<Int>, relations: Relations, turns: Map<Int, Int>) {
         private val n = active.size
 
         // Each tile's turn in an old plan (later than all for tiles it doesn't have)
@@ -109,23 +159,17 @@ object HintSolver {
         private val freeOfKind: IntArray
 
         init {
-            val a = Array(n) { ArrayList<Int>() }
-            val l = Array(n) { ArrayList<Int>() }
-            val r = Array(n) { ArrayList<Int>() }
+            // The layout's relations, kept to the tiles left and renumbered as they are here
+            val here = IntArray(relations.positions.size) { -1 }
+            activeAt.forEachIndexed { i, at -> here[at] = i }
+            fun mapped(of: IntArray) = of.map { here[it] }.filter { it >= 0 }.toIntArray()
             for (i in 0 until n) {
-                for (j in 0 until n) {
-                    if (i == j) continue
-                    val p = active[i].position
-                    val q = listOf(active[j].position)
-                    if (BoardSolvabilityGenerator.isCovered(p, q)) { a[i].add(j); holds[j] += 2 }
-                    if (BoardSolvabilityGenerator.isBlockedLeft(p, q)) { l[i].add(j); holds[j]++ }
-                    if (BoardSolvabilityGenerator.isBlockedRight(p, q)) { r[i].add(j); holds[j]++ }
-                }
-            }
-            for (i in 0 until n) {
-                above[i] = a[i].toIntArray()
-                left[i] = l[i].toIntArray()
-                right[i] = r[i].toIntArray()
+                above[i] = mapped(relations.above[activeAt[i]])
+                left[i] = mapped(relations.left[activeAt[i]])
+                right[i] = mapped(relations.right[activeAt[i]])
+                for (j in above[i]) holds[j] += 2
+                for (j in left[i]) holds[j]++
+                for (j in right[i]) holds[j]++
             }
             val firsts = ArrayList<Int>()
             for (i in 0 until n) {

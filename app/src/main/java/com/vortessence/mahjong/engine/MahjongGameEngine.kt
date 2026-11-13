@@ -183,8 +183,9 @@ object MahjongGameEngine {
 
     /**
      * Picks a pair to hint that keeps the board clearable: one of the free pairs of a plan that
-     * still holds (the deal's, or one the solver finds), taking the next of them on each repeated
-     * hint. If no plan is found in time, the most promising free pair. Null if no pair is free.
+     * still holds (the deal's, or one the solver finds). If no plan is found in time, the most
+     * promising free pair. Null if no pair is free. (A hint already showing is shown again, free:
+     * MahjongViewModel.requestHint never asks for another.)
      * It can take a moment on a big board, so it's for a background thread.
      */
     fun findHint(state: GameState): Hint? {
@@ -197,8 +198,7 @@ object MahjongGameEngine {
             HintSolver.rank(state.tiles)
         }
         if (candidates.isEmpty()) return null
-        val shown = candidates.indexOfFirst { samePair(it, state.hintPair) }
-        return Hint(candidates[(shown + 1) % candidates.size], plan ?: emptyList())
+        return Hint(candidates.first(), plan ?: emptyList())
     }
 
     /**
@@ -221,9 +221,6 @@ object MahjongGameEngine {
         }
         return tiles.all { it.isRemoved || it.id in covered }
     }
-
-    private fun samePair(a: Pair<Int, Int>, b: Pair<Int, Int>?) =
-        b != null && ((a.first == b.first && a.second == b.second) || (a.first == b.second && a.second == b.first))
 
     /**
      * Reshuffles remaining unremoved tiles in case of stalemate.

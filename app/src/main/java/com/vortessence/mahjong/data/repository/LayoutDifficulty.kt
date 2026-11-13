@@ -109,10 +109,6 @@ internal object LayoutDifficulty {
     }
 
     /**
-     * The levels as they were numbered before they were ordered by clear rate (1.3.6 and earlier),
-     * so a player's unlocked levels can be carried over once.
-     */
-    /**
      * The highest unlocked level after the reorder, for a player whose highest was [highest] in the
      * old numbering: every layout they could play stays playable, so it becomes the furthest any of
      * those layouts moved to (which may also open some levels between). Past the last level means
@@ -124,6 +120,10 @@ internal object LayoutDifficulty {
         return maxOf(highest, reached)
     }
 
+    /**
+     * The levels as they were numbered before they were ordered by clear rate (1.3.6 and earlier),
+     * so a player's unlocked levels can be carried over once.
+     */
     val levelsBeforeMeasuredOrder: List<String> = listOf(
         "jade_pillar", // Jade Pillar
         "bamboo_spire", // Bamboo Spire
