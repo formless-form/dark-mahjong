@@ -71,11 +71,20 @@ data class TileKit(
     // The bar's colours lightened towards white by this much, and a fine light rim round it
     val barLighten: Float = 0f,
     val barRim: Boolean = false,
+    // The bar's outline: how dark (0 to 1) and how wide (in the bar's heights); and the colours kept
+    // apart by a dark line ([BarSplit.LINE]) or a gap ([BarSplit.GAP]) as wide as [barGap] heights
+    val barOutline: Float = 0.5f,
+    val barOutlineWidth: Float = 0.18f,
+    val barSplit: BarSplit = BarSplit.NONE,
+    val barGap: Float = 0.2f,
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,
     val artLift: Float = 0f,
 )
+
+/** How a colour bar's colours are kept apart. */
+enum class BarSplit { NONE, LINE, GAP }
 
 /** Where a tile's colour-code dots go. */
 enum class DotPlace {

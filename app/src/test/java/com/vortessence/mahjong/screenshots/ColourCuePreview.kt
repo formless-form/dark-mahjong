@@ -24,6 +24,7 @@ import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 import com.vortessence.mahjong.engine.MahjongGameEngine
+import com.vortessence.mahjong.ui.components.BarSplit
 import com.vortessence.mahjong.ui.components.DotPlace
 import com.vortessence.mahjong.ui.components.FaceColours
 import com.vortessence.mahjong.ui.components.LampColour
@@ -127,9 +128,8 @@ class ColourCuePreview {
     private val cream = Color(0xFFF2E6C8)
 
     @Test fun ivory() = variant(TileKits.IVORY, "0-ivory")
-    @Test fun barGlow() = variant(bar.copy(glow = 1f), "3-bar-glow")
-    @Test fun coreOnly() = variant(bar.copy(led = true), "7-core-only")
-    @Test fun coreHairline() = variant(bar.copy(led = true, glow = 0.8f, glowSpread = 0.25f), "8-core-hairline-glow")
-    @Test fun brightGloss() = variant(bar.copy(barLighten = 0.25f), "9-brighter-gloss")
-    @Test fun backlitGlass() = variant(bar.copy(led = true, ledCore = 0.45f, barLighten = 0.15f, barRim = true), "10-backlit-glass")
+    @Test fun barEven() = variant(bar, "1-bar-as-before")
+    @Test fun lines() = variant(bar.copy(barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.LINE, barGap = 0.22f), "11-faint-outline-dividers")
+    @Test fun gaps() = variant(bar.copy(barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.GAP, barGap = 0.35f), "12-faint-outline-gaps")
+    @Test fun linesLonger() = variant(bar.copy(barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.LINE, barGap = 0.22f, barLength = 0.54f), "13-dividers-longer")
 }

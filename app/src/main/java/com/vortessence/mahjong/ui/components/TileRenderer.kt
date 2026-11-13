@@ -841,10 +841,40 @@ object TileRenderer {
                 }
             }
             val pill = Path().apply { addRoundRect(RoundRect(left, top, left + barW, top + barH, CornerRadius(barH / 2f, barH / 2f))) }
+            val rim = barH * kit.barOutlineWidth
+            val rimColour = Color.Black.copy(alpha = kit.barOutline)
+            if (kit.barSplit == BarSplit.GAP) {
+                // Each colour its own piece, a gap between: the ends rounded, the inner edges square
+                val gap = barH * kit.barGap
+                val piece = (barW - gap * (colours.size - 1)) / colours.size
+                colours.forEachIndexed { i, c ->
+                    val l = left + i * (piece + gap)
+                    val shape = Path().apply {
+                        val first = i == 0
+                        val last = i == colours.lastIndex
+                        val rr = CornerRadius(barH / 2f, barH / 2f)
+                        addRoundRect(
+                            RoundRect(
+                                l, top, l + piece, top + barH,
+                                topLeftCornerRadius = if (first) rr else CornerRadius.Zero,
+                                topRightCornerRadius = if (last) rr else CornerRadius.Zero,
+                                bottomRightCornerRadius = if (last) rr else CornerRadius.Zero,
+                                bottomLeftCornerRadius = if (first) rr else CornerRadius.Zero,
+                            ),
+                        )
+                    }
+                    scope.drawPath(shape, rimColour, style = Stroke(width = rim * 2f))
+                    scope.clipPath(shape) {
+                        drawRect(lerp(fill(c), Color.White, kit.barLighten), Offset(l, top), Size(piece, barH))
+                        drawRect(Color.White.copy(alpha = 0.28f), Offset(l, top), Size(piece, barH * 0.38f))
+                    }
+                }
+                return
+            }
             // A fine dark rim, so it reads on any face
             scope.drawRoundRect(
-                Color.Black.copy(alpha = 0.5f), Offset(left - barH * 0.18f, top - barH * 0.18f),
-                Size(barW + barH * 0.36f, barH * 1.36f), CornerRadius(barH * 0.68f, barH * 0.68f),
+                rimColour, Offset(left - rim, top - rim),
+                Size(barW + rim * 2f, barH + rim * 2f), CornerRadius(barH / 2f + rim, barH / 2f + rim),
             )
             scope.clipPath(pill) {
                 fun lit(c: Color) = lerp(fill(c), Color.White, kit.barLighten)
@@ -861,6 +891,11 @@ object TileRenderer {
                 } else {
                     // A sheen along its top, so it reads as a glossy inlay
                     drawRect(Color.White.copy(alpha = 0.28f), Offset(left, top), Size(barW, barH * 0.38f))
+                }
+                // A dark line between colours
+                if (kit.barSplit == BarSplit.LINE) for (i in 1 until colours.size) {
+                    val at = left + i * part
+                    drawRect(rimColour, Offset(at - barH * kit.barGap / 2f, top), Size(barH * kit.barGap, barH))
                 }
             }
             // A fine light rim, as round lit glass
