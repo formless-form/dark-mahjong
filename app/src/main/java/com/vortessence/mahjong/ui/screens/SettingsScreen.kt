@@ -188,8 +188,23 @@ fun SettingsScreen(
             )
 
             SectionHeader("Appearance")
+            // The choice of tile sets, while it's offered (TileKits.OFFERED)
+            val tileSetRow: (@Composable (ListItemShapes) -> Unit)? = if (TileKits.OFFERED) {
+                { shapes ->
+                    if (tileSamples) {
+                        TileSetRow(shapes, settings.tileSet) { onSettingsChanged(settings.copy(tileSet = it)) }
+                    } else {
+                        ChoiceRow(
+                            shapes, Icons.Rounded.Style, "Tiles", null,
+                            TileSet.entries, { it.shortName }, settings.tileSet,
+                        ) { onSettingsChanged(settings.copy(tileSet = it)) }
+                    }
+                }
+            } else {
+                null
+            }
             SegmentedGroup(
-                listOf<@Composable (ListItemShapes) -> Unit>(
+                listOfNotNull<@Composable (ListItemShapes) -> Unit>(
                     { shapes ->
                         ToggleRow(
                             shapes, Icons.Rounded.Speed, "Low-performance mode", "Turns off firelight and fireworks, for slower phones",
@@ -202,16 +217,7 @@ fun SettingsScreen(
                             TableSurface.entries, { it.shortName }, settings.tableSurface,
                         ) { onSettingsChanged(settings.copy(tableSurface = it)) }
                     },
-                    { shapes ->
-                        if (tileSamples) {
-                            TileSetRow(shapes, settings.tileSet) { onSettingsChanged(settings.copy(tileSet = it)) }
-                        } else {
-                            ChoiceRow(
-                                shapes, Icons.Rounded.Style, "Tiles", null,
-                                TileSet.entries, { it.shortName }, settings.tileSet,
-                            ) { onSettingsChanged(settings.copy(tileSet = it)) }
-                        }
-                    },
+                    tileSetRow,
                     { shapes ->
                         SliderRow(shapes, "Lamp brightness", settings.lampBrightness, onSettingsCommit) {
                             onSettingsPreview(settings.copy(lampBrightness = it))

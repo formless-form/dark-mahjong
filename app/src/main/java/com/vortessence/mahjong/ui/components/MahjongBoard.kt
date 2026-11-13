@@ -546,7 +546,7 @@ private fun BoardContent(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             // The tiles in the set chosen in Settings (read here, so a change draws the board anew)
-            TileKits.chosen = TileKits.of(settings.tileSet)
+            TileKits.chosen = if (TileKits.OFFERED) TileKits.of(settings.tileSet) else TileKits.IVORY
             // The table's colour never flickers: drawn once, in screen pixels, and kept until the
             // zoom, pan, size or surface changes (a pinch or pan is followed by scaling it, and it
             // is drawn afresh once the view settles)

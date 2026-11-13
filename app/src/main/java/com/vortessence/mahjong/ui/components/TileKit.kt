@@ -84,6 +84,13 @@ object TileKits {
         terrazzo = 1f,
     )
 
+    /**
+     * Whether Settings offers a choice of sets. Off since 1.4.14 (Gareth found an issue with
+     * Charcoal on 2026-11-13): the row is hidden and every board is drawn in Ivory, whatever was
+     * chosen before, which is kept for when the choice returns.
+     */
+    const val OFFERED = false
+
     fun of(set: TileSet): TileKit = when (set) {
         TileSet.IVORY -> IVORY
         TileSet.CHARCOAL -> CHARCOAL
