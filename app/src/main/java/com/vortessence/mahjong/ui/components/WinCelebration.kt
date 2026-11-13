@@ -115,7 +115,7 @@ fun WinCelebration(
                     if (firstRibbon) {
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text = "Your first gold ribbon: cleared without hints or reshuffles. Each level you clean earns its ribbon and a hint.",
+                            text = "Your first gold ribbon: cleared without hints, reshuffles or undos. Each level you clean earns its ribbon and a hint.",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = RibbonText,

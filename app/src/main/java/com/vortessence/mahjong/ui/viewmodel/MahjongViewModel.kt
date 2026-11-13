@@ -635,7 +635,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                         _firstRibbon.value = prefsRepo.recordGameWon(
                             constellationId = current.constellation.id,
                             levelIndex = levelIndex,
-                            clean = !newState.usedHelp && !TutorialScript.isTutorial(current),
+                            // Clean (the gold ribbon): no hints, no reshuffles and no undos (one mark
+                            // for all three, Gareth 2026-11-13; before 1.4.16 undo was allowed)
+                            clean = !newState.usedHelp && newState.undosUsed == 0 && !TutorialScript.isTutorial(current),
                             puzzleDay = day,
                             record = record,
                         )

@@ -76,7 +76,7 @@ class LevelRecordTest {
             }
             val found = record!!
             assertTrue("recorded ${found.millis} ms", found.millis >= 42_000)
-            assertTrue(found.perfect)
+            assertTrue(found.clean)
         } finally {
             com.vortessence.mahjong.ui.viewmodel.MahjongViewModel.dealContext = kotlinx.coroutines.Dispatchers.Default
         }

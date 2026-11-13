@@ -9,7 +9,8 @@ data class Progress(
     val highestLevelReached: Int = 1,
     val completedConstellations: Set<String> = emptySet(),
     val puzzleDaysSolved: Set<Long> = emptySet(),
-    // Layouts cleared cleanly (no hints, no reshuffles) since that was first kept: the gold ribbon
+    // Layouts cleared cleanly (no hints, no reshuffles, and since 1.4.16 no undos) since that was
+    // first kept: the gold ribbon
     val cleanConstellations: Set<String> = emptySet(),
     // Hints to spend: one earned for each first clean clear, at most MAX_HINTS
     val hints: Int = 0,
@@ -35,10 +36,8 @@ data class LevelRecord(val millis: Long, val hints: Int, val reshuffles: Int, va
         }
     }
 
-    /** No hints and no reshuffles: the gold ribbon. */
-    val clean: Boolean get() = hints == 0 && reshuffles == 0
-    /** Clean, and not one move undone either. */
-    val perfect: Boolean get() = clean && undos == 0
+    /** No hints, no reshuffles and no undos: the gold ribbon. */
+    val clean: Boolean get() = hints == 0 && reshuffles == 0 && undos == 0
     /** "3:42", or "1:05:09" past an hour. */
     val time: String get() {
         val s = millis / 1000
