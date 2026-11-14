@@ -122,7 +122,11 @@ class MainActivity : ComponentActivity() {
         // (with a perf scene, the scene's frames are the ones timed)
         val checkReset = intent?.getBooleanExtra("perfCheckReset", false) == true
         if (checkReset) viewModel.resetPerfCheck()
-        PerfSwitches.imperialEarned = intent?.getStringExtra("perfImperial") == "earned"
+        // --es perfImperial earned (or locked): Imperial shown as earned, or as the Journey has it,
+        // kept until changed (test builds only; the player's progress itself is never touched)
+        val perfPrefs = getSharedPreferences("perf", MODE_PRIVATE)
+        intent?.getStringExtra("perfImperial")?.let { perfPrefs.edit().putBoolean("imperialEarned", it == "earned").apply() }
+        PerfSwitches.imperialEarned = perfPrefs.getBoolean("imperialEarned", false)
         PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         val layout = intent?.getStringExtra("perfLayout") ?: return
         PerfSwitches.fireFps = intent.getIntExtra("perfFireFps", 0)

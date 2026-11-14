@@ -13,12 +13,14 @@ cd "$(dirname "$0")/.."
 # The Imperial images ship in the Play build only and are never committed (they're kept out by
 # .git/info/exclude), so a checkout can lack them: without them the game quietly leaves Imperial
 # out, so a release must not be built without the full set: 12 bodies and 42 faces, each with
-# its surface map
+# its surface map, and the ready-made picture of its tiles for Settings (made by
+# ImperialSettingsSamples, a Play-build test)
 IMPERIAL="app/src/play/assets/imperial"
 pictures=$(find "$IMPERIAL" -maxdepth 1 -name '*.webp' ! -name '*-surface.webp' 2>/dev/null | wc -l)
 maps=$(find "$IMPERIAL" -maxdepth 1 -name '*-surface.webp' 2>/dev/null | wc -l)
-[ "$pictures" -eq 54 ] && [ "$maps" -eq 54 ] || {
-    echo "Imperial images incomplete in $IMPERIAL: $pictures of 54 pictures, $maps of 54 surface maps" >&2
+samples=$(find "$IMPERIAL" -maxdepth 1 -name 'settings-samples.webp' 2>/dev/null | wc -l)
+[ "$pictures" -eq 55 ] && [ "$maps" -eq 54 ] && [ "$samples" -eq 1 ] || {
+    echo "Imperial images incomplete in $IMPERIAL: $pictures of 55 pictures (with settings-samples.webp), $maps of 54 surface maps" >&2
     exit 1
 }
 

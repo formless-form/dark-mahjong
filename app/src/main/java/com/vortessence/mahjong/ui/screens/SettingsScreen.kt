@@ -1,6 +1,5 @@
 package com.vortessence.mahjong.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -51,7 +50,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,18 +79,15 @@ import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.model.TileSuit
 import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.tips.TipOffer
-import com.vortessence.mahjong.ui.components.BoardTransform
 import com.vortessence.mahjong.ui.components.CheckSwitch
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
-import com.vortessence.mahjong.ui.components.ImperialImages
-import com.vortessence.mahjong.ui.components.LampColour
 import com.vortessence.mahjong.ui.components.LeadingIcon
 import com.vortessence.mahjong.ui.components.MenuBackdrop
+import com.vortessence.mahjong.ui.components.SampleStrip
 import com.vortessence.mahjong.ui.components.SectionHeader
 import com.vortessence.mahjong.ui.components.SegmentGap
 import com.vortessence.mahjong.ui.components.TileKit
 import com.vortessence.mahjong.ui.components.TileKits
-import com.vortessence.mahjong.ui.components.TileRenderer
 import com.vortessence.mahjong.ui.components.TipCard
 import com.vortessence.mahjong.ui.components.panel
 import com.vortessence.mahjong.ui.components.segmentColors
@@ -620,20 +615,9 @@ private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect
             ),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
-            // The images load the first time they're asked for: until then the space is left
-            // empty (never the set's plain stand-in colours), and the tiles fade in once they're here
-            LaunchedEffect(Unit) { ImperialImages.loadSoon() }
-            val ready = ImperialImages.loaded.value
-            val shown by animateFloatAsState(if (ready) 1f else 0f, tween(350), label = "imperial samples")
             Box(contentAlignment = Alignment.Center) {
-                val samples = Modifier.fillMaxWidth().height(76.dp)
-                if (ready) {
-                    TileSamples(
-                        TileKits.of(TileSet.IMPERIAL), samples.graphicsLayer { alpha = shown }, IMPERIAL_SAMPLE_TILES, dim = !earned,
-                    )
-                } else {
-                    Spacer(samples)
-                }
+                // Its ready-made picture: the set itself isn't loaded to show it
+                TileSamples(TileKits.of(TileSet.IMPERIAL), Modifier.fillMaxWidth().height(76.dp), SampleStrip.IMPERIAL_TILES, dim = !earned)
                 if (!earned) {
                     Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
                         Icon(Icons.Rounded.Lock, null, tint = IMPERIAL_GOLD, modifier = Modifier.padding(10.dp).size(26.dp))
@@ -665,24 +649,14 @@ private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect
     }
 }
 
-private val IMPERIAL_SAMPLE_TILES = listOf(
-    Tile(TileSuit.WIND, 1), Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3), Tile(TileSuit.CHARACTER, 9),
-)
-
-// A few tiles of [kit] side by side, lit as by the lamp over the table; [dim] for a set not yet earned
+// A few tiles of [kit] side by side, lit as by the lamp over the table (drawn once and kept, or
+// for Imperial, its ready-made picture); [dim] for a set not yet earned
 @Composable
 private fun TileSamples(kit: TileKit, modifier: Modifier, tiles: List<Tile> = SAMPLE_TILES, dim: Boolean = false) {
-    val lamp = remember { LampColour.tiles().let { Color(it[0], it[1], it[2]) } }
+    val picture = remember(kit, tiles) { SampleStrip.of(kit, tiles) }
     Canvas(modifier.graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
-        val h = size.height * 0.84f
-        val w = h / BoardTransform.ASPECT_RATIO
-        val gap = w * 0.12f
-        val total = w * tiles.size + gap * (tiles.size - 1)
-        val x0 = (size.width - total) / 2f
-        tiles.forEachIndexed { i, tile ->
-            TileRenderer.drawSample(this, tile, x0 + i * (w + gap), (size.height - h) / 2f, w, h, kit, look = i)
-        }
-        drawRect(lamp, blendMode = BlendMode.Modulate)
+        if (picture == null) return@Canvas
+        with(SampleStrip) { drawSamples(picture) }
         if (dim) drawRect(Color.Black.copy(alpha = 0.45f), blendMode = BlendMode.SrcAtop)
     }
 }
