@@ -28,6 +28,7 @@ import com.vortessence.mahjong.engine.TodaysPuzzle
 import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.tips.Tips
 import com.vortessence.mahjong.ui.components.ImperialImages
+import com.vortessence.mahjong.ui.components.PerfSwitches
 import com.vortessence.mahjong.ui.components.PerformanceNotice
 import com.vortessence.mahjong.ui.components.PredictiveBackHandling
 import com.vortessence.mahjong.ui.components.PredictiveBackState
@@ -200,7 +201,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         onGooglePlay = BuildConfig.FLAVOR == "play",
                         imperial = if (ImperialImages.available) {
                             val levels = ConstellationRepository.levelConstellations.map { it.id }
-                            ImperialProgress(progress.journeyLevelsCleared(levels), levels.size)
+                            val cleared = if (BuildConfig.PERF_HOOKS && PerfSwitches.imperialEarned) levels.size else progress.journeyLevelsCleared(levels)
+                            ImperialProgress(cleared, levels.size)
                         } else {
                             null
                         },

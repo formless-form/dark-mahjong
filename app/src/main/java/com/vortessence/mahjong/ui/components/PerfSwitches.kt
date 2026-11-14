@@ -13,4 +13,8 @@ object PerfSwitches {
     /** The firelight's frames a second, if set (perfFireFps), for comparing rates by eye; 0 for the game's own. */
     @Volatile
     var fireFps = 0
+
+    /** Imperial shown as earned whatever the Journey's progress (perfImperial=earned), to try it. */
+    @Volatile
+    var imperialEarned = false
 }

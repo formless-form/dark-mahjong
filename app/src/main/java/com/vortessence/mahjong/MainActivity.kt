@@ -122,6 +122,7 @@ class MainActivity : ComponentActivity() {
         // (with a perf scene, the scene's frames are the ones timed)
         val checkReset = intent?.getBooleanExtra("perfCheckReset", false) == true
         if (checkReset) viewModel.resetPerfCheck()
+        PerfSwitches.imperialEarned = intent?.getStringExtra("perfImperial") == "earned"
         PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         val layout = intent?.getStringExtra("perfLayout") ?: return
         PerfSwitches.fireFps = intent.getIntExtra("perfFireFps", 0)
