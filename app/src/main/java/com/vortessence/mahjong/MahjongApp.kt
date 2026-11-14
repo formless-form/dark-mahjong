@@ -194,6 +194,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         onSettingsPreview = { updated -> viewModel.previewSettings(updated) },
                         onSettingsCommit = { viewModel.commitSettings() },
                         onFireAudition = { viewModel.auditionFire(it) },
+                        onGooglePlay = BuildConfig.FLAVOR == "play",
                         tipsAvailable = tips?.available == true,
                         tipOffers = tipOffers,
                         tipThanked = tipThanked,

@@ -42,6 +42,8 @@ import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Highlight
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PrivacyTip
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Style
@@ -63,6 +65,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -93,6 +96,8 @@ fun SettingsScreen(
     onSettingsPreview: (GameSettings) -> Unit = onSettingsChanged,
     onSettingsCommit: () -> Unit = {},
     onFireAudition: (Boolean) -> Unit = {},
+    // The Play build: rate the game and share it, by its Google Play listing
+    onGooglePlay: Boolean = false,
     // Tips through Google Play (the Play build only, where the row always shows)
     tipsAvailable: Boolean = false,
     tipOffers: List<TipOffer> = emptyList(),
@@ -262,12 +267,37 @@ fun SettingsScreen(
                 ),
             )
 
-            // A tip jar, in the Play build (the card explains if Google Play can't price tips yet)
-            if (tipsAvailable) {
+            // In the Play build: rating and sharing the game by its Google Play listing (asked for
+            // by testers, 2026-11-14; a row, never a prompt), and a tip jar (the card explains if
+            // Google Play can't price tips yet)
+            if (onGooglePlay || tipsAvailable) {
+                val context = LocalContext.current
                 SectionHeader("Support")
                 SegmentedGroup(
-                    listOf(
-                        { shapes ->
+                    listOfNotNull<Segment>(
+                        if (onGooglePlay) { shapes ->
+                            SegmentedListItem(
+                                onClick = { rateOnGooglePlay(context) },
+                                shapes = shapes,
+                                colors = segmentColors(),
+                                leadingContent = { LeadingIcon(Icons.Rounded.Star) },
+                                supportingContent = { Text("Leave a rating on Google Play") },
+                            ) {
+                                Text("Rate Dark Mahjong")
+                            }
+                        } else null,
+                        if (onGooglePlay) { shapes ->
+                            SegmentedListItem(
+                                onClick = { shareGame(context) },
+                                shapes = shapes,
+                                colors = segmentColors(),
+                                leadingContent = { LeadingIcon(Icons.Rounded.Share) },
+                                supportingContent = { Text("Send a friend a link to the game") },
+                            ) {
+                                Text("Share Dark Mahjong")
+                            }
+                        } else null,
+                        if (tipsAvailable) { shapes ->
                             SegmentedListItem(
                                 onClick = { tipping = true; onTipOpened() },
                                 shapes = shapes,
@@ -277,7 +307,7 @@ fun SettingsScreen(
                             ) {
                                 Text("Support Dark Mahjong")
                             }
-                        },
+                        } else null,
                     ),
                 )
             }
@@ -390,6 +420,33 @@ private const val NOTICE_URL = "https://github.com/formless-form/dark-mahjong/bl
 private const val SOURCE_CODE_URL = "https://github.com/formless-form/dark-mahjong"
 
 // Opened in the browser; the app itself has no internet access
+// The game's Google Play listing: the real app's, even from a test build (which has an ID of its own)
+private const val PLAY_APP_ID = "com.formlessform.darkmahjong"
+private const val PLAY_LISTING_URL = "https://play.google.com/store/apps/details?id=$PLAY_APP_ID"
+
+/** The listing in the Play Store app, where the player can rate it; the web page if there's no store app. */
+private fun rateOnGooglePlay(context: android.content.Context) {
+    val market = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$PLAY_APP_ID"))
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(market)
+    } catch (_: android.content.ActivityNotFoundException) {
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(PLAY_LISTING_URL))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+}
+
+/** The phone's own share sheet, with a line about the game and its listing. */
+private fun shareGame(context: android.content.Context) {
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND)
+        .setType("text/plain")
+        .putExtra(android.content.Intent.EXTRA_SUBJECT, "Dark Mahjong")
+        .putExtra(android.content.Intent.EXTRA_TEXT, "Dark Mahjong: a stunning, relaxed mahjong solitaire, played by firelight. $PLAY_LISTING_URL")
+    context.startActivity(android.content.Intent.createChooser(send, "Share Dark Mahjong").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+}
+
 private const val PRIVACY_POLICY_URL = "https://github.com/formless-form/dark-mahjong/blob/dark-mahjong/docs/PRIVACY.md"
 
 // A run of list items drawn as one rounded block: big outer corners, small inner ones, hairline gaps
