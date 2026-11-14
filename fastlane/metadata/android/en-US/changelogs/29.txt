@@ -1,0 +1,6 @@
+New in 1.4.16:
+• Play is now the Journey, with 47 new layouts mixed in by difficulty
+• Each cleared level shows your best time, and how many hints, reshuffles and undos it took
+• The gold ribbon is for a clear with no hints, reshuffles or undos
+• Jade tiles are now mottled like real polished jade
+• Fixes and improvements
