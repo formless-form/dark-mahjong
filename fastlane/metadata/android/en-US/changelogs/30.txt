@@ -1,0 +1,7 @@
+New in 1.4.17:
+• The Journey now has 100 levels, with twelve new boards
+• Finish the Journey to earn Imperial, a deluxe set of carved stone tiles with their own stone-on-stone sounds
+• Rate and share Dark Mahjong from Settings → Support
+• Clearer tile taps and matches on a phone's speaker
+• Settings opens faster, with each tile set shown at a glance
+• Fixes and improvements
