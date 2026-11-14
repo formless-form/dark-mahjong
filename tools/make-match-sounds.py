@@ -5,11 +5,13 @@ Builds Dark Mahjong's match sound: two tiles clacking together, with a soft burs
 
 Writes app/src/main/res/raw/tile_match_1.ogg to tile_match_4.ogg. Each take is at a slightly
 different pitch (the clack and its chimes together) with its own scatter of sparkles, so
-repeated matches never sound the same. Everything is made from sounds/tile_clack-original.wav and synthesis, so it is all CC0.
+repeated matches never sound the same. The clack is the Imperial set's stone clack
+(sounds/stone_clack.wav, one hit already cut and levelled) sped up 2x into a bright tile tick: the
+old wooden clack (sounds/tile_clack-original.wav) sped up 1.4x got lost in the stardust on a
+phone's speaker (2026-11-14). Everything is CC0.
 
-The Imperial set's match is made the same way from a stone clack (--stone, sounds/stone_clack.wav):
-one hit, already cut and levelled to the ivory clack, at the same pitches and over the same
-stardust, not sped up (sped up, stone loses its weight). It writes stone_match_1.ogg to
+The Imperial set's match (--stone) is the same clack at its own speed, not sped up (sped up, stone
+loses its weight), at the same pitches and over the same stardust. It writes stone_match_1.ogg to
 stone_match_4.ogg.
 
 Needs Python 3 with numpy, and ffmpeg (with libvorbis). Run from the repo root:
@@ -24,20 +26,21 @@ import wave
 import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SOURCE = os.path.join(ROOT, "sounds/tile_clack-original.wav")
+SOURCE = os.path.join(ROOT, "sounds/stone_clack.wav")
 OUT = os.path.join(ROOT, "app/src/main/res/raw")
 SR = 44100
 
-# The clack: mono, trimmed, levelled to the old match sound, sped up 1.4x (about 6 semitones up)
-CLACK_CHAIN = ("pan=mono|c0=0.5*c0+0.5*c1,atrim=start=0.0015:end=0.19,afade=t=in:d=0.001,"
-               "afade=t=out:st=0.14:d=0.0485,volume=-5.20dB")
-SPEED = 1.4
+# The clack: the stone clack (already mono, cut and levelled), sped up 2x (an octave up)
+CLACK_CHAIN = "pan=mono|c0=c0,afade=t=in:d=0.001"
+SPEED = 2.0
 PITCHES = [0.955, 0.985, 1.015, 1.045]
 
 # Stardust: G major pentatonic (the game's music is pentatonic), two octaves from about 3 kHz
 PENTATONIC = [392.0, 440.0, 493.88, 587.33, 659.25]
 NOTES = [f * m for m in (8, 16) for f in PENTATONIC]
 STARDUST_LEVEL = 0.42   # stardust peak, relative to the clack's peak
+CLACK_LEVEL = 0.9       # the clack itself, turned down 10% after the stardust is set from it (2026-11-14)
+STONE_CLACK_LEVEL = 0.81  # Imperial's, down another 10%
 LENGTH = 0.75           # seconds, with a short fade at the end
 
 
@@ -122,6 +125,7 @@ def take(index, pitch):
     hit = clack(pitch)
     dust *= STARDUST_LEVEL * np.abs(hit).max() / np.abs(dust).max()
     mix = dust
+    hit = hit * CLACK_LEVEL
     mix[:len(hit)] += np.stack([hit, hit], 1)
     fade = int(0.08 * SR)
     mix[-fade:] *= np.linspace(1, 0, fade)[:, None]
@@ -132,7 +136,7 @@ def take(index, pitch):
 
 
 def main():
-    global SOURCE, CLACK_CHAIN, SPEED, OUT
+    global SOURCE, CLACK_CHAIN, SPEED, OUT, CLACK_LEVEL
     args = argparse.ArgumentParser()
     args.add_argument("--stone", action="store_true", help="the Imperial set's stone match")
     args.add_argument("--source", help="the clack (default: the set's own)")
@@ -142,6 +146,7 @@ def main():
     name = "tile_match"
     if a.stone:
         SOURCE, CLACK_CHAIN, SPEED, name = STONE_SOURCE, STONE_CHAIN, STONE_SPEED, "stone_match"
+        CLACK_LEVEL = STONE_CLACK_LEVEL
     SOURCE = a.source or SOURCE
     SPEED = a.speed or SPEED
     OUT = a.out or OUT

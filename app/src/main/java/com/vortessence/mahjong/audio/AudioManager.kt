@@ -68,10 +68,10 @@ class AudioManager(private val context: Context) {
         soundPool.load(context.applicationContext, R.raw.tile_tap_4, 1),
     )
 
-    // Two tiles clacking together over a soft burst of stardust (chimes and glitter), in four
-    // takes at slightly different pitches with their own sparkles, so repeated matches never
-    // sound mechanical; each match also plays at a fresh random speed within 3% (pitch and
-    // length together). Built by tools/make-match-sounds.py
+    // Two tiles clacking together (the stone clack, sped up an octave) over a soft burst of
+    // stardust (chimes and glitter), in four takes at slightly different pitches with their own
+    // sparkles, so repeated matches never sound mechanical; each match also plays at a fresh
+    // random speed within 3% (pitch and length together). Built by tools/make-match-sounds.py
     private val matchSoundIds = intArrayOf(
         soundPool.load(context.applicationContext, R.raw.tile_match_1, 1),
         soundPool.load(context.applicationContext, R.raw.tile_match_2, 1),

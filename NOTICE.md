@@ -58,8 +58,9 @@ Dark Mahjong is made to be free of ads and tracking, with nothing to buy, offlin
 
 ### Match sound
 
-* **Files:** `app/src/main/res/raw/tile_match_1.ogg` to `tile_match_4.ogg`, built by `tools/make-match-sounds.py`: a tile clack from `sounds/tile_clack-original.wav` (mono, trimmed, levelled, sped up 1.4×, four slightly different pitches) over synthesised stardust (pentatonic chimes and a glitter fizz)
-* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication); no attribution
+* **Files:** `app/src/main/res/raw/tile_match_1.ogg` to `tile_match_4.ogg`, built by `tools/make-match-sounds.py`: the Imperial stone clack `sounds/stone_clack.wav` (below) sped up 2×, at four slightly different pitches, over synthesised stardust (pentatonic chimes and a glitter fizz)
+* **Source:** [Stone on Stone Hit](https://freesound.org/s/858891/) by **xtra1**, Freesound
+* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain dedication); no attribution required
 
 ### Tile tap
 
