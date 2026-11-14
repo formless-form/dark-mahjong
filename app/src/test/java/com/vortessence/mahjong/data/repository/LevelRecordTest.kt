@@ -59,10 +59,17 @@ class LevelRecordTest {
     @Test
     fun aWinRecordsTheTimePlayed() {
         com.vortessence.mahjong.ui.viewmodel.MahjongViewModel.dealContext = kotlin.coroutines.EmptyCoroutineContext
+        // The view model lives in a store cleared at the end, so its work stops with the test: left
+        // running, it hung a later test's storage writes (PerfPhoneTest) in the full suite
+        val store = androidx.lifecycle.ViewModelStore()
+        val looper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
         try {
             val app = ApplicationProvider.getApplicationContext<android.app.Application>()
-            val looper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
-            val vm = com.vortessence.mahjong.ui.viewmodel.MahjongViewModel(app)
+            val vm = androidx.lifecycle.ViewModelProvider(store, object : androidx.lifecycle.ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
+                    com.vortessence.mahjong.ui.viewmodel.MahjongViewModel(app) as T
+            })[com.vortessence.mahjong.ui.viewmodel.MahjongViewModel::class.java]
             looper.idle()
             vm.startLevel(1)
             looper.idle()
@@ -88,6 +95,8 @@ class LevelRecordTest {
             assertTrue("recorded ${found.millis} ms", found.millis >= 42_000)
             assertTrue(found.clean)
         } finally {
+            store.clear()
+            looper.idle()
             com.vortessence.mahjong.ui.viewmodel.MahjongViewModel.dealContext = kotlinx.coroutines.Dispatchers.Default
         }
     }
