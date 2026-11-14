@@ -239,7 +239,8 @@ class MahjongEngineTest {
     @Test
     fun testLevelsRunEasyToHard() {
         val levels = ConstellationRepository.levelConstellations
-        assertEquals("12 phone-shaped levels plus the Mah layouts", 12 + ConstellationRepository.mahConstellations.size, levels.size)
+        assertEquals("12 phone-shaped levels, the Mah layouts and the twelve made for the Journey: 100", 100, levels.size)
+        assertEquals(12 + ConstellationRepository.mahConstellations.size + ConstellationRepository.journeyConstellations.size, levels.size)
         assertEquals("Total levels count should match", levels.size, ConstellationRepository.totalLevels)
 
         // Every layout has been measured, and the levels run from the most often cleared to the
@@ -253,10 +254,11 @@ class MahjongEngineTest {
             )
         }
 
-        // Levels 1 to 8 are the layouts they were before the Mah layouts joined, so progress
-        // made then still means the same boards
+        // Levels 1 to 4 are the layouts they were before the Mah layouts joined; Paper Boat, made
+        // for the Journey (2026-11-14), measured among the easiest, so it comes 5th and the rest of
+        // the first eight follow it (levelsBeforeJourney100 carries progress over)
         assertEquals(
-            listOf("jade_pillar", "bamboo_spire", "dragon_saber", "celestial_lantern", "torii_arch", "celadon_hourglass", "cascading_falls", "phoenix_tower"),
+            listOf("jade_pillar", "bamboo_spire", "dragon_saber", "celestial_lantern", "paper_boat", "torii_arch", "celadon_hourglass", "cascading_falls"),
             levels.take(8).map { it.id },
         )
         // The board sizes on screen are checked in BoardFitTest
@@ -497,12 +499,12 @@ class MahjongEngineTest {
 
     // After a reorder no layout a player could play is locked: whatever level they had reached in
     // the old numbering, every layout up to it is open in today's (the measured order of 1.3.7, and
-    // again when Mah's wide boards joined in 1.4.16); one who had cleared them all goes on past
+    // again when Mah's wide boards joined in 1.4.16, and when the Journey reached 100); one who had cleared them all goes on past
     // the furthest of them
     @Test
     fun testUnlockedLevelsCarryOverToTheMeasuredOrder() {
         val newLevel = { id: String -> ConstellationRepository.levelIndexOf(id) }
-        for (old in listOf(LayoutDifficulty.levelsBeforeMeasuredOrder, LayoutDifficulty.levelsBeforeWideMah)) {
+        for (old in listOf(LayoutDifficulty.levelsBeforeMeasuredOrder, LayoutDifficulty.levelsBeforeWideMah, LayoutDifficulty.levelsBeforeJourney100)) {
             for (highest in 1..old.size) {
                 val after = LayoutDifficulty.highestAfterReorder(highest, newLevel, old)
                 for (id in old.take(highest)) assertTrue("$id locked after $highest", newLevel(id)!! <= after)

@@ -34,8 +34,9 @@ class WideBoardTest {
         assertEquals(LayoutShape.EVEN, layoutShape(ConstellationRepository.getById("mah_2283982827")!!.positions))
     }
 
-    // Mah's boards too small upright, played on their side (1.4.16): 47 of them
-    private val ON_SIDE = ConstellationRepository.constellations.filter { it.onSide }.map { it.id }.toSet().also { check(it.size == 47) }
+    // Mah's boards too small upright, played on their side (1.4.16): 47 of them; and the three wide
+    // boards made for the Journey's last twelve levels
+    private val ON_SIDE = ConstellationRepository.constellations.filter { it.onSide }.map { it.id }.toSet().also { check(it.size == 50) }
 
     // The layouts made wide for Layouts (WideLayouts, ThemedLayouts): all of them wide enough to ask
     private val WIDE_LAYOUTS = setOf(

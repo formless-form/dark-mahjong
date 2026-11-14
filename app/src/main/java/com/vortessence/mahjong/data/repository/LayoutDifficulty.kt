@@ -146,6 +146,19 @@ internal object LayoutDifficulty {
         "mah_3707661927" to 0.1817f, // Willow Leaf
         "mah_1647425443" to 0.1784f, // Go Board
         "mah_2206664028" to 0.1600f, // Picture Frame
+        // Made for the Journey, taking it to 100 levels (2026-11-14)
+        "paper_boat" to 0.9450f, // Paper Boat
+        "ancient_coin" to 0.8365f, // Ancient Coin
+        "paper_umbrella" to 0.7885f, // Paper Umbrella
+        "winter_plum" to 0.7570f, // Winter Plum
+        "giant_panda" to 0.7515f, // Giant Panda
+        "snow_peak" to 0.6510f, // Snow Peak
+        "tea_pavilion" to 0.5515f, // Tea Pavilion
+        "sampan" to 0.5440f, // Sampan
+        "longevity_peach" to 0.5115f, // Longevity Peach
+        "autumn_bloom" to 0.4140f, // Autumn Bloom
+        "festival_drum" to 0.3815f, // Festival Drum
+        "frontier_wall" to 0.1865f, // Frontier Wall
     )
 
     /** The label for a clear rate: Easy from 90%, Medium from 60%, Hard from 35%, Expert below. */
@@ -168,6 +181,102 @@ internal object LayoutDifficulty {
         val reached = before.take(highest).mapNotNull(newLevelOf).maxOrNull() ?: return highest
         return maxOf(highest, reached)
     }
+
+    /**
+     * The levels as they were numbered in 1.4.16 (88: the phone-shaped layouts and the ones from Mah),
+     * before the twelve made for the Journey joined them, so a player's unlocked levels are carried
+     * over once more.
+     */
+    val levelsBeforeJourney100: List<String> = listOf(
+        "jade_pillar",
+        "bamboo_spire",
+        "dragon_saber",
+        "celestial_lantern",
+        "torii_arch",
+        "celadon_hourglass",
+        "cascading_falls",
+        "phoenix_tower",
+        "imperial_monolith",
+        "ruyi_scepter",
+        "pillar_of_heaven",
+        "mah_4277830847",
+        "mah_1830783848",
+        "mah_1492921254",
+        "mah_544607066",
+        "mah_828570775",
+        "mah_709938609",
+        "pagoda_spire",
+        "mah_852527327",
+        "mah_2485677966",
+        "mah_2390420165",
+        "mah_588942537",
+        "mah_1088330854",
+        "mah_679913014",
+        "mah_1861655803",
+        "mah_2257355141",
+        "mah_3101065593",
+        "mah_1566704849",
+        "mah_2232624362",
+        "mah_1344148453",
+        "mah_1752166124",
+        "mah_399933105",
+        "mah_1901484058",
+        "mah_2866125446",
+        "mah_3878481316",
+        "mah_3316304069",
+        "mah_2680421030",
+        "mah_1378681582",
+        "mah_2674681711",
+        "mah_3354968048",
+        "mah_1504777776",
+        "mah_3262148258",
+        "mah_2951481859",
+        "mah_2036373485",
+        "mah_2005925237",
+        "mah_2038574563",
+        "mah_2650995104",
+        "mah_1001794235",
+        "mah_2219513689",
+        "mah_1488318675",
+        "mah_2842823842",
+        "mah_1953985656",
+        "mah_3955482880",
+        "mah_979337589",
+        "mah_113014417",
+        "mah_2683869356",
+        "mah_554306016",
+        "mah_2283982827",
+        "mah_2810552848",
+        "mah_2175883231",
+        "mah_2788427354",
+        "mah_2579333550",
+        "mah_1048565772",
+        "mah_179167734",
+        "mah_130253071",
+        "mah_773823936",
+        "mah_2072264091",
+        "mah_1593808196",
+        "mah_2756835802",
+        "mah_2926596175",
+        "mah_450647981",
+        "mah_3906642412",
+        "mah_2881142435",
+        "mah_738084013",
+        "mah_1870648008",
+        "mah_2770595719",
+        "mah_4047697972",
+        "mah_2630082713",
+        "mah_2215397839",
+        "mah_1843357205",
+        "mah_2971925539",
+        "mah_2410278133",
+        "mah_2838350141",
+        "mah_702162641",
+        "mah_1463206324",
+        "mah_3707661927",
+        "mah_1647425443",
+        "mah_2206664028",
+    )
 
     /**
      * The levels as they were numbered in 1.4.15 and earlier (after the measured reorder), before

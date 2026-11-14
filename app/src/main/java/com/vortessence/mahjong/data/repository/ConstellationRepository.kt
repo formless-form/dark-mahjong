@@ -86,6 +86,11 @@ object ConstellationRepository {
         WideLayouts.layouts.map(::measured)
     }
 
+    /** Layouts made for the Journey (levels 89 to 100 when they joined, slotted in by difficulty). */
+    val journeyConstellations: List<Constellation> by lazy {
+        JourneyLayouts.layouts.map(::measured)
+    }
+
     /** Themed layouts, for Layouts. */
     val themedConstellations: List<Constellation> by lazy {
         ThemedLayouts.layouts.map(::measured)
@@ -97,12 +102,12 @@ object ConstellationRepository {
         LayoutDifficulty.clearRate[c.id]?.let { c.copy(difficulty = LayoutDifficulty.label(it)) } ?: c
 
     /**
-     * The progressive levels in Levels mode, easy to hard: the phone-shaped layouts and the ones
-     * from Mah. Levels 1 to 8 are the same as before the Mah layouts joined (they measured easiest
-     * too).
+     * The progressive levels in the Journey, easy to hard: the phone-shaped layouts, the ones from
+     * Mah, and those made for the Journey. Levels 1 to 8 are the same as before the Mah layouts
+     * joined (they measured easiest too).
      */
     val levelConstellations: List<Constellation> by lazy {
-        (phoneConstellations + mahConstellations).sortedWith(easyToHard)
+        (phoneConstellations + mahConstellations + journeyConstellations).sortedWith(easyToHard)
     }
 
     /**
@@ -110,7 +115,7 @@ object ConstellationRepository {
      */
     val constellations: List<Constellation> by lazy {
         listOf(tutorialConstellation) +
-            (phoneConstellations + classicConstellations + wideConstellations + themedConstellations + mahConstellations)
+            (phoneConstellations + classicConstellations + wideConstellations + themedConstellations + mahConstellations + journeyConstellations)
                 .sortedWith(easyToHard)
     }
 

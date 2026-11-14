@@ -40,7 +40,7 @@ If you build on it, **please keep it that way too: no ads, no in-app purchases, 
 - **Glossy, well-used tiles.** A thick clear glaze reflects the lamp in streaks, broken up by tiny ripples in the glaze. Every tile is a little different: hairline scratches, grime in patches, the odd ding, sitting a fraction off-square, all from one evenly aged set. The artwork is engraved into the face.
 - **Three tabletops,** all rendered live in perspective: **Walnut** (lacquered boards), **Green Mat** (felt) and **Thai Straw** (a well-used woven sedge mat).
 - **Portrait-first,** because most layouts are taller than they are wide.
-- **54 layouts:** the original's 25, plus 29 boards from [Mah](https://github.com/ffalt/mah) (animals, plants, symbols, shapes and buildings), chosen to suit a phone held upright. Pinch to zoom in on any of them. Levels and the Layouts list both run from easy to hard.
+- **145 layouts:** the original's, 76 boards from [Mah](https://github.com/ffalt/mah) (animals, plants, symbols, shapes and buildings; the widest played with the phone on its side), and themed boards made for Dark Mahjong. Pinch to zoom in on any of them. The 100-level Journey and the Layouts list both run from easy to hard.
 
 ### More relaxed play
 - **No timer, no scores, no statistics, no best times.** Progress is simply how far you've come.
