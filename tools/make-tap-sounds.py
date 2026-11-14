@@ -31,7 +31,11 @@ TAKES = [  # (source, pitch)
 ]
 STONE_SOURCE = os.path.join(ROOT, "sounds/stone_knock.wav")
 STONE_PITCHES = [0.98, 1.03]
-TARGET_RMS_DB = -26.0  # loudness of the knock itself (the old taps ranged -33 to -21.5)
+# Loudness of the knock itself. A phone's speaker plays little below 500 Hz, which is most of the
+# wood knock's body but none of the stone's crack: at the same level the wood was 8 dB quieter
+# on the phone, so the wood is levelled 6 dB up and the stone 3 dB down (2026-11-14)
+TARGET_RMS_DB = -20.0
+STONE_TARGET_RMS_DB = -29.0
 
 
 def decode(path):
@@ -57,6 +61,7 @@ def main():
     a = args.parse_args()
     OUT = a.out or OUT
     prefix = "stone_tap" if a.stone else "tile_tap"
+    target = STONE_TARGET_RMS_DB if a.stone else TARGET_RMS_DB
     takes = [(a.source or STONE_SOURCE, p) for p in STONE_PITCHES] if a.stone else [(os.path.join(KENNEY, n), p) for n, p in TAKES]
     for n, (src, pitch) in enumerate(takes, start=1):
         name = os.path.basename(src)
@@ -66,7 +71,7 @@ def main():
         start = max(0, np.argmax(a > a.max() * 0.02) - int(0.001 * SR))
         quiet = np.where(np.convolve(a, np.ones(220) / 220, "same") > a.max() * 0.003)[0]
         end = quiet[-1] / SR
-        gain = TARGET_RMS_DB - knock_rms_db(x)
+        gain = target - knock_rms_db(x)
         # Levelled on the source, then checked on the result: a knock that is mostly tail can land
         # off target, so it's put right once (the ivory taps already land within half a dB)
         for _ in range(2):
@@ -79,7 +84,7 @@ def main():
                  "-c:a", "libvorbis", "-q:a", "6", out],
                 check=True,
             )
-            miss = TARGET_RMS_DB - knock_rms_db(decode(out))
+            miss = target - knock_rms_db(decode(out))
             if abs(miss) <= 0.5:
                 break
             gain += miss

@@ -282,7 +282,7 @@ class AudioManager(private val context: Context) {
     fun playMenuClick() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(pickSoundIds, loudness(settings.soundVolume) * 0.35f, rate = 1.25f)
+            playRandomSound(pickSoundIds, loudness(settings.soundVolume) * 0.175f, rate = 1.25f)
         }
         vibrate { HapticPatterns.select(it) }
     }
