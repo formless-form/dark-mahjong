@@ -44,7 +44,7 @@ If you build on it, **please keep it that way too: no ads, no in-app purchases, 
 
 ### More relaxed play
 - **No timer, no scores, no statistics, no best times.** Progress is simply how far you've come.
-- **Unlimited** hints, undo and reshuffles, and every board is guaranteed solvable (from the original engine).
+- **Earned hints:** clear a level without hints, reshuffles or undo for a gold ribbon and a hint (up to 6 saved). Undo and reshuffles are unlimited, and every board is guaranteed solvable (from the original engine).
 - **A gentle reward.** Clearing a board brings a fireworks show seen from above, in widely varied colours, and a warm message drawn from a large pool that doesn't repeat until you've seen them all.
 - **Quiet touches.** Soft clicks and light haptics, and everything respects the sound, vibration and animation settings.
 - **No ads, no tracking, no network access.**

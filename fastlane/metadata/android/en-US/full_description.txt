@@ -16,7 +16,7 @@ A DIFFERENT LOOK
 RELAXED PLAY
 • 145 layouts, from small, gentle boards to full 144-tile challenges, and a 100-level Journey that runs from easy to hard.
 • No timer, no scores, no statistics.
-• Unlimited hints, undo and reshuffles, and every board can be cleared.
+• Hints are earned: clear a level without help to win one (up to 6 saved). Undo and reshuffles are unlimited, and every board can be cleared.
 • A guided tutorial for newcomers.
 • Each match ends in a small burst of fireworks where the two tiles meet.
 • Clearing a board brings a full fireworks show, with the boom and crackle of real fireworks, and a warm, never-repeating message.
