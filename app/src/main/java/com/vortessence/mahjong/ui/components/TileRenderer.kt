@@ -110,7 +110,7 @@ object TileRenderer {
         // clipped only until the atlas is ready (or when told to, to compare)
         val walls = if (live || PerfSwitches.isOff("atlas") || PerfSwitches.isOff("wallstamps")) null else TileAtlas.ready(iw)
         if ((rightAway > 0f || belowAway > 0f) && !PerfSwitches.isOff("sides")) {
-            if (walls != null) walls.stampSidesAway(scope, ix, iy, iw, rightAway, belowAway)
+            if (walls != null) walls.stampSidesAway(scope, boardTile.id, ix, iy, iw, rightAway, belowAway)
             else drawSidesAway(scope, rightAway, belowAway, ix, iy, iw, ih)
         }
         if (seams != null && !PerfSwitches.isOff("seams")) {
@@ -450,7 +450,7 @@ object TileRenderer {
         if (isSelected) drawGoldGlow(scope, x, y, width, height)
 
         // Tiles are stamped from the atlas, highlighted ones too: their bodies come tinted
-        if (!live && !PerfSwitches.isOff("atlas")) {
+        if ((!live || TileKits.current.stone) && !PerfSwitches.isOff("atlas")) {
             val atlas = TileAtlas.ready(width)
             if (atlas != null &&
                 atlas.stamp(scope, boardTile, x, y, width, height, highlight, freeTint && !isSelected, strength, glare, goldFace = isSelected)
@@ -482,7 +482,7 @@ object TileRenderer {
         // 8. The clear glaze, over everything painted on the face. The face is flat; its gloss
         // shows in sharp reflections of the lamp (streaked by tiny ripples in the glaze, strongest
         // near the lamp's mirror point, with a hotspot there), scratch flares and edge glints
-        if (!PerfSwitches.isOff("glaze")) drawGlaze(scope, look, face.topLeft, face.size, width, glare, GlazePart.ALL)
+        if (!PerfSwitches.isOff("glaze") && !TileKits.current.stone) drawGlaze(scope, look, face.topLeft, face.size, width, glare, GlazePart.ALL)
         if (isSelected) drawGoldRim(scope, x, y, width, height)
     }
 
@@ -491,6 +491,21 @@ object TileRenderer {
      * (Settings), drawn whole each time rather than from the atlas, which holds the board's set.
      */
     fun drawSample(scope: DrawScope, tile: Tile, x: Float, y: Float, width: Float, height: Float, kit: TileKit, look: Int = 0) {
+        if (kit.stone) {
+            // From the set's own images, once they are loaded (asked for here if they are not)
+            val images = ImperialImages.ready
+            val engraving = images?.engravings?.get(tile)
+            if (images != null && engraving != null) {
+                val body = images.bodies[Math.floorMod(look, images.bodies.size)]
+                val k = width / images.width
+                sampleRect.set(x, y, x + body.width * k, y + body.height * k)
+                val canvas = scope.drawContext.canvas.nativeCanvas
+                canvas.drawBitmap(body, null, sampleRect, samplePaint)
+                canvas.drawBitmap(engraving, null, sampleRect, samplePaint)
+                return
+            }
+            ImperialImages.loadSoon()
+        }
         drawWalls(scope, x, y, width, height, null, 0f, kit)
         drawFace(scope, x, y, width, height, null, 0f, false, kit)
         val face = faceRect(x, y, width, height)
@@ -498,8 +513,11 @@ object TileRenderer {
         getTileVector(tile)?.let { drawArtwork(scope, it, x, y, width, height, kit, faceColours(tile)) }
         drawWear(scope, look, face.topLeft, face.size, kit)
         drawTone(scope, look, face.topLeft, face.size, kit)
-        drawGlaze(scope, look, face.topLeft, face.size, width, 0f, GlazePart.ALL)
+        if (!kit.stone) drawGlaze(scope, look, face.topLeft, face.size, width, 0f, GlazePart.ALL)
     }
+
+    private val sampleRect = RectF()
+    private val samplePaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
     /*
      * The selected tile, in polished gold (chosen 2026-10-29 over a flat amber tint): a warm
@@ -1020,7 +1038,18 @@ object TileRenderer {
             // The right and lower walls' masks (wallMask), over the body's image
             private val wallRight: Bitmap,
             private val wallBelow: Bitmap,
+            // A set drawn from images made once (TileKit.stone): a body for each of its looks, and
+            // for each body its own shape (a highlight's tint is stamped through it, the outline
+            // being the stone's own) and its own walls' masks. Its artwork is each face's
+            // engraving, the size of a body, and it has no terrazzo, surface or glare
+            private val stoneBodies: Array<Bitmap>? = null,
+            private val stoneShapes: Array<Bitmap>? = null,
+            private val stoneWallRight: Array<Bitmap>? = null,
+            private val stoneWallBelow: Array<Bitmap>? = null,
         ) {
+            // Which of a stone set's bodies the tile [id] has
+            private fun stoneIndex(id: Int) = TileWear.look(id) % (stoneBodies?.size ?: 1)
+
             // Where the body's image (and so the walls' masks) goes for a tile at (x, y), width wide
             private fun bodyRect(x: Float, y: Float, width: Float, body: Bitmap) {
                 val k = width / this.width
@@ -1028,16 +1057,18 @@ object TileRenderer {
             }
 
             /** The right and lower sides darkened by [right] and [below], for facing away from the light. */
-            internal fun stampSidesAway(scope: DrawScope, x: Float, y: Float, width: Float, right: Float, below: Float) {
+            internal fun stampSidesAway(scope: DrawScope, id: Int, x: Float, y: Float, width: Float, right: Float, below: Float) {
                 val canvas = scope.drawContext.canvas.nativeCanvas
-                bodyRect(x, y, width, wallRight)
+                val toRight = stoneWallRight?.get(stoneIndex(id)) ?: wallRight
+                val down = stoneWallBelow?.get(stoneIndex(id)) ?: wallBelow
+                bodyRect(x, y, width, toRight)
                 if (right > 0f) {
                     wallPaint.alpha = (right.coerceIn(0f, 1f) * 255f).roundToInt()
-                    canvas.drawBitmap(wallRight, null, stampRect, wallPaint)
+                    canvas.drawBitmap(toRight, null, stampRect, wallPaint)
                 }
                 if (below > 0f) {
                     wallPaint.alpha = (below.coerceIn(0f, 1f) * 255f).roundToInt()
-                    canvas.drawBitmap(wallBelow, null, stampRect, wallPaint)
+                    canvas.drawBitmap(down, null, stampRect, wallPaint)
                 }
             }
 
@@ -1046,10 +1077,12 @@ object TileRenderer {
                 val shaders = seamShadersFor(id, seams, x, y, width, height)
                 if (shaders.shaders.isEmpty()) return
                 val canvas = scope.drawContext.canvas.nativeCanvas
-                bodyRect(x, y, width, wallRight)
+                val toRight = stoneWallRight?.get(stoneIndex(id)) ?: wallRight
+                val down = stoneWallBelow?.get(stoneIndex(id)) ?: wallBelow
+                bodyRect(x, y, width, toRight)
                 for (i in shaders.shaders.indices) {
                     seamPaint.shader = shaders.shaders[i]
-                    canvas.drawBitmap(if (shaders.right[i]) wallRight else wallBelow, null, stampRect, seamPaint)
+                    canvas.drawBitmap(if (shaders.right[i]) toRight else down, null, stampRect, seamPaint)
                 }
                 seamPaint.shader = null
             }
@@ -1075,6 +1108,26 @@ object TileRenderer {
                 val art = art[tile.tile] ?: return false
                 val canvas = scope.drawContext.canvas.nativeCanvas
                 val k = width / this.width
+                val stone = stoneBodies
+                if (stone != null) {
+                    // A body of the tile's own look, any tint stamped through its shape, then the
+                    // face's engraving over it
+                    val index = stoneIndex(tile.id)
+                    val body = stone[index]
+                    stampRect.set(x, y, x + body.width * k, y + body.height * k)
+                    canvas.drawBitmap(body, null, stampRect, stampPaint)
+                    val colour = highlight.colour ?: if (free) FreeTint else null
+                    val shapes = stoneShapes
+                    if (colour != null && shapes != null) {
+                        val alpha = if (highlight == Highlight.NONE) 0.15f else 0.5f * strength
+                        shapePaint.color = colour.copy(alpha = alpha.coerceIn(0f, 1f)).toArgb()
+                        canvas.drawBitmap(shapes[index], null, stampRect, shapePaint)
+                    }
+                    if (goldFace) drawGoldFace(scope, x, y, width, height)
+                    stampRect.set(x, y, x + body.width * k, y + body.height * k)
+                    canvas.drawBitmap(art, null, stampRect, stampPaint)
+                    return true
+                }
                 val freeIndex = if (free) 1 else 0
                 val body = bodies[highlight.ordinal * 2 + freeIndex]
                 stampRect.set(x - pad * k, y - pad * k, x - pad * k + body.width * k, y - pad * k + body.height * k)
@@ -1125,7 +1178,8 @@ object TileRenderer {
             val kit = TileKits.current
             // Images of another set (just changed in Settings) are not shown while new ones are made
             if (now != null && now.kit !== kit) baked = null
-            val suits = now != null && now.kit === kit && want <= now.width && want >= now.width * 0.6f
+            // (A stone set's images are made once, at their largest: they suit any size)
+            val suits = now != null && now.kit === kit && (kit.stone || (want <= now.width && want >= now.width * 0.6f))
             if (!suits && (wanted != want || wantedKit !== kit)) {
                 wanted = want
                 wantedKit = kit
@@ -1134,7 +1188,34 @@ object TileRenderer {
             return baked
         }
 
+        // A stone set's atlas: its images loaded (not made), and from each body its shape and its
+        // walls' masks. The usual walls' masks, kept to where this body's stone is
+        private fun bakeStone(kit: TileKit) {
+            val images = ImperialImages.load() ?: return
+            val w = images.width.toFloat()
+            val h = w * BoardTransform.ASPECT_RATIO
+            val bodies = images.bodies
+            val shapes = Array(bodies.size) { bodies[it].extractAlpha().apply { setHasMipMap(true) } }
+            val within = Paint().apply { xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN) }
+            fun walls(right: Boolean) = Array(bodies.size) {
+                wallMask(right, bodies[it].width, bodies[it].height, 0f, w, h).also { mask ->
+                    android.graphics.Canvas(mask).drawBitmap(shapes[it], 0f, 0f, within)
+                }
+            }
+            val wallsRight = walls(right = true)
+            val wallsBelow = walls(right = false)
+            if (kit !== TileKits.current) return
+            baked = Baked(
+                images.width, kit, 0, emptyArray(), images.engravings, null, emptyArray(), emptyArray(),
+                wallsRight[0], wallsBelow[0], bodies, shapes, wallsRight, wallsBelow,
+            )
+        }
+
         private fun bake(width: Int, kit: TileKit) {
+            if (kit.stone) {
+                bakeStone(kit)
+                return
+            }
             val w = width.toFloat()
             val h = ceil(w * BoardTransform.ASPECT_RATIO)
             val pad = 2
@@ -1200,6 +1281,7 @@ object TileRenderer {
         private val stampRect = RectF()
         private val stampPaint = Paint(Paint.FILTER_BITMAP_FLAG)
         private val tintPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+        private val shapePaint = Paint(Paint.FILTER_BITMAP_FLAG)
         private val glarePaint = Paint(Paint.FILTER_BITMAP_FLAG)
         private val wallPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { color = android.graphics.Color.BLACK }
         private val seamPaint = Paint(Paint.FILTER_BITMAP_FLAG)

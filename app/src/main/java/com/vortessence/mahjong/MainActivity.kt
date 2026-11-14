@@ -30,6 +30,7 @@ import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.ui.components.FireShadows
 import com.vortessence.mahjong.ui.components.PerfSwitches
+import com.vortessence.mahjong.ui.components.ImperialImages
 import com.vortessence.mahjong.ui.components.TileWear
 import com.vortessence.mahjong.ui.viewmodel.MahjongViewModel
 import com.vortessence.mahjong.tips.Tips
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         TileWear.prepareAsync()
+        ImperialImages.assets = applicationContext.assets
         ConstellationRepository.prepareAsync()
         // Play builds ask Google Play for newer versions; the open-source build never does
         updates = AppUpdates(this)

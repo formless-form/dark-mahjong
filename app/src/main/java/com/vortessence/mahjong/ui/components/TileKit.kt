@@ -106,6 +106,10 @@ data class TileKit(
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,
     val artLift: Float = 0f,
+    // Drawn from images that come with the app (ImperialImages), not from shapes: a body
+    // for each look, its own outline, sides and all, and each face's engraving laid over it. No
+    // wear, glaze or glare. The kit's colours are only for the moments before the images load
+    val stone: Boolean = false,
 )
 
 /** How a colour bar's colours are kept apart. */
@@ -244,6 +248,37 @@ object TileKits {
         woodFigure = 0.6f,
         toneVariation = 0.8f,
         wear = 0.5f,
+    )
+
+    /**
+     * Imperial, the reward set: blocks roughly carved from grey granite, matte, the engraving
+     * painted gold, each face's colours in a bar carved in pieces and painted. Gareth's design
+     * ("carved from granite, with the engraving painted gold", "no shininess", "even the sides are
+     * rough and the curves and edges are rough") and his picks of 2026-11-14 from numbered
+     * previews: a grey granite, "a slightly darker shade"; lightly rough, one finish over the
+     * whole block ("i like 12"); "the original carved and painted colour bar"; "that looks
+     * perfect"; of every face, "Faces are right"; and the gold a little paler and less green
+     * ("number 27 please"). Drawn from the Imperial images
+     * (ImperialImages), which come with the Play build only: where they are absent the set is not
+     * offered. These colours stand in only for the moments before the images are loaded. Not yet
+     * a TileSet: how it is unlocked and offered is still to be designed with him.
+     */
+    val IMPERIAL = CHARCOAL.copy(
+        name = "Imperial",
+        faceTop = Color(0xFF646568),
+        faceBottom = Color(0xFF595A5D),
+        side = Color(0xFF444548),
+        backing = Color(0xFF28292B),
+        bevelHighlight = Color(0xFF8A8884),
+        bevelAlpha = 0.3f,
+        art = Color(0xFFE2BA71),
+        raised = false,
+        cutShadow = Color(0xD0000000),
+        cutLight = Color(0x5AFFFFFF),
+        terrazzo = 0f,
+        wear = 0f,
+        toneVariation = 0f,
+        stone = true,
     )
 
     /** The set chosen in Settings (MahjongBoard keeps it up to date). */
