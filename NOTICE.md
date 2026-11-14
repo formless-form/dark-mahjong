@@ -45,10 +45,11 @@ Dark Mahjong is made to be free of ads and tracking, with nothing to buy, offlin
 * **License:** Public Domain / CC0 1.0 Universal
 * **Details:** All tile illustrations (PNG/SVG) are free to copy, modify, and distribute for any purpose without restrictions.
 
-### Imperial tile set (Google Play build only)
+### Imperial tile set (Google Play build only, closed source)
 
-* **Files:** the Imperial images, in `app/src/play/assets/imperial/` of the Google Play build. They are **not** in this repository, and the open-source build does without them (it simply doesn't offer the set).
-* **License:** Copyright (C) 2026 Grevillea Labs. All rights reserved: they are not covered by the GPL or CC0 terms above.
+* **By:** Grevillea Labs
+* **Files:** the Imperial tile set's images, in `app/src/play/assets/imperial/` of the Google Play build. They are closed source: **not** in this repository, and the open-source build does without them (it simply doesn't offer the set).
+* **License:** Copyright (C) 2026 Grevillea Labs. All rights reserved: not covered by the GPL or CC0 terms above.
 * **Derived from:** the tile pictures are carved from samoheen's public-domain drawings above.
 
 ---
@@ -65,6 +66,12 @@ Dark Mahjong is made to be free of ads and tracking, with nothing to buy, offlin
 * **Files:** `app/src/main/res/raw/tile_tap_1.ogg` to `tile_tap_4.ogg`, built by `tools/make-tap-sounds.py` (mono, trimmed, levelled, two slightly different pitches each) from `impactWood_light_000.ogg` and `impactWood_light_002.ogg` in `sounds/kenney/`
 * **Source:** [Impact Sounds](https://kenney.nl/assets/impact-sounds) by **Kenney** (www.kenney.nl)
 * **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/); see `sounds/kenney/License.txt`
+
+### Imperial stone tap and match
+
+* **Files:** `app/src/main/res/raw/stone_tap_1.ogg` and `stone_tap_2.ogg`, and `stone_match_1.ogg` to `stone_match_4.ogg` (the match over the same synthesised stardust), built by `tools/make-tap-sounds.py --stone` and `tools/make-match-sounds.py --stone` from two hits cut from the recording: `sounds/stone_knock.wav` and `sounds/stone_clack.wav`. Played only with the Imperial set; open source like the other sounds
+* **Source:** [Stone on Stone Hit](https://freesound.org/s/858891/) by **xtra1**, Freesound
+* **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/); no attribution required
 
 ### Fireplace
 

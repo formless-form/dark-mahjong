@@ -7,9 +7,15 @@ Writes app/src/main/res/raw/tile_match_1.ogg to tile_match_4.ogg. Each take is a
 different pitch (the clack and its chimes together) with its own scatter of sparkles, so
 repeated matches never sound the same. Everything is made from sounds/tile_clack-original.wav and synthesis, so it is all CC0.
 
+The Imperial set's match is made the same way from a stone clack (--stone, sounds/stone_clack.wav):
+one hit, already cut and levelled to the ivory clack, at the same pitches and over the same
+stardust, not sped up (sped up, stone loses its weight). It writes stone_match_1.ogg to
+stone_match_4.ogg.
+
 Needs Python 3 with numpy, and ffmpeg (with libvorbis). Run from the repo root:
-    python3 tools/make-match-sounds.py
+    python3 tools/make-match-sounds.py [--stone] [--source WAV] [--speed X] [--out DIR]
 """
+import argparse
 import os
 import subprocess
 import tempfile
@@ -33,6 +39,11 @@ PENTATONIC = [392.0, 440.0, 493.88, 587.33, 659.25]
 NOTES = [f * m for m in (8, 16) for f in PENTATONIC]
 STARDUST_LEVEL = 0.42   # stardust peak, relative to the clack's peak
 LENGTH = 0.75           # seconds, with a short fade at the end
+
+
+STONE_SOURCE = os.path.join(ROOT, "sounds/stone_clack.wav")
+STONE_CHAIN = "pan=mono|c0=c0,afade=t=in:d=0.001"
+STONE_SPEED = 1.0
 
 
 def clack(pitch):
@@ -121,6 +132,19 @@ def take(index, pitch):
 
 
 def main():
+    global SOURCE, CLACK_CHAIN, SPEED, OUT
+    args = argparse.ArgumentParser()
+    args.add_argument("--stone", action="store_true", help="the Imperial set's stone match")
+    args.add_argument("--source", help="the clack (default: the set's own)")
+    args.add_argument("--speed", type=float, help="speed-up of the clack (default: the set's own)")
+    args.add_argument("--out", help="where to write (default: the app's res/raw)")
+    a = args.parse_args()
+    name = "tile_match"
+    if a.stone:
+        SOURCE, CLACK_CHAIN, SPEED, name = STONE_SOURCE, STONE_CHAIN, STONE_SPEED, "stone_match"
+    SOURCE = a.source or SOURCE
+    SPEED = a.speed or SPEED
+    OUT = a.out or OUT
     for i, pitch in enumerate(PITCHES, start=1):
         mix = take(i, pitch)
         with tempfile.TemporaryDirectory() as tmp:
@@ -130,9 +154,9 @@ def main():
                 w.setsampwidth(2)
                 w.setframerate(SR)
                 w.writeframes((np.clip(mix, -1, 1) * 32767).astype(np.int16).tobytes())
-            out = os.path.join(OUT, f"tile_match_{i}.ogg")
+            out = os.path.join(OUT, f"{name}_{i}.ogg")
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-c:a", "libvorbis", "-q:a", "6", out], check=True)
-        print(f"tile_match_{i}.ogg: peak {20 * np.log10(np.abs(mix).max()):.1f} dB")
+        print(f"{name}_{i}.ogg: peak {20 * np.log10(np.abs(mix).max()):.1f} dB")
 
 
 if __name__ == "__main__":

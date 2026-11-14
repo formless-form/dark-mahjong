@@ -6,9 +6,13 @@ slightly different pitches, levelled to sit as quietly as the taps they replaced
 
 Writes app/src/main/res/raw/tile_tap_1.ogg to tile_tap_4.ogg.
 
+The Imperial set's tap is made the same way from one short stone knock (--stone,
+sounds/stone_knock.wav), at the same two pitches, and writes stone_tap_1.ogg and stone_tap_2.ogg.
+
 Needs Python 3 with numpy, and ffmpeg (with libvorbis). Run from the repo root:
-    python3 tools/make-tap-sounds.py
+    python3 tools/make-tap-sounds.py [--stone] [--source WAV] [--out DIR]
 """
+import argparse
 import os
 import subprocess
 
@@ -25,6 +29,8 @@ TAKES = [  # (source, pitch)
     ("impactWood_light_002.ogg", 0.98),
     ("impactWood_light_002.ogg", 1.03),
 ]
+STONE_SOURCE = os.path.join(ROOT, "sounds/stone_knock.wav")
+STONE_PITCHES = [0.98, 1.03]
 TARGET_RMS_DB = -26.0  # loudness of the knock itself (the old taps ranged -33 to -21.5)
 
 
@@ -43,8 +49,17 @@ def knock_rms_db(x):
 
 
 def main():
-    for n, (name, pitch) in enumerate(TAKES, start=1):
-        src = os.path.join(KENNEY, name)
+    global OUT
+    args = argparse.ArgumentParser()
+    args.add_argument("--stone", action="store_true", help="the Imperial set's stone tap")
+    args.add_argument("--source", help="the stone knock (default: sounds/stone_knock.wav)")
+    args.add_argument("--out", help="where to write (default: the app's res/raw)")
+    a = args.parse_args()
+    OUT = a.out or OUT
+    prefix = "stone_tap" if a.stone else "tile_tap"
+    takes = [(a.source or STONE_SOURCE, p) for p in STONE_PITCHES] if a.stone else [(os.path.join(KENNEY, n), p) for n, p in TAKES]
+    for n, (src, pitch) in enumerate(takes, start=1):
+        name = os.path.basename(src)
         # Start just before the knock, end once it has died away, with tiny fades
         x = decode(src)
         a = np.abs(x)
@@ -52,17 +67,24 @@ def main():
         quiet = np.where(np.convolve(a, np.ones(220) / 220, "same") > a.max() * 0.003)[0]
         end = quiet[-1] / SR
         gain = TARGET_RMS_DB - knock_rms_db(x)
-        chain = (f",atrim=start={start / SR:.4f}:end={end:.4f},asetpts=PTS-STARTPTS,afade=t=in:d=0.0008,"
-                 f"afade=t=out:st={max(0, end - start / SR - 0.02):.4f}:d=0.02,volume={gain:.2f}dB,"
-                 f"asetrate={SR}*{pitch},aresample={SR}")
-        out = os.path.join(OUT, f"tile_tap_{n}.ogg")
-        subprocess.run(
-            ["ffmpeg", "-v", "error", "-y", "-i", src, "-af", "pan=mono|c0=0.5*c0+0.5*c1" + chain,
-             "-c:a", "libvorbis", "-q:a", "6", out],
-            check=True,
-        )
+        # Levelled on the source, then checked on the result: a knock that is mostly tail can land
+        # off target, so it's put right once (the ivory taps already land within half a dB)
+        for _ in range(2):
+            chain = (f",atrim=start={start / SR:.4f}:end={end:.4f},asetpts=PTS-STARTPTS,afade=t=in:d=0.0008,"
+                     f"afade=t=out:st={max(0, end - start / SR - 0.02):.4f}:d=0.02,volume={gain:.2f}dB,"
+                     f"asetrate={SR}*{pitch},aresample={SR}")
+            out = os.path.join(OUT, f"{prefix}_{n}.ogg")
+            subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-i", src, "-af", "pan=mono|c0=0.5*c0+0.5*c1" + chain,
+                 "-c:a", "libvorbis", "-q:a", "6", out],
+                check=True,
+            )
+            miss = TARGET_RMS_DB - knock_rms_db(decode(out))
+            if abs(miss) <= 0.5:
+                break
+            gain += miss
         y = decode(out)
-        print(f"tile_tap_{n}.ogg: {name} at {pitch}x, {len(y) / SR * 1000:.0f} ms, "
+        print(f"{prefix}_{n}.ogg: {name} at {pitch}x, {len(y) / SR * 1000:.0f} ms, "
               f"knock {knock_rms_db(y):.1f} dB, peak {20 * np.log10(np.abs(y).max()):.1f} dB")
 
 

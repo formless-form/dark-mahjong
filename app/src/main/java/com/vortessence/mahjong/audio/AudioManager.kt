@@ -15,6 +15,8 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import com.vortessence.mahjong.R
 import com.vortessence.mahjong.data.model.GameSettings
+import com.vortessence.mahjong.data.model.TileSet
+import com.vortessence.mahjong.ui.components.ImperialImages
 import java.util.concurrent.Executors
 import kotlin.math.pow
 import kotlin.random.Random
@@ -76,6 +78,24 @@ class AudioManager(private val context: Context) {
         soundPool.load(context.applicationContext, R.raw.tile_match_3, 1),
         soundPool.load(context.applicationContext, R.raw.tile_match_4, 1),
     )
+
+    // The Imperial set's own: stone on stone, the knock and the clack (over the same stardust), from
+    // one recorded hit each. Built by the same tools with --stone
+    private val stonePickSoundIds = intArrayOf(
+        soundPool.load(context.applicationContext, R.raw.stone_tap_1, 1),
+        soundPool.load(context.applicationContext, R.raw.stone_tap_2, 1),
+    )
+    private val stoneMatchSoundIds = intArrayOf(
+        soundPool.load(context.applicationContext, R.raw.stone_match_1, 1),
+        soundPool.load(context.applicationContext, R.raw.stone_match_2, 1),
+        soundPool.load(context.applicationContext, R.raw.stone_match_3, 1),
+        soundPool.load(context.applicationContext, R.raw.stone_match_4, 1),
+    )
+
+    // Imperial's tiles are stone: only where they're really drawn (the build has the images)
+    private val stone get() = currentSettings?.tileSet == TileSet.IMPERIAL && ImperialImages.available
+    private val pickSounds get() = if (stone) stonePickSoundIds else pickSoundIds
+    private val matchSounds get() = if (stone) stoneMatchSoundIds else matchSoundIds
 
     // The dull knock of a blocked tile. Built by tools/make-knock-sound.py
     private val blockedSoundIds = intArrayOf(soundPool.load(context.applicationContext, R.raw.tile_blocked, 1))
@@ -253,7 +273,7 @@ class AudioManager(private val context: Context) {
     fun playTileSelect() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(pickSoundIds, loudness(settings.soundVolume))
+            playRandomSound(pickSounds, loudness(settings.soundVolume))
         }
         vibrate { HapticPatterns.select(it) }
     }
@@ -270,7 +290,7 @@ class AudioManager(private val context: Context) {
     fun playTileDeselect() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(pickSoundIds, loudness(settings.soundVolume))
+            playRandomSound(pickSounds, loudness(settings.soundVolume))
         }
         vibrate { HapticPatterns.deselect(it) }
     }
@@ -278,7 +298,7 @@ class AudioManager(private val context: Context) {
     fun playTileMatch() {
         val settings = currentSettings ?: return
         if (settings.soundEnabled) {
-            playRandomSound(matchSoundIds, loudness(settings.soundVolume), rate = 0.97f + Random.nextFloat() * 0.06f)
+            playRandomSound(matchSounds, loudness(settings.soundVolume), rate = 0.97f + Random.nextFloat() * 0.06f)
         }
         val now = SystemClock.elapsedRealtime()
         matchStreak = if ((now - lastMatchTimeMs) <= MATCH_STREAK_WINDOW_MS) {
