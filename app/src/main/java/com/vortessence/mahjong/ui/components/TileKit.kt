@@ -97,6 +97,11 @@ data class TileKit(
     // Figured wood: dark heartwood streaks wandering through the grain, as olive wood's, as
     // strong as this (0: none)
     val woodFigure: Float = 0f,
+    // Mottled stone, as real jade: soft clouds of a darker and a lighter green drifting through the
+    // face, pale wispy veins and fine flecks, each tile its own, as strong as this (0: none), in
+    // [mottleTones] (the dark clouds', the light clouds', the veins'). Jade, 2026-11-14
+    val mottle: Float = 0f,
+    val mottleTones: List<Color> = emptyList(),
     // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
     // tile's height), to leave the dots room
     val artScale: Float = 0.85f,
@@ -196,22 +201,29 @@ object TileKits {
     }
 
     /**
-     * Dark jade, with Charcoal's white raised pictures and colour bar: smooth stone with a soft
-     * bevel and a little tone from tile to tile. Chosen by Gareth on 2026-11-13 (the darkest of
-     * three shades).
+     * Polished jade, mottled as the real stone is: soft clouds of deeper and paler green through a
+     * mid-green face, a few pale wispy veins and fine flecks, every tile its own, with Charcoal's
+     * white raised pictures and colour bar, a soft bevel and a little tone from tile to tile.
+     * First chosen by Gareth on 2026-11-13 as plain dark jade (the darkest of three shades); made
+     * lifelike from his photo of a polished jade stone, and his pick of four (mock-up 9, the
+     * mid-green, over the shipped dark jade mottled and two lighter greens) on 2026-11-14
+     * (JadePreview).
      */
     val JADE = CHARCOAL.copy(
         name = "Jade",
-        faceTop = Color(0xFF2D5D47),
-        faceBottom = Color(0xFF1F4635),
-        side = Color(0xFF19382A),
-        backing = Color(0xFF11281A),
+        faceTop = Color(0xFF2F7A4C),
+        faceBottom = Color(0xFF235F3A),
+        side = Color(0xFF1C4A2E),
+        backing = Color(0xFF12301E),
         bevelHighlight = Color(0xFF9CC9B0),
         art = Color(0xFFF4ECD6),
         terrazzo = 0f,
         wear = 0.4f,
         bevel = 0.8f,
         toneVariation = 1.2f,
+        mottle = 1f,
+        // Deep clouds, pale clouds, and the veins and flecks
+        mottleTones = listOf(Color(0xFF103D22), Color(0xFF5DAE72), Color(0xFFCDEBD3)),
     )
 
     /**

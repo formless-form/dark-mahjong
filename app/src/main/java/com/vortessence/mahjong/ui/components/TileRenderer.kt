@@ -1182,7 +1182,7 @@ object TileRenderer {
                 }
             }
             // Terrazzo, under the paint: each look's own
-            val terrazzos = if (kit.terrazzo > 0f || kit.woodGrain > 0f) Array(TileWear.LOOKS) { look ->
+            val terrazzos = if (kit.terrazzo > 0f || kit.woodGrain > 0f || kit.mottle > 0f) Array(TileWear.LOOKS) { look ->
                 image(width, ih) { drawTerrazzo(this, look, face.topLeft, face.size, glints = 0f, kit = kit) }
             } else null
             val wallRight = wallMask(right = true, bodyW, bodyH, pad.toFloat(), w, h)
@@ -1222,6 +1222,7 @@ object TileRenderer {
      */
     private fun drawTerrazzo(scope: DrawScope, look: Int, topLeft: Offset, size: Size, glints: Float, flakes: Boolean = true, kit: TileKit = TileKits.current) {
         if (kit.woodGrain > 0f && flakes && !PerfSwitches.isOff("terrazzo")) drawWoodGrain(scope, look, topLeft, size, kit.woodGrain, kit.woodFigure)
+        if (kit.mottle > 0f && flakes && !PerfSwitches.isOff("terrazzo")) drawMottle(scope, look, topLeft, size, kit)
         val strength = kit.terrazzo
         if (strength <= 0f || PerfSwitches.isOff("terrazzo")) return
         val random = kotlin.random.Random(TERRAZZO_SEED + look * 7919)
@@ -1301,6 +1302,75 @@ object TileRenderer {
                 } else if (glints > 0f) {
                     drawCircle(Color(0xFFFFF8EA).copy(alpha = (0.8f * glints * strength).coerceAtMost(1f)), r * 1.2f, Offset(x, y))
                 }
+            }
+        }
+    }
+
+    /**
+     * Mottled jade ([TileKit.mottle], its strength), [look]'s own: broad soft clouds of a darker and
+     * a lighter green ([TileKit.mottleTones]) over the face's colour, smaller mottles among them,
+     * a few pale wispy veins wandering across, and fine pale flecks.
+     */
+    private fun drawMottle(scope: DrawScope, look: Int, topLeft: Offset, size: Size, kit: TileKit) {
+        val tones = kit.mottleTones
+        if (tones.size < 3) return
+        val (dark, light, vein) = tones
+        val strength = kit.mottle
+        val random = kotlin.random.Random(MOTTLE_SEED + look * 7919)
+        val unit = size.width
+        fun a(x: Float) = (x * strength).coerceIn(0f, 1f)
+        val clip = Path().apply {
+            addRoundRect(RoundRect(topLeft.x, topLeft.y, topLeft.x + size.width, topLeft.y + size.height, CornerRadius(unit * 0.085f * 0.9f)))
+        }
+        scope.clipPath(clip) {
+            // A soft cloud: a radial fade from [tone] at its heart to nothing at [r]
+            fun cloud(tone: Color, alpha: Float, r: Float) {
+                val c = Offset(
+                    topLeft.x + (random.nextFloat() * 1.3f - 0.15f) * size.width,
+                    topLeft.y + (random.nextFloat() * 1.3f - 0.15f) * size.height,
+                )
+                drawCircle(
+                    Brush.radialGradient(
+                        0f to tone.copy(alpha = a(alpha)), 0.55f to tone.copy(alpha = a(alpha * 0.5f)), 1f to Color.Transparent,
+                        center = c, radius = r,
+                    ),
+                    r, c,
+                )
+            }
+            // Broad clouds, then smaller mottles among them
+            repeat(MOTTLE_CLOUDS) {
+                cloud(if (random.nextBoolean()) dark else light, 0.45f + random.nextFloat() * 0.3f, unit * (0.2f + random.nextFloat() * 0.35f))
+            }
+            repeat(MOTTLE_SPOTS) {
+                cloud(if (random.nextFloat() < 0.5f) dark else light, 0.35f + random.nextFloat() * 0.4f, unit * (0.02f + random.nextFloat() * 0.06f))
+            }
+            // Veins: pale wisps wandering across, a soft wide stroke under a finer one
+            val path = Path()
+            repeat(1 + random.nextInt(2)) {
+                path.reset()
+                var x = topLeft.x + random.nextFloat() * size.width
+                var y = topLeft.y + random.nextFloat() * size.height
+                var heading = random.nextFloat() * 6.2832f
+                path.moveTo(x, y)
+                val steps = 4 + random.nextInt(5)
+                repeat(steps) {
+                    heading += (random.nextFloat() - 0.5f) * 1.1f
+                    val step = unit * (0.04f + random.nextFloat() * 0.05f)
+                    x += cos(heading) * step
+                    y += sin(heading) * step
+                    path.lineTo(x, y)
+                }
+                val width = unit * (0.003f + random.nextFloat() * 0.005f)
+                drawPath(path, vein.copy(alpha = a(0.1f)), style = Stroke(width = width * 5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(path, vein.copy(alpha = a(0.12f + random.nextFloat() * 0.1f)), style = Stroke(width = width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
+            // Fine pale flecks
+            repeat(MOTTLE_FLECKS) {
+                drawCircle(
+                    vein.copy(alpha = a(0.15f + random.nextFloat() * 0.35f)),
+                    unit * (0.002f + random.nextFloat() * 0.004f),
+                    Offset(topLeft.x + random.nextFloat() * size.width, topLeft.y + random.nextFloat() * size.height),
+                )
             }
         }
     }
@@ -1844,6 +1914,11 @@ object TileRenderer {
         Color(0xFF6A6863), Color(0xFF34332F), Color(0xFF7C6D60), Color(0xFF5E4E44),
     )
     private const val TERRAZZO_SEED = 4057
+    // Mottled jade: its broad clouds, its smaller mottles, its flecks, and its seed
+    private const val MOTTLE_CLOUDS = 10
+    private const val MOTTLE_SPOTS = 110
+    private const val MOTTLE_FLECKS = 420
+    private const val MOTTLE_SEED = 8263
     private const val TONE_SEED = 7121
     private const val WOOD_SEED = 9311
     // Heartwood's dark brown, for figured wood's streaks and knots
