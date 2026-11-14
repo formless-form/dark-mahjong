@@ -30,8 +30,9 @@ class ImperialStandInTest {
     @Test
     fun `an Imperial tile draws with or without its images`() {
         ImperialImages.assets = RuntimeEnvironment.getApplication().assets
-        // Present in the Play build's tests, absent in the open-source build's: both are right
-        ImperialImages.load()
+        // Present in the Play build's tests, absent in the open-source build's: both are right,
+        // and the quick look agrees with what loading finds
+        assertTrue(ImperialImages.present() == (ImperialImages.load() != null))
         val w = 120
         val h = 190
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)

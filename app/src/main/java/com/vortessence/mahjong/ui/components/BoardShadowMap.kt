@@ -31,7 +31,9 @@ import kotlin.math.sin
  * - **The surface map**, for a set drawn from images that has surface maps (ImperialImages):
  *   which way each point of the tiles' faces turns, each standing tile's own surface map drawn
  *   where the tile is, at half resolution. The tiles' light reads it every frame, so the stone's
- *   relief turns towards the fire as it flickers.
+ *   relief turns towards the fire as it flickers. Made only by the fire, and never in
+ *   low-performance mode (which has no fire): otherwise the stone keeps the light its pictures
+ *   were made in.
  *
  * All are made for the board as it was laid out when they were built, and only rebuilt when
  * tiles are removed. When the board grows or moves (its automatic scaling), that is only a
@@ -71,10 +73,7 @@ class BoardShadowMap private constructor(
             s.setInputShader("heightMap", heights)
             s.setInputShader("aoMap", occlusion)
             s.setInputShader("tileReliefMap", relief ?: none)
-            s.setFloatUniform(
-                "tileRelief",
-                if (relief != null && TableSurfaceRenderer.tileRelief) 1f else 0f, RELIEF_SCALE, if (TableSurfaceRenderer.tileLampRelief) 1f else 0f,
-            )
+            s.setFloatUniform("tileRelief", if (relief != null && TableSurfaceRenderer.tileRelief) 1f else 0f, RELIEF_SCALE)
             s.setFloatUniform("mapXform", scale, scale, offsetX, offsetY)
             s.setFloatUniform("shade", if (fireShadows) 1f else 0f, AO_SCALE, layer, layers * layer)
             s.setFloatUniform("shadowSteps", FireShadows.steps)
@@ -102,7 +101,7 @@ class BoardShadowMap private constructor(
             s.setInputShader("heightMap", none)
             s.setInputShader("aoMap", none)
             s.setInputShader("tileReliefMap", none)
-            s.setFloatUniform("tileRelief", 0f, RELIEF_SCALE, 0f)
+            s.setFloatUniform("tileRelief", 0f, RELIEF_SCALE)
             s.setFloatUniform("mapXform", 1f, 1f, 0f, 0f)
             s.setFloatUniform("shade", 0f, AO_SCALE, 1f, 1f)
             s.setFloatUniform("shadowSteps", FireShadows.FULL)
@@ -110,7 +109,8 @@ class BoardShadowMap private constructor(
             s.setFloatUniform("boardBox", 1f, 1f, 0f, 0f)
         }
 
-        fun build(tiles: List<BoardTile>, transform: BoardTransform, w: Float, h: Float): BoardShadowMap? {
+        /** [relief]: the surface map too, for a set that has one (wanted only by the fire). */
+        fun build(tiles: List<BoardTile>, transform: BoardTransform, w: Float, h: Float, relief: Boolean = false): BoardShadowMap? {
             if (w <= 0f || h <= 0f) return null
             val standing = tiles.filter { !it.isRemoved }.sortedBy { it.z }
             val layer = transform.tileWidth * TILE_HEIGHT / h
@@ -118,7 +118,7 @@ class BoardShadowMap private constructor(
             return BoardShadowMap(
                 heightMap(standing, transform, w, h),
                 occlusionMap(standing, transform, w, h, layer, box),
-                surfaceMap(standing, transform, w, h),
+                if (relief) surfaceMap(standing, transform, w, h) else null,
                 transform,
                 (standing.maxOfOrNull { it.z } ?: 0) + 1,
                 box,

@@ -401,13 +401,15 @@ private fun BoardContent(
     val seams = remember(gameState.tiles) { seams(gameState.tiles) }
     // The highest layer still standing, from which lower layers are shaded darker
     val topLayer = remember(gameState.tiles) { gameState.tiles.filter { !it.isRemoved }.maxOfOrNull { it.z } ?: 0 }
-    // (Made again, too, when a set drawn from images has loaded them: its surface map is of them)
-    val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, canvasW, canvasH, TileKits.current, ImperialImages.loaded.value) {
+    // By the fire, a set drawn from images with surface maps has the board's surface map made too,
+    // so the fire's light turns with the stone's relief (made again once those images are loaded)
+    val relief = firelit && !settings.lowPerformance && TileKits.current.stone && ImperialImages.loaded.value
+    val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, canvasW, canvasH, relief) {
         val layout = currentTransform
         value = if (value == null) {
-            BoardShadowMap.build(gameState.tiles, layout, canvasW, canvasH)
+            BoardShadowMap.build(gameState.tiles, layout, canvasW, canvasH, relief)
         } else {
-            withContext(Dispatchers.Default) { BoardShadowMap.build(gameState.tiles, layout, canvasW, canvasH) }
+            withContext(Dispatchers.Default) { BoardShadowMap.build(gameState.tiles, layout, canvasW, canvasH, relief) }
         }
     }
     val placedShadows = shadowMap?.placed(currentTransform, canvasH)

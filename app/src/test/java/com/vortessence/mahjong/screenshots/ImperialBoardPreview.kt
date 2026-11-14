@@ -34,9 +34,9 @@ import kotlin.random.Random
 
 /**
  * Imperial on a real board, drawn by the game itself from the Imperial images (ImperialImages):
- * Quad on the green mat by the lamp, and on walnut by the fire, with the stone's relief lit as
- * its pictures were made, turning to the fire, and turning to the lamp too. Into
- * build/imperial-tile/board-*.png. The images come with the
+ * Quad on the green mat by the lamp, and on walnut by the fire: there with the stone keeping the
+ * light its pictures were made in (to compare), and with the fire's light turning with its relief,
+ * as in the game. Into build/imperial-tile/board-*.png. The images come with the
  * Play build only, so this does nothing where they are absent (the open-source build's tests).
  * Run: ./gradlew testPlayDebugUnitTest --tests '*ImperialBoardPreview*'
  */
@@ -50,12 +50,11 @@ class ImperialBoardPreview {
     fun back() {
         TileKits.preview = null
         TableSurfaceRenderer.tileRelief = true
-        TableSurfaceRenderer.tileLampRelief = false
     }
 
-    // A table, the fire lit or not, and how the stone's relief is lit: as its pictures were made
-    // (relief off), turning to the fire (the usual), or to the lamp as well
-    private data class Scene(val surface: TableSurface, val fire: Boolean, val name: String, val relief: Boolean = true, val lampRelief: Boolean = false)
+    // A table, the fire lit or not, and whether the fire's light turns with the stone's relief (as
+    // it does in the game) or the stone keeps the light its pictures were made in (to compare)
+    private data class Scene(val surface: TableSurface, val fire: Boolean, val name: String, val relief: Boolean = true)
 
     @Test
     fun board() {
@@ -70,10 +69,8 @@ class ImperialBoardPreview {
         val state = MahjongGameEngine.startNewGame(layout).copy(tiles = tiles)
         val scenes = listOf(
             Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp"),
-            Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp-turning", lampRelief = true),
             Scene(TableSurface.WALNUT, true, "board-walnut-fire-as-made", relief = false),
             Scene(TableSurface.WALNUT, true, "board-walnut-fire"),
-            Scene(TableSurface.WALNUT, true, "board-walnut-fire-lamp-turning", lampRelief = true),
         )
         var scene by mutableStateOf(scenes.first())
         compose.mainClock.autoAdvance = false
@@ -92,7 +89,6 @@ class ImperialBoardPreview {
         for (next in scenes) {
             // Applied at once: a change waiting on the next frame was never seen (ColourCuePreview)
             TableSurfaceRenderer.tileRelief = next.relief
-            TableSurfaceRenderer.tileLampRelief = next.lampRelief
             Snapshot.withMutableSnapshot { scene = next }
             compose.mainClock.advanceTimeBy(1500)
             compose.onRoot().captureRoboImage("build/imperial-tile/${next.name}.png")

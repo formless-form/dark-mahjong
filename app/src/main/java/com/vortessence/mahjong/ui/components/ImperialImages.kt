@@ -57,6 +57,16 @@ internal object ImperialImages {
     /** The images if they are loaded; null until then. */
     val ready: Images? get() = images
 
+    /**
+     * Whether this build has the images at all (the Play build does; the open-source build does
+     * not): a quick look, without loading them. Where it is false the set is not to be offered.
+     */
+    fun present(): Boolean = try {
+        assets?.list(FOLDER)?.contains(bodyName(0)) == true
+    } catch (e: IOException) {
+        false
+    }
+
     fun bodyName(look: Int) = "body-$look.webp"
 
     fun engravingName(tile: Tile) = "${tile.suit.name.lowercase()}-${tile.value}.webp"
