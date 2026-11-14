@@ -1,5 +1,7 @@
 package com.vortessence.mahjong.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -49,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +84,7 @@ import com.vortessence.mahjong.tips.TipOffer
 import com.vortessence.mahjong.ui.components.BoardTransform
 import com.vortessence.mahjong.ui.components.CheckSwitch
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
+import com.vortessence.mahjong.ui.components.ImperialImages
 import com.vortessence.mahjong.ui.components.LampColour
 import com.vortessence.mahjong.ui.components.LeadingIcon
 import com.vortessence.mahjong.ui.components.MenuBackdrop
@@ -616,8 +620,20 @@ private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect
             ),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
+            // The images load the first time they're asked for: until then the space is left
+            // empty (never the set's plain stand-in colours), and the tiles fade in once they're here
+            LaunchedEffect(Unit) { ImperialImages.loadSoon() }
+            val ready = ImperialImages.loaded.value
+            val shown by animateFloatAsState(if (ready) 1f else 0f, tween(350), label = "imperial samples")
             Box(contentAlignment = Alignment.Center) {
-                TileSamples(TileKits.of(TileSet.IMPERIAL), Modifier.fillMaxWidth().height(76.dp), IMPERIAL_SAMPLE_TILES, dim = !earned)
+                val samples = Modifier.fillMaxWidth().height(76.dp)
+                if (ready) {
+                    TileSamples(
+                        TileKits.of(TileSet.IMPERIAL), samples.graphicsLayer { alpha = shown }, IMPERIAL_SAMPLE_TILES, dim = !earned,
+                    )
+                } else {
+                    Spacer(samples)
+                }
                 if (!earned) {
                     Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
                         Icon(Icons.Rounded.Lock, null, tint = IMPERIAL_GOLD, modifier = Modifier.padding(10.dp).size(26.dp))

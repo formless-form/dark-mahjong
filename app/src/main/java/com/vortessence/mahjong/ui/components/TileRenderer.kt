@@ -445,6 +445,10 @@ object TileRenderer {
         val strength = if (highlight == Highlight.HINT) hintStrength.coerceIn(0f, 1f) else 1f
         val tintAlpha = if (isImportantHighlight) 0.5f * strength else 0.15f
 
+        // A stone set is drawn only from its images: while they load the tile waits, unseen, rather
+        // than showing in the set's plain stand-in colours (those are only for a build without them)
+        if (TileKits.current.stone && ImperialImages.available && !PerfSwitches.isOff("atlas") && TileAtlas.ready(width) == null) return
+
         // 1. Physically Grounded 3D Shadows
         if (!PerfSwitches.isOff("rest")) drawRestingShadows(scope, boardTile.z, x, y, width, height, shadows)
         if (isSelected) drawGoldGlow(scope, x, y, width, height)

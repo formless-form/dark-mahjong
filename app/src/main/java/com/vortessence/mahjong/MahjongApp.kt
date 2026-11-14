@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.model.WideBoards
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.TodaysPuzzle
@@ -58,6 +59,10 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     val levelIndex by viewModel.currentLevelIndex.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
+    // Imperial chosen: its images start loading as the game opens, so its tiles are ready to draw
+    LaunchedEffect(settings.tileSet) {
+        if (settings.tileSet == TileSet.IMPERIAL && ImperialImages.available) ImperialImages.loadSoon()
+    }
     val continueInfo by viewModel.continueInfo.collectAsStateWithLifecycle()
     val tutorialStep by viewModel.tutorialStep.collectAsStateWithLifecycle()
     val winMessage by viewModel.winMessage.collectAsStateWithLifecycle()
