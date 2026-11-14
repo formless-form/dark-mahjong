@@ -1,7 +1,5 @@
 package com.vortessence.mahjong
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import com.vortessence.mahjong.tips.Tips
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -24,16 +22,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vortessence.mahjong.data.model.WideBoards
+import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.TodaysPuzzle
 import com.vortessence.mahjong.engine.TutorialScript
-import com.vortessence.mahjong.data.model.WideBoards
+import com.vortessence.mahjong.tips.Tips
+import com.vortessence.mahjong.ui.components.ImperialImages
 import com.vortessence.mahjong.ui.components.PerformanceNotice
 import com.vortessence.mahjong.ui.components.PredictiveBackHandling
-import com.vortessence.mahjong.ui.components.isWideBoard
 import com.vortessence.mahjong.ui.components.PredictiveBackState
+import com.vortessence.mahjong.ui.components.isWideBoard
 import com.vortessence.mahjong.ui.components.predictiveBack
 import com.vortessence.mahjong.ui.screens.ConstellationSelectScreen
 import com.vortessence.mahjong.ui.screens.GameScreen
+import com.vortessence.mahjong.ui.screens.ImperialProgress
 import com.vortessence.mahjong.ui.screens.LevelSelectScreen
 import com.vortessence.mahjong.ui.screens.MainMenuScreen
 import com.vortessence.mahjong.ui.screens.SettingsScreen
@@ -45,6 +47,7 @@ import com.vortessence.mahjong.update.AppUpdates
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Composable
 fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = null) {
@@ -195,6 +198,12 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         onSettingsCommit = { viewModel.commitSettings() },
                         onFireAudition = { viewModel.auditionFire(it) },
                         onGooglePlay = BuildConfig.FLAVOR == "play",
+                        imperial = if (ImperialImages.available) {
+                            val levels = ConstellationRepository.levelConstellations.map { it.id }
+                            ImperialProgress(progress.journeyLevelsCleared(levels), levels.size)
+                        } else {
+                            null
+                        },
                         tipsAvailable = tips?.available == true,
                         tipOffers = tipOffers,
                         tipThanked = tipThanked,

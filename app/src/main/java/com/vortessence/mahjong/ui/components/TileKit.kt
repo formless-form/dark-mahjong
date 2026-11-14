@@ -202,6 +202,9 @@ object TileKits {
         TileSet.CHARCOAL -> CHARCOAL
         TileSet.JADE -> JADE
         TileSet.WOOD -> WOOD
+        // Where the build has no Imperial images (the open-source build), a stored choice of it
+        // falls back to Ivory
+        TileSet.IMPERIAL -> if (ImperialImages.available) IMPERIAL else IVORY
     }
 
     /**

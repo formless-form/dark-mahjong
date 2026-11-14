@@ -45,6 +45,12 @@ Dark Mahjong is made to be free of ads and tracking, with nothing to buy, offlin
 * **License:** Public Domain / CC0 1.0 Universal
 * **Details:** All tile illustrations (PNG/SVG) are free to copy, modify, and distribute for any purpose without restrictions.
 
+### Imperial tile set (Google Play build only)
+
+* **Files:** the Imperial images, in `app/src/play/assets/imperial/` of the Google Play build. They are **not** in this repository, and the open-source build does without them (it simply doesn't offer the set).
+* **License:** Copyright (C) 2026 Grevillea Labs. All rights reserved: they are not covered by the GPL or CC0 terms above.
+* **Derived from:** the tile pictures are carved from samoheen's public-domain drawings above.
+
 ---
 
 ## 3. Audio Assets

@@ -17,6 +17,8 @@ enum class TileSet(val shortName: String) {
     CHARCOAL("Terrazzo"),
     JADE("Jade"),
     WOOD("Olivewood"),
+    // Earned by finishing the Journey, and only in builds that have the Imperial images
+    IMPERIAL("Imperial"),
 }
 
 // How a wide board (one that plays much bigger with the phone on its side) is shown: the player is

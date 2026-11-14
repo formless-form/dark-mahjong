@@ -5,14 +5,21 @@ import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.TileSet
+import com.vortessence.mahjong.ui.components.ImperialImages
 import com.vortessence.mahjong.ui.components.MenuFire
+import com.vortessence.mahjong.ui.components.TileKits
 import com.vortessence.mahjong.ui.components.TileWear
+import com.vortessence.mahjong.ui.screens.ImperialProgress
 import com.vortessence.mahjong.ui.screens.SettingsScreen
 import com.vortessence.mahjong.ui.theme.MahjongTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
@@ -26,14 +33,17 @@ class TileSetSettingsPreview {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun shoot(samples: Boolean, set: TileSet, name: String) {
+    private fun shoot(samples: Boolean, set: TileSet, name: String, imperial: ImperialProgress? = null) {
         MenuFire.flickers = false
         TileWear.prepareNow()
         compose.setContent {
             MahjongTheme {
-                SettingsScreen(settings = GameSettings(tileSet = set), onSettingsChanged = {}, onBack = {}, tileSamples = samples)
+                SettingsScreen(
+                    settings = GameSettings(tileSet = set), onSettingsChanged = {}, onBack = {}, tileSamples = samples, imperial = imperial,
+                )
             }
         }
+        compose.waitForIdle()
         compose.onRoot().captureRoboImage("build/tile-set-settings/$name.png")
     }
 
@@ -63,4 +73,31 @@ class TileSetSettingsPreview {
     @Test fun samplesCharcoal() = shoot(true, TileSet.CHARCOAL, "samples-charcoal")
     @Test fun samplesIvory() = shoot(true, TileSet.IVORY, "samples-ivory")
     @Test fun switchCharcoal() = shoot(false, TileSet.CHARCOAL, "switch-charcoal")
+
+    // Imperial, which only the Play build has the images for (skipped elsewhere): locked partway
+    // through the Journey, and earned and chosen
+    private fun imperial(): Boolean {
+        ImperialImages.assets = RuntimeEnvironment.getApplication().assets
+        return ImperialImages.available && ImperialImages.load() != null
+    }
+
+    @Test
+    fun imperialLocked() {
+        assumeTrue("The Imperial images are not in this build", imperial())
+        shoot(true, TileSet.JADE, "imperial-locked", ImperialProgress(36, 100))
+    }
+
+    @Test
+    fun imperialEarned() {
+        assumeTrue("The Imperial images are not in this build", imperial())
+        shoot(true, TileSet.IMPERIAL, "imperial-earned", ImperialProgress(100, 100))
+    }
+
+    // The open-source build: no images, so no Imperial card, and a stored choice of it draws Ivory
+    @Test
+    fun imperialAbsentFallsBackToIvory() {
+        ImperialImages.assets = null
+        assertFalse(ImperialImages.available)
+        assertEquals(TileKits.IVORY, TileKits.of(TileSet.IMPERIAL))
+    }
 }

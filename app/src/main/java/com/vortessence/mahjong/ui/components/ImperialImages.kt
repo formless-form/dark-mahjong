@@ -38,6 +38,16 @@ internal object ImperialImages {
     /** The app's assets, to load from: given once at start-up (and by tests). */
     @Volatile
     var assets: AssetManager? = null
+        set(value) {
+            field = value
+            availableCache = null
+        }
+
+    private var availableCache: Boolean? = null
+
+    /** [present], looked up once the assets are known. */
+    val available: Boolean
+        get() = availableCache ?: present().also { if (assets != null) availableCache = it }
 
     /**
      * The set: every body is the same size, and every engraving the size of a body, to lie over

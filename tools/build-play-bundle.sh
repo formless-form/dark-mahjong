@@ -10,6 +10,18 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# The Imperial images ship in the Play build only and are never committed (they're kept out by
+# .git/info/exclude), so a checkout can lack them: without them the game quietly leaves Imperial
+# out, so a release must not be built without the full set: 12 bodies and 42 faces, each with
+# its surface map
+IMPERIAL="app/src/play/assets/imperial"
+pictures=$(find "$IMPERIAL" -maxdepth 1 -name '*.webp' ! -name '*-surface.webp' 2>/dev/null | wc -l)
+maps=$(find "$IMPERIAL" -maxdepth 1 -name '*-surface.webp' 2>/dev/null | wc -l)
+[ "$pictures" -eq 54 ] && [ "$maps" -eq 54 ] || {
+    echo "Imperial images incomplete in $IMPERIAL: $pictures of 54 pictures, $maps of 54 surface maps" >&2
+    exit 1
+}
+
 KEYSTORE="$HOME/.config/dark-mahjong/upload-keystore.p12"
 [ -f "$KEYSTORE" ] || { echo "No upload keystore at $KEYSTORE" >&2; exit 1; }
 DARK_MAHJONG_UPLOAD_KEY_PASS="$(python3 "$HOME/server_secrets.py" get DARK_MAHJONG_UPLOAD_KEY_PASS)"

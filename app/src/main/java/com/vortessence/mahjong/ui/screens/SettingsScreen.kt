@@ -1,30 +1,10 @@
 package com.vortessence.mahjong.ui.screens
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
-import com.vortessence.mahjong.data.model.Tile
-import com.vortessence.mahjong.data.model.TileSuit
-import com.vortessence.mahjong.ui.components.BoardTransform
-import com.vortessence.mahjong.ui.components.LampColour
-import com.vortessence.mahjong.ui.components.TileKit
-import com.vortessence.mahjong.ui.components.TileKits
-import com.vortessence.mahjong.ui.components.TileRenderer
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.mutableStateOf
-import com.vortessence.mahjong.ui.components.TipCard
-import com.vortessence.mahjong.tips.TipOffer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,25 +12,32 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Fireplace
 import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Highlight
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PrivacyTip
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.ScreenRotation
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Texture
 import androidx.compose.material.icons.rounded.Vibration
-import androidx.compose.material.icons.rounded.Fireplace
 import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
@@ -62,27 +49,48 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TileSet
+import com.vortessence.mahjong.data.model.TileSuit
 import com.vortessence.mahjong.data.model.WideBoards
+import com.vortessence.mahjong.tips.TipOffer
+import com.vortessence.mahjong.ui.components.BoardTransform
 import com.vortessence.mahjong.ui.components.CheckSwitch
 import com.vortessence.mahjong.ui.components.ExpressiveScreen
+import com.vortessence.mahjong.ui.components.LampColour
 import com.vortessence.mahjong.ui.components.LeadingIcon
+import com.vortessence.mahjong.ui.components.MenuBackdrop
 import com.vortessence.mahjong.ui.components.SectionHeader
 import com.vortessence.mahjong.ui.components.SegmentGap
+import com.vortessence.mahjong.ui.components.TileKit
+import com.vortessence.mahjong.ui.components.TileKits
+import com.vortessence.mahjong.ui.components.TileRenderer
+import com.vortessence.mahjong.ui.components.TipCard
 import com.vortessence.mahjong.ui.components.panel
-import com.vortessence.mahjong.ui.components.MenuBackdrop
 import com.vortessence.mahjong.ui.components.segmentColors
 
 private typealias Segment = @Composable (ListItemShapes) -> Unit
@@ -98,6 +106,9 @@ fun SettingsScreen(
     onFireAudition: (Boolean) -> Unit = {},
     // The Play build: rate the game and share it, by its Google Play listing
     onGooglePlay: Boolean = false,
+    // Imperial, in a build that has its images: how far through the Journey the player is (it's
+    // earned by finishing it). Null where the build has no Imperial images: it isn't offered
+    imperial: ImperialProgress? = null,
     // Tips through Google Play (the Play build only, where the row always shows)
     tipsAvailable: Boolean = false,
     tipOffers: List<TipOffer> = emptyList(),
@@ -197,11 +208,12 @@ fun SettingsScreen(
             val tileSetRow: (@Composable (ListItemShapes) -> Unit)? = if (TileKits.OFFERED) {
                 { shapes ->
                     if (tileSamples) {
-                        TileSetRow(shapes, settings.tileSet) { onSettingsChanged(settings.copy(tileSet = it)) }
+                        TileSetRow(shapes, settings.tileSet, imperial) { onSettingsChanged(settings.copy(tileSet = it)) }
                     } else {
                         ChoiceRow(
                             shapes, Icons.Rounded.Style, "Tiles", null,
-                            TileSet.entries, { it.shortName }, settings.tileSet,
+                            TileSet.entries.filter { it != TileSet.IMPERIAL || imperial?.earned == true },
+                            { it.shortName }, settings.tileSet,
                         ) { onSettingsChanged(settings.copy(tileSet = it)) }
                     }
                 }
@@ -530,7 +542,7 @@ private fun SliderRow(
 // The tile sets, each shown by a few of its tiles under the table's warm lamp, two to a row (so
 // each set's tiles show at a size that reads), the chosen one ringed
 @Composable
-private fun TileSetRow(shapes: ListItemShapes, selected: TileSet, onSelect: (TileSet) -> Unit) {
+private fun TileSetRow(shapes: ListItemShapes, selected: TileSet, imperial: ImperialProgress?, onSelect: (TileSet) -> Unit) {
     Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -540,12 +552,13 @@ private fun TileSetRow(shapes: ListItemShapes, selected: TileSet, onSelect: (Til
             }
             Spacer(Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                TileSet.entries.chunked(2).forEach { pair ->
+                TileSet.entries.filter { it != TileSet.IMPERIAL }.chunked(2).forEach { pair ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                         pair.forEach { set -> TileSetChoice(set, set == selected, Modifier.weight(1f)) { onSelect(set) } }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
+                imperial?.let { ImperialChoice(it, selected == TileSet.IMPERIAL) { onSelect(TileSet.IMPERIAL) } }
             }
         }
     }
@@ -573,20 +586,88 @@ private fun TileSetChoice(set: TileSet, chosen: Boolean, modifier: Modifier, onS
     }
 }
 
-// Three tiles of [kit] side by side, lit as by the lamp over the table
+/** How far through the Journey the player is, which earns Imperial: [cleared] of [levels]. */
+data class ImperialProgress(val cleared: Int, val levels: Int) {
+    val earned: Boolean get() = cleared >= levels
+}
+
+// Imperial's gold, as painted into its engravings
+private val IMPERIAL_GOLD = Color(0xFFE2BA71)
+
+// Imperial: the full width, under the other sets, five of its tiles. Until it's earned they're shown
+// dimmed under a gold lock, with how far the Journey has got, and it can't be chosen
 @Composable
-private fun TileSamples(kit: TileKit, modifier: Modifier) {
+private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect: () -> Unit) {
+    val earned = progress.earned
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
+        border = if (chosen && earned) BorderStroke(2.dp, IMPERIAL_GOLD) else null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .then(
+                if (earned) {
+                    Modifier.selectable(selected = chosen, role = Role.RadioButton, onClick = onSelect)
+                } else {
+                    Modifier.semantics(mergeDescendants = true) { stateDescription = "Locked" }
+                },
+            ),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                TileSamples(TileKits.of(TileSet.IMPERIAL), Modifier.fillMaxWidth().height(76.dp), IMPERIAL_SAMPLE_TILES, dim = !earned)
+                if (!earned) {
+                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
+                        Icon(Icons.Rounded.Lock, null, tint = IMPERIAL_GOLD, modifier = Modifier.padding(10.dp).size(26.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                TileSet.IMPERIAL.shortName,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (!earned || chosen) IMPERIAL_GOLD else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                if (earned) "Earned by finishing the Journey" else "A deluxe set, earned by finishing the Journey",
+                style = MaterialTheme.typography.bodySmall, color = muted, textAlign = TextAlign.Center,
+            )
+            if (!earned) {
+                Spacer(Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress = { progress.cleared.toFloat() / progress.levels.coerceAtLeast(1) },
+                    color = IMPERIAL_GOLD,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text("${progress.cleared} of ${progress.levels} levels", style = MaterialTheme.typography.labelSmall, color = muted)
+            }
+        }
+    }
+}
+
+private val IMPERIAL_SAMPLE_TILES = listOf(
+    Tile(TileSuit.WIND, 1), Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3), Tile(TileSuit.CHARACTER, 9),
+)
+
+// A few tiles of [kit] side by side, lit as by the lamp over the table; [dim] for a set not yet earned
+@Composable
+private fun TileSamples(kit: TileKit, modifier: Modifier, tiles: List<Tile> = SAMPLE_TILES, dim: Boolean = false) {
     val lamp = remember { LampColour.tiles().let { Color(it[0], it[1], it[2]) } }
     Canvas(modifier.graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
         val h = size.height * 0.84f
         val w = h / BoardTransform.ASPECT_RATIO
         val gap = w * 0.12f
-        val total = w * 3 + gap * 2
+        val total = w * tiles.size + gap * (tiles.size - 1)
         val x0 = (size.width - total) / 2f
-        SAMPLE_TILES.forEachIndexed { i, tile ->
+        tiles.forEachIndexed { i, tile ->
             TileRenderer.drawSample(this, tile, x0 + i * (w + gap), (size.height - h) / 2f, w, h, kit, look = i)
         }
         drawRect(lamp, blendMode = BlendMode.Modulate)
+        if (dim) drawRect(Color.Black.copy(alpha = 0.45f), blendMode = BlendMode.SrcAtop)
     }
 }
 

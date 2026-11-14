@@ -16,7 +16,13 @@ data class Progress(
     val hints: Int = 0,
     // Each layout's best clear (by its id), kept since that was first recorded
     val records: Map<String, LevelRecord> = emptyMap(),
-)
+) {
+    /**
+     * How many of the Journey's levels ([levelIds]) have been cleared, played as levels or not.
+     * Counted by layout, so no reordering of the levels can change it: all of them earns Imperial.
+     */
+    fun journeyLevelsCleared(levelIds: List<String>): Int = levelIds.count { it in completedConstellations }
+}
 
 /**
  * A layout's best clear: the cleanest (fewest hints and reshuffles, then fewest undos), and of
