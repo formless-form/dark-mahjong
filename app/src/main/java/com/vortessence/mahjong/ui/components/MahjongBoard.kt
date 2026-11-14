@@ -401,7 +401,8 @@ private fun BoardContent(
     val seams = remember(gameState.tiles) { seams(gameState.tiles) }
     // The highest layer still standing, from which lower layers are shaded darker
     val topLayer = remember(gameState.tiles) { gameState.tiles.filter { !it.isRemoved }.maxOfOrNull { it.z } ?: 0 }
-    val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, canvasW, canvasH) {
+    // (Made again, too, when a set drawn from images has loaded them: its surface map is of them)
+    val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, canvasW, canvasH, TileKits.current, ImperialImages.loaded.value) {
         val layout = currentTransform
         value = if (value == null) {
             BoardShadowMap.build(gameState.tiles, layout, canvasW, canvasH)

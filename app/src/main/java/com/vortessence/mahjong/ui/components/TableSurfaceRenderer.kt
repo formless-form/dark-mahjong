@@ -1,5 +1,8 @@
 package com.vortessence.mahjong.ui.components
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
@@ -217,6 +220,19 @@ half4 main(float2 p) {
         BitmapShader(Bitmap.createBitmap(intArrayOf(0xFF8080FF.toInt()), 1, 1, Bitmap.Config.ARGB_8888), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
     }
     private var glossShader: RuntimeShader? = null
+    /**
+     * Whether the fire's light turns with a stone set's relief (its surface map). Off, the stone
+     * keeps the light its pictures were made in: the lighter way, for phones near the line.
+     */
+    var tileRelief by mutableStateOf(true)
+
+    /**
+     * Whether the lamp's light, too, turns with a stone set's relief, as the fire's does (off: by
+     * the lamp the stone keeps the light its pictures were made in). A choice still to be made
+     * with Gareth; previews set it.
+     */
+    var tileLampRelief by mutableStateOf(false)
+
     private var flameShader: RuntimeShader? = null
     private var raisedShader: RuntimeShader? = null
     private var previewAlbedo: RuntimeShader? = null
@@ -554,6 +570,8 @@ uniform shader aoMap;       // the table's ambient occlusion in green, at a coar
 uniform float4 mapXform;    // table pixels now to map pixels: scale x, y, then offset x, y (the board may have moved)
 uniform float4 shade;       // fire shadows on (1) or off, occlusion map pixels per map pixel, one layer's height, the tallest stack's
 uniform float aoStrength;   // how deep the table's ambient occlusion goes (0 with no map)
+uniform shader tileReliefMap; // a stone set's surface map (BoardShadowMap): which way each point of its tiles' faces turns, as x, y down the table and z up in red, green and blue
+uniform float3 tileRelief;  // there is one (1) or not, its pixels per height-map pixel, and whether the lamp's light turns with it as the fire's does (1)
 uniform float flameHeight;  // how high the flames stand above the table this frame, in table heights
 uniform float flameSpread;  // how much wider than round the fire's pool spreads across the table (FlameLight.spread)
 const int SHADOW_STEPS = 40;
@@ -654,6 +672,18 @@ uniform float2 res;
 // (the tile set's TileKit.neutralLight): its pale pictures stay whiter by the fire
 uniform float neutralLight;
 $FLAME_AGSL
+// A stone set's pictures were made lit by one lamp, from this direction (up the table and a little
+// right), this share of its light falling whichever way the stone faced
+const float3 MADE_BY = float3(0.3505, 0.7011, 0.6210);
+const float MADE_EVEN = 0.27;
+// The lamp's height over the tiles for their relief, and the share of the fire's light that falls
+// whichever way the stone faces: little, as it rakes across from low down (as on the slate table)
+const float TILE_LAMP_HEIGHT = 0.3;
+const float TILE_FIRE_EVEN = 0.15;
+// How bright a point facing n is in light from direction l, against a level one
+float turned(float3 n, float3 l, float even) {
+    return (even + max(dot(n, l), 0.0)) / (even + max(l.z, 1e-3));
+}
 half4 main(float2 p) {
     float2 q = float2((p.x - 0.5 * res.x) / res.y, (0.5 * res.y - p.y) / res.y);
     // The lamp's light on the tiles (softer than on the table, so no face is ever too dark to
@@ -664,9 +694,26 @@ half4 main(float2 p) {
     // layer there are only the tiles' shadows, black, which no light changes
     float h0 = surfaceHeight(q);
     float fire = (cullUnder > 0.5 && h0 <= 0.0) ? 1.0 : fireShadow(q, h0);
+    // A stone set's relief: each point lit as it faces the fire now (and the lamp, if asked), in
+    // place of the one lamp its picture was made by, so crests turned to the fire catch its flicker
+    float lampTurn = 1.0;
+    float fireTurn = 1.0;
+    if (tileRelief.x > 0.5) {
+        half4 s = tileReliefMap.eval(tablePixel(q) * tileRelief.y);
+        if (s.a > 0.02) {
+            float3 m = float3(s.rgb) / s.a * 2.0 - 1.0;
+            // The map's y runs down the table, q's up it; where the map half covers a pixel, half level
+            float3 n = normalize(mix(float3(0.0, 0.0, 1.0), float3(m.x, -m.y, m.z), s.a));
+            float made = turned(n, MADE_BY, MADE_EVEN);
+            fireTurn = clamp(turned(n, normalize(float3(flame.xy - q, flameHeight)), TILE_FIRE_EVEN) / made, 0.3, 3.0);
+            if (tileRelief.z > 0.5) {
+                lampTurn = clamp(turned(n, normalize(float3(lampAt(LAMP_AT) - q, TILE_LAMP_HEIGHT)), MADE_EVEN) / made, 0.4, 2.5);
+            }
+        }
+    }
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
-    float3 c = (lampLevel * lamp * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TILES + flameLight(q) * fire)
-        * 0.81;
+    float3 c = (lampLevel * lamp * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TILES * lampTurn
+        + flameLight(q) * fire * fireTurn) * 0.81;
     c = mix(c, float3(dot(c, float3(0.2126, 0.7152, 0.0722))), neutralLight);
     return half4(half3(keepHue(c)), 1.0);
 }

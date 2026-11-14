@@ -28,7 +28,12 @@ import kotlin.math.sin
  *   at a quarter resolution, used by the table only (the tiles' own walls and contact shadows darken
  *   their foot instead), so no tile picks up a rim from it.
  *
- * Both are made for the board as it was laid out when they were built, and only rebuilt when
+ * - **The surface map**, for a set drawn from images that has surface maps (ImperialImages):
+ *   which way each point of the tiles' faces turns, each standing tile's own surface map drawn
+ *   where the tile is, at half resolution. The tiles' light reads it every frame, so the stone's
+ *   relief turns towards the fire as it flickers.
+ *
+ * All are made for the board as it was laid out when they were built, and only rebuilt when
  * tiles are removed. When the board grows or moves (its automatic scaling), that is only a
  * scale and a shift, so [placed] tells the shaders how to find the map from the board as it is
  * now, and the shading keeps up every frame. Building one takes some tens of milliseconds, so
@@ -37,6 +42,8 @@ import kotlin.math.sin
 class BoardShadowMap private constructor(
     private val heights: BitmapShader,
     private val occlusion: BitmapShader,
+    // Null for a set with no surface maps
+    private val relief: BitmapShader?,
     // The board's layout when the map was made
     private val built: BoardTransform,
     // The number of layers in the tallest stack
@@ -63,6 +70,11 @@ class BoardShadowMap private constructor(
         fun setUniforms(s: RuntimeShader, fireShadows: Boolean) {
             s.setInputShader("heightMap", heights)
             s.setInputShader("aoMap", occlusion)
+            s.setInputShader("tileReliefMap", relief ?: none)
+            s.setFloatUniform(
+                "tileRelief",
+                if (relief != null && TableSurfaceRenderer.tileRelief) 1f else 0f, RELIEF_SCALE, if (TableSurfaceRenderer.tileLampRelief) 1f else 0f,
+            )
             s.setFloatUniform("mapXform", scale, scale, offsetX, offsetY)
             s.setFloatUniform("shade", if (fireShadows) 1f else 0f, AO_SCALE, layer, layers * layer)
             s.setFloatUniform("shadowSteps", FireShadows.steps)
@@ -73,6 +85,8 @@ class BoardShadowMap private constructor(
 
     companion object {
         private const val AO_SCALE = 0.25f
+        // The surface map's pixels per height-map pixel: the light's change across a face is broad
+        private const val RELIEF_SCALE = 0.5f
         private const val PER_LAYER = 31
         private const val AMBIENT_OCCLUSION = 0.8f
 
@@ -87,6 +101,8 @@ class BoardShadowMap private constructor(
         fun setNone(s: RuntimeShader) {
             s.setInputShader("heightMap", none)
             s.setInputShader("aoMap", none)
+            s.setInputShader("tileReliefMap", none)
+            s.setFloatUniform("tileRelief", 0f, RELIEF_SCALE, 0f)
             s.setFloatUniform("mapXform", 1f, 1f, 0f, 0f)
             s.setFloatUniform("shade", 0f, AO_SCALE, 1f, 1f)
             s.setFloatUniform("shadowSteps", FireShadows.FULL)
@@ -102,6 +118,7 @@ class BoardShadowMap private constructor(
             return BoardShadowMap(
                 heightMap(standing, transform, w, h),
                 occlusionMap(standing, transform, w, h, layer, box),
+                surfaceMap(standing, transform, w, h),
                 transform,
                 (standing.maxOfOrNull { it.z } ?: 0) + 1,
                 box,
@@ -129,6 +146,36 @@ class BoardShadowMap private constructor(
             }
             val margin = transform.tileWidth * 0.04f + 3f
             return floatArrayOf(left - margin, top - margin, right + margin, bottom + margin)
+        }
+
+        /**
+         * The board's surface map, for a set drawn from images that has surface maps: each standing
+         * tile's body's map where the tile is drawn (the body of its own look, as the atlas stamps
+         * it), its face's engraving's over that, in the order the tiles are drawn, so each point
+         * holds the top tile's. Null for any other set, or until the images are loaded.
+         */
+        private fun surfaceMap(standing: List<BoardTile>, transform: BoardTransform, w: Float, h: Float): BitmapShader? {
+            if (!TileKits.current.stone) return null
+            val images = ImperialImages.ready ?: return null
+            val bodies = images.bodySurfaces ?: return null
+            val engravings = images.engravingSurfaces ?: return null
+            val bitmap = Bitmap.createBitmap((w * RELIEF_SCALE).toInt().coerceAtLeast(1), (h * RELIEF_SCALE).toInt().coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.scale(RELIEF_SCALE, RELIEF_SCALE)
+            val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+            val place = android.graphics.RectF()
+            val k = transform.tileWidth / images.surfaceWidth
+            for (tile in standing.sortedWith(TileDrawOrder)) {
+                val x = transform.tilePixelX(tile.x, tile.z)
+                val y = transform.tilePixelY(tile.y, tile.z)
+                val body = bodies[TileWear.look(tile.id) % bodies.size]
+                place.set(x, y, x + body.width * k, y + body.height * k)
+                canvas.drawBitmap(body, null, place, paint)
+                engravings[tile.tile]?.let { canvas.drawBitmap(it, null, place, paint) }
+            }
+            return BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply {
+                filterMode = BitmapShader.FILTER_MODE_LINEAR
+            }
         }
 
         /** The full-resolution height map, each tile drawn exactly as on screen. */
