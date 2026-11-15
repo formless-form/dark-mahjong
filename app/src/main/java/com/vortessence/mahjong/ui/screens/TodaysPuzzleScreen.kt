@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -100,6 +102,7 @@ fun TodaysPuzzleScreen(
                         month = month,
                         today = todayDate,
                         solved = progress.puzzleDaysSolved,
+                        full = progress.isFullPuzzleMonth(month),
                         canGoBack = month > firstMonth,
                         canGoForward = month < thisMonth,
                         onMonth = { month = it },
@@ -144,7 +147,7 @@ fun TodaysPuzzleScreen(
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "The same puzzle for everyone today. A new one at 4 am.",
+                    "The same puzzle for everyone today. A new one at 4 am.\nSolve every day of a month to earn the silk brocade table.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -158,6 +161,9 @@ fun TodaysPuzzleScreen(
 }
 
 private val MIN_MAX_WIDTH = 480.dp
+
+// A full month's seal: the silver of the brocade table it earns
+private val MONTH_SEAL = Color(0xFFB9C1D9)
 private val MAX_WIDTH = 620.dp
 private const val HEIGHT_TO_WIDTH = 0.47f
 // The calendar's width on a typical phone
@@ -171,6 +177,8 @@ private fun Calendar(
     month: YearMonth,
     today: LocalDate,
     solved: Set<Long>,
+    // Every day of the month solved: sealed under its name
+    full: Boolean,
     canGoBack: Boolean,
     canGoForward: Boolean,
     onMonth: (YearMonth) -> Unit,
@@ -195,6 +203,17 @@ private fun Calendar(
                 )
                 IconButton(onClick = { onMonth(month.plusMonths(1)) }, enabled = canGoForward) {
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = "Next month")
+                }
+            }
+            if (full) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp).semantics(mergeDescendants = true) {},
+                ) {
+                    Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = MONTH_SEAL, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Every day solved", style = MaterialTheme.typography.labelLarge, color = MONTH_SEAL)
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp)) {

@@ -28,7 +28,7 @@ import kotlin.math.max
 
 /**
  * Draws the tabletop: procedural green felt, walnut, Thai straw mat (redrawn from measurements
- * of a real woven sedge mat) or the menus' slate, seen through [TableCamera]'s tilted perspective and lit
+ * of a real woven sedge mat), the menus' slate or silk brocade (earned with the daily puzzles), seen through [TableCamera]'s tilted perspective and lit
  * by a single warm lamp above the middle of the table, with the room falling away into darkness
  * around it. Its colour never changes, so it is drawn once and kept; only its light is worked out
  * each frame.
@@ -62,7 +62,7 @@ float2 tablePoint(float2 p, out float fp) {
      * size or surface changes.
      */
     private const val ALBEDO_AGSL = """
-uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat, 3 slate (TableSurface order)
+uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat, 3 slate, 4 silk brocade (TableSurface order)
 const float WALNUT_SCALE = 1.2;
 const float STRAW_SCALE = 1.1;
 $CAMERA_AGSL
@@ -79,7 +79,8 @@ half4 main(float2 p) {
     // The straw mat a little finer too, for the same reason
     else if (mode < 2.5) albedo = straw(q * STRAW_SCALE, fp * STRAW_SCALE);
     // The menus' slate, its colour here and its relief lit by the table's light (SLATE_SURFACE_AGSL)
-    else albedo = stoneColour(q * SLATE_SCALE) * SLATE_GAIN;
+    else if (mode < 3.5) albedo = stoneColour(q * SLATE_SCALE) * SLATE_GAIN;
+    else albedo = silkBrocade(q, fp);
     return half4(half3(albedo), 1.0);
 }
 """
@@ -396,6 +397,8 @@ half4 main(float2 p) {
             // Honed slate: a faint satin sheen
             TableSurface.SLATE -> 0.18f
             TableSurface.GREEN_MAT -> 0f
+            // Silk: a soft sheen
+            TableSurface.BROCADE -> 0.3f
         }
         if (gloss > 0f && !PerfSwitches.isOff("gloss")) {
             val g = glossShader ?: RuntimeShader(TABLE_GLOSS_AGSL).also { glossShader = it }
@@ -461,6 +464,32 @@ half4 main(float2 p) {
         setCameraUniforms(s, width, height, zoom, pan)
         s.setFloatUniform("mode", surface.ordinal.toFloat())
     }
+
+    /**
+     * A swatch of the silk brocade, flat and lit warm in the middle, as Settings shows it: the
+     * cloth itself, without the table's shadows or fire.
+     */
+    fun brocadeSwatch(width: Float, height: Float): ShaderBrush {
+        val s = swatchShader ?: RuntimeShader(SWATCH_AGSL).also { swatchShader = it }
+        s.setFloatUniform("res", width, height)
+        return ShaderBrush(s)
+    }
+
+    private var swatchShader: RuntimeShader? = null
+
+    private const val SWATCH_AGSL = """
+uniform float2 res;
+$SURFACES_AGSL
+half4 main(float2 p) {
+    // A little closer than the table seen whole, so the fret reads at the swatch's size
+    float scale = 0.2;
+    float2 q = float2(p.x - 0.5 * res.x, 0.5 * res.y - p.y) / res.y * scale;
+    float3 c = silkBrocade(q, scale / res.y);
+    float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
+    float lamp = 0.7 + 1.5 * exp(-dot(d, d) * 2.5);
+    return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
+}
+"""
 
     /**
      * How far the lamp's light is stretched across a table [width] x [height]: 1 upright, and the
@@ -883,5 +912,102 @@ float3 straw(float2 q, float fp) {
         m = mix(m, float3(0.68, 0.62, 0.48), fibre * 0.7 * fine);
     }
     return m;
+}
+
+// ---- Silk brocade: the daily puzzles' monthly reward ----
+float sdSeg(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+}
+
+// The key fret's distance field: one squared spiral per cell, touching its neighbours'
+float fretD(float2 u) {
+    float2 f = fract(u);
+    float d = sdSeg(f, float2(0.0, 0.08), float2(0.92, 0.08));
+    d = min(d, sdSeg(f, float2(0.92, 0.08), float2(0.92, 0.92)));
+    d = min(d, sdSeg(f, float2(0.92, 0.92), float2(0.24, 0.92)));
+    d = min(d, sdSeg(f, float2(0.24, 0.92), float2(0.24, 0.30)));
+    d = min(d, sdSeg(f, float2(0.24, 0.30), float2(0.70, 0.30)));
+    d = min(d, sdSeg(f, float2(0.70, 0.30), float2(0.70, 0.70)));
+    return min(d, sdSeg(f, float2(0.70, 0.70), float2(0.46, 0.70)));
+}
+
+float lineMask(float d, float w, float aa) { return 1.0 - smoothstep(w - aa, w + aa, d); }
+
+// The chosen brocade (Gareth, 2026-11-15, mock-up 10): midnight indigo satin with a key fret
+// woven in muted silver. The two are different threads, woven differently: the ground is a
+// warp-faced satin of fine silk running away from the viewer, the fret floats of twisted
+// metal thread lying across it, tied down with tiny couching stitches and outlined by a cord
+float3 silkBrocade(float2 q, float fp) {
+    float3 indigo = float3(0.040, 0.050, 0.130);
+    float3 silver = float3(0.165, 0.180, 0.240);
+    float cell = 0.06;
+    float2 u = q / cell;
+    float aa = max(fp / cell * 1.2, 0.004);
+    float w = 0.068;
+    float d = fretD(u);
+    float m = lineMask(d, w, aa);
+    // A little of the light falls on the fret's far edge, and its near edge throws a thin shadow
+    // onto the satin
+    float dFar = fretD(u + float2(0.0, 0.035));
+    float dNear = fretD(u - float2(0.0, 0.05));
+    float raisedLit = m * (1.0 - lineMask(dFar, w, aa));
+    float shadow = (1.0 - m) * lineMask(dNear, w, aa);
+
+    // ---- The satin ground ----
+    float wp = 0.0016;                         // warp thread pitch
+    float pp = 0.0017;                         // weft pick pitch
+    float seeW = 1.0 - smoothstep(wp * 0.25, wp * 0.7, fp);
+    float i = floor(q.x / wp);
+    float a = fract(q.x / wp) - 0.5;
+    float crown = sqrt(max(1.0 - 4.0 * a * a, 0.0));
+    float j = floor(q.y / pp);
+    // An 8-end satin: each warp tied down once in 8 picks, the ties stepping 3 along
+    float tie = step(mod(j + i * 3.0, 8.0), 0.5) * (1.0 - smoothstep(0.15, 0.45, abs(fract(q.y / pp) - 0.5)));
+    float tone = 0.9 + 0.2 * hash11(i * 1.31 + 7.0);
+    // Slubs: here and there a thread runs a little thicker and brighter for a stretch
+    float slub = smoothstep(0.78, 0.92, vnoise(float2(i * 3.7, q.y * 55.0)));
+    // Each thread rounded, dark in the valleys between, with silk's bright sheen along its crown
+    float3 g = indigo * tone * (0.55 + 0.6 * crown) * (1.0 + 0.35 * slub);
+    g += float3(0.030, 0.038, 0.075) * pow(crown, 6.0) * (0.6 + 0.8 * vnoise(float2(i * 1.9, q.y * 30.0)));
+    g *= 1.0 - 0.55 * tie;
+    g = mix(indigo * (0.95 + 0.1 * tone), g, seeW);
+    // The silk's long sheen, in soft folds along the warp, and faint fading where it's been used
+    g *= 0.82 + 0.34 * fbm(float2(q.x * 3.5, q.y * 0.9) + 3.0);
+    float worn = smoothstep(0.55, 0.85, fbm(q * 1.8 + 21.0));
+    g = mix(g, g * float3(1.12, 1.1, 1.02), 0.4 * worn);
+    // The odd snagged warp thread, pulled a little loose and catching more light
+    float snag = step(0.996, hash11(i * 0.77 + 13.0)) * smoothstep(0.6, 0.75, vnoise(float2(i, q.y * 6.0)));
+    g *= 1.0 + 0.5 * snag * seeW;
+    g *= 1.0 - 0.45 * shadow;
+
+    // ---- The silver fret: floats of twisted metal thread across the warp ----
+    float tp = 0.0019;
+    float seeT = 1.0 - smoothstep(tp * 0.25, tp * 0.7, fp);
+    float k = floor(q.y / tp);
+    float b = fract(q.y / tp) - 0.5;
+    float tcrown = sqrt(max(1.0 - 4.0 * b * b, 0.0));
+    // The metal strip wound round its silk core: fine bright slants along every thread
+    float twist = smoothstep(0.55, 0.9, sin((q.x / tp + b * 1.6 + hash11(k) * 6.0) * 3.14159 * 1.4) * 0.5 + 0.5);
+    float3 t = silver * (0.6 + 0.45 * tcrown) * (0.92 + 0.16 * hash11(k * 2.1 + 3.0));
+    t *= 1.0 + 0.8 * twist * tcrown * seeT;
+    // Tied down with tiny couching stitches, staggered thread to thread
+    // (a fine silk thread across the metal, every so often, each row's stitches between the last's)
+    float sx = q.x / (tp * 9.0) + 0.5 * mod(k, 2.0);
+    float stitch = (1.0 - smoothstep(0.012, 0.03, abs(fract(sx) - 0.5))) * smoothstep(0.1, 0.3, tcrown);
+    t = mix(t, indigo * 1.6, 0.45 * stitch * seeT);
+    t = mix(silver * 0.86, t, seeT);
+    // Tarnish here and there, as old metal thread has
+    t *= 0.9 + 0.18 * fbm(q * 7.0 + 31.0);
+    t *= 1.0 + 0.35 * raisedLit;
+
+    // A twisted cord outlining the fret, a shade darker than the silver
+    float cord = lineMask(abs(d - w), 0.012, aa);
+    float cordTwist = smoothstep(0.4, 0.9, sin((q.x + q.y) / 0.0011) * 0.5 + 0.5);
+    float3 cordC = silver * 0.62 * (0.85 + 0.3 * cordTwist * seeT);
+
+    float3 c = mix(g, t, m);
+    return mix(c, cordC, cord);
 }
 """

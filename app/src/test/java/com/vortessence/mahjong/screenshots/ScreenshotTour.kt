@@ -443,9 +443,13 @@ class ScreenshotTour {
     @Test @Config(qualifiers = "w800dp-h1280dp-port-240dpi")
     fun todaysPuzzleTablet() = todaysPuzzleShot("todays_puzzle_tablet")
 
-    private fun todaysPuzzleShot(name: String) {
+    @Test fun todaysPuzzleFullMonth() = todaysPuzzleShot("todays-puzzle-full-month", fullMonth = true)
+
+    private fun todaysPuzzleShot(name: String, fullMonth: Boolean = false) {
         val today = java.time.LocalDate.of(2026, 10, 31).toEpochDay()
-        val solved = (1L..30L).filter { it % 7 != 3L && it % 11 != 0L }.map { today - 31 + it }.toSet()
+        // A full month: every day of October solved, today too, so it's sealed
+        val solved = if (fullMonth) (0L..30L).map { today - 30 + it }.toSet()
+            else (1L..30L).filter { it % 7 != 3L && it % 11 != 0L }.map { today - 31 + it }.toSet()
         compose.setContent {
             MahjongTheme {
                 TodaysPuzzleScreen(

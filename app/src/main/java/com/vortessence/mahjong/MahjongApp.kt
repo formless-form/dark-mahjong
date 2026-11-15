@@ -211,6 +211,9 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         } else {
                             null
                         },
+                        brocade = progress.brocadeProgress(TodaysPuzzle.today()).let {
+                            if (BuildConfig.PERF_HOOKS && PerfSwitches.brocadeEarned) it.copy(earned = true) else it
+                        },
                         tipsAvailable = tips?.available == true,
                         tipOffers = tipOffers,
                         tipThanked = tipThanked,

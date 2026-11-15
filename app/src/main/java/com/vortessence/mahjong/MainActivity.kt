@@ -127,6 +127,9 @@ class MainActivity : ComponentActivity() {
         val perfPrefs = getSharedPreferences("perf", MODE_PRIVATE)
         intent?.getStringExtra("perfImperial")?.let { perfPrefs.edit().putBoolean("imperialEarned", it == "earned").apply() }
         PerfSwitches.imperialEarned = perfPrefs.getBoolean("imperialEarned", false)
+        // --es perfBrocade earned (or locked): the same for the silk brocade table
+        intent?.getStringExtra("perfBrocade")?.let { perfPrefs.edit().putBoolean("brocadeEarned", it == "earned").apply() }
+        PerfSwitches.brocadeEarned = perfPrefs.getBoolean("brocadeEarned", false)
         PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         val layout = intent?.getStringExtra("perfLayout") ?: return
         PerfSwitches.fireFps = intent.getIntExtra("perfFireFps", 0)

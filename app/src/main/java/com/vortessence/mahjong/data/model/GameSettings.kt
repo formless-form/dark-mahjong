@@ -7,6 +7,8 @@ enum class TableSurface(val displayName: String, val shortName: String) {
     WALNUT("Walnut", "Walnut"),
     THAI_STRAW("Thai straw", "Straw"),
     SLATE("Slate", "Slate"),
+    // The reward for solving every one of a month's daily puzzles
+    BROCADE("Silk brocade", "Brocade"),
 }
 
 // The tiles' set (TileKits): the classic ivory, or charcoal terrazzo, jade or wood with soft gold

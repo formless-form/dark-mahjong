@@ -74,6 +74,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.ui.components.TableSurfaceRenderer
+import com.vortessence.mahjong.data.model.BrocadeProgress
 import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.model.TileSuit
@@ -108,6 +110,9 @@ fun SettingsScreen(
     // Imperial, in a build that has its images: how far through the Journey the player is (it's
     // earned by finishing it). Null where the build has no Imperial images: it isn't offered
     imperial: ImperialProgress? = null,
+    // The silk brocade table: earned by solving every daily puzzle of a month, and this month's
+    // progress towards it. Null: not shown (previews of other things)
+    brocade: BrocadeProgress? = null,
     // Tips through Google Play (the Play build only, where the row always shows)
     tipsAvailable: Boolean = false,
     tipOffers: List<TipOffer> = emptyList(),
@@ -230,7 +235,14 @@ fun SettingsScreen(
                     { shapes ->
                         ChoiceRow(
                             shapes, Icons.Rounded.Texture, "Table surface", null,
-                            TableSurface.entries, { it.shortName }, settings.tableSurface,
+                            TableSurface.entries.filter { it != TableSurface.BROCADE }, { it.shortName }, settings.tableSurface,
+                            below = brocade?.let { b ->
+                                {
+                                    BrocadeChoice(b, settings.tableSurface == TableSurface.BROCADE) {
+                                        onSettingsChanged(settings.copy(tableSurface = TableSurface.BROCADE))
+                                    }
+                                }
+                            },
                         ) { onSettingsChanged(settings.copy(tableSurface = it)) }
                     },
                     tileSetRow,
@@ -585,6 +597,72 @@ private fun TileSetChoice(set: TileSet, chosen: Boolean, modifier: Modifier, onS
     }
 }
 
+private val BROCADE_SILVER = Color(0xFFB9C1D9)
+
+// The silk brocade table: the full width, under the other tables, a swatch of the cloth. Until
+// it's earned it's dimmed under a silver lock, with this month's daily puzzles so far
+@Composable
+private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: () -> Unit) {
+    val earned = progress.earned
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val monthName = progress.month.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+    val nextName = progress.month.plusMonths(1).month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
+        border = if (chosen && earned) BorderStroke(2.dp, BROCADE_SILVER) else null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .then(
+                if (earned) {
+                    Modifier.selectable(selected = chosen, role = Role.RadioButton, onClick = onSelect)
+                } else {
+                    Modifier.semantics(mergeDescendants = true) { stateDescription = "Locked" }
+                },
+            ),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxWidth().height(76.dp).clip(MaterialTheme.shapes.medium)) {
+                    drawRect(TableSurfaceRenderer.brocadeSwatch(size.width, size.height))
+                    if (!earned) drawRect(Color.Black.copy(alpha = 0.45f))
+                }
+                if (!earned) {
+                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
+                        Icon(Icons.Rounded.Lock, null, tint = BROCADE_SILVER, modifier = Modifier.padding(10.dp).size(26.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                TableSurface.BROCADE.displayName,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (!earned || chosen) BROCADE_SILVER else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                if (earned) "Earned with a month of daily puzzles" else "A silk table, earned by solving every daily puzzle in a month",
+                style = MaterialTheme.typography.bodySmall, color = muted, textAlign = TextAlign.Center,
+            )
+            if (!earned) {
+                Spacer(Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress = { if (progress.missed) 0f else progress.solved.toFloat() / progress.days.coerceAtLeast(1) },
+                    color = BROCADE_SILVER,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (progress.missed) "A day was missed in $monthName. $nextName starts afresh"
+                    else "${progress.solved} of ${progress.days} days in $monthName",
+                    style = MaterialTheme.typography.labelSmall, color = muted, textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
 /** How far through the Journey the player is, which earns Imperial: [cleared] of [levels]. */
 data class ImperialProgress(val cleared: Int, val levels: Int) {
     val earned: Boolean get() = cleared >= levels
@@ -673,6 +751,8 @@ private fun <T> ChoiceRow(
     choices: List<T>,
     label: (T) -> String,
     selected: T,
+    // Under the buttons, full width (the brocade table's card)
+    below: (@Composable () -> Unit)? = null,
     onSelect: (T) -> Unit,
 ) {
     Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
@@ -716,6 +796,10 @@ private fun <T> ChoiceRow(
                         Text(label(choice), maxLines = 1)
                     }
                 }
+            }
+            below?.let {
+                Spacer(Modifier.height(12.dp))
+                it()
             }
         }
     }

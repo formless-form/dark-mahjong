@@ -3,7 +3,9 @@ package com.vortessence.mahjong.screenshots
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.vortessence.mahjong.data.model.BrocadeProgress
 import com.vortessence.mahjong.data.model.GameSettings
+import com.vortessence.mahjong.data.model.TableSurface
 import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.ui.components.ImperialImages
 import com.vortessence.mahjong.ui.components.MenuFire
@@ -21,6 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.time.YearMonth
 
 /**
  * Settings with the choice of tile sets, as sample tiles or as a plain switch, on a screen tall
@@ -33,13 +36,17 @@ class TileSetSettingsPreview {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun shoot(samples: Boolean, set: TileSet, name: String, imperial: ImperialProgress? = null) {
+    private fun shoot(
+        samples: Boolean, set: TileSet, name: String, imperial: ImperialProgress? = null,
+        brocade: BrocadeProgress? = null, surface: TableSurface = TableSurface.GREEN_MAT,
+    ) {
         MenuFire.flickers = false
         TileWear.prepareNow()
         compose.setContent {
             MahjongTheme {
                 SettingsScreen(
-                    settings = GameSettings(tileSet = set), onSettingsChanged = {}, onBack = {}, tileSamples = samples, imperial = imperial,
+                    settings = GameSettings(tileSet = set, tableSurface = surface), onSettingsChanged = {}, onBack = {}, tileSamples = samples,
+                    imperial = imperial, brocade = brocade,
                 )
             }
         }
@@ -100,4 +107,18 @@ class TileSetSettingsPreview {
         assertFalse(ImperialImages.available)
         assertEquals(TileKits.IVORY, TileKits.of(TileSet.IMPERIAL))
     }
+
+    // The silk brocade table, under the other tables: on track this month, a day missed, and
+    // earned and chosen
+    @Test
+    fun brocadeLocked() = shoot(true, TileSet.IVORY, "brocade-locked", brocade = BrocadeProgress(false, 14, 30, YearMonth.of(2026, 11), false))
+
+    @Test
+    fun brocadeMissed() = shoot(true, TileSet.IVORY, "brocade-missed", brocade = BrocadeProgress(false, 12, 30, YearMonth.of(2026, 11), true))
+
+    @Test
+    fun brocadeEarned() = shoot(
+        true, TileSet.IVORY, "brocade-earned",
+        brocade = BrocadeProgress(true, 3, 31, YearMonth.of(2026, 12), false), surface = TableSurface.BROCADE,
+    )
 }

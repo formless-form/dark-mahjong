@@ -1,9 +1,13 @@
 package com.vortessence.mahjong.data.model
 
+import java.time.LocalDate
+import java.time.YearMonth
+
 /**
  * Everything Dark Mahjong records about the player: how far the level journey has got, which
  * boards have been cleared, and the days whose puzzle was solved (epoch days, for Today's Puzzle's
- * calendar). Deliberately no times, counts, scores or streaks.
+ * calendar). Deliberately no scores and no running streak: a month with every day's puzzle solved
+ * is sealed on the calendar, and the first earns the silk brocade table, for good.
  */
 data class Progress(
     val highestLevelReached: Int = 1,
@@ -22,7 +26,37 @@ data class Progress(
      * Counted by layout, so no reordering of the levels can change it: all of them earns Imperial.
      */
     fun journeyLevelsCleared(levelIds: List<String>): Int = levelIds.count { it in completedConstellations }
+
+    /** The months with every day's puzzle solved: sealed on the calendar. */
+    fun fullPuzzleMonths(): Set<YearMonth> =
+        puzzleDaysSolved.map { YearMonth.from(LocalDate.ofEpochDay(it)) }.toSet()
+            .filter { isFullPuzzleMonth(it) }.toSet()
+
+    fun isFullPuzzleMonth(month: YearMonth): Boolean =
+        (1..month.lengthOfMonth()).all { month.atDay(it).toEpochDay() in puzzleDaysSolved }
+
+    /** How far this month (the one [today], an epoch day, falls in) has got towards the brocade. */
+    fun brocadeProgress(today: Long): BrocadeProgress {
+        val date = LocalDate.ofEpochDay(today)
+        val month = YearMonth.from(date)
+        val solved = (1..month.lengthOfMonth()).count { month.atDay(it).toEpochDay() in puzzleDaysSolved }
+        // A day before today left unsolved: this month can't be full now
+        val missed = (1 until date.dayOfMonth).any { month.atDay(it).toEpochDay() !in puzzleDaysSolved }
+        return BrocadeProgress(fullPuzzleMonths().isNotEmpty(), solved, month.lengthOfMonth(), month, missed)
+    }
 }
+
+/**
+ * The silk brocade table, earned by solving every daily puzzle of a month: [earned] for good once
+ * one month was full; otherwise [solved] of this [month]'s [days], and whether a day was [missed].
+ */
+data class BrocadeProgress(
+    val earned: Boolean,
+    val solved: Int,
+    val days: Int,
+    val month: YearMonth,
+    val missed: Boolean,
+)
 
 /**
  * A layout's best clear: the cleanest (fewest hints and reshuffles, then fewest undos), and of

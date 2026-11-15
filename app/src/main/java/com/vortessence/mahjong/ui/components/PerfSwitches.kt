@@ -17,4 +17,8 @@ object PerfSwitches {
     /** Imperial shown as earned whatever the Journey's progress (perfImperial=earned, kept until perfImperial=locked), to try it. */
     @Volatile
     var imperialEarned = false
+
+    /** The silk brocade table shown as earned whatever the daily puzzles (perfBrocade=earned, kept until perfBrocade=locked). */
+    @Volatile
+    var brocadeEarned = false
 }
