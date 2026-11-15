@@ -714,7 +714,8 @@ half4 main(float2 p) {
     float3 l = normalize(float3(0.0, 0.6, $RELIEF_LAMP_HEIGHT));
     float3 c = elmWood(q * elmMm, fp * elmMm) * (0.4 + max(dot(n, l), 0.0)) / (0.4 + l.z);
     float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
-    float lamp = 0.7 + 1.5 * exp(-dot(d, d) * 2.5);
+    // The same lamp as the other tables' swatches (SWATCH_AGSL)
+    float lamp = 0.85 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
     return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
 }
 """
