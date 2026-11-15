@@ -8,6 +8,7 @@ import androidx.compose.ui.test.pinch
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.engine.MahjongGameEngine
 import com.vortessence.mahjong.ui.components.TileWear
@@ -30,7 +31,7 @@ class BrocadePreview {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun shoot(zoomed: Boolean = false) {
+    private fun shoot(zoomed: Boolean = false, surface: TableSurface = TableSurface.BROCADE, tiles: TileSet = TileSet.IVORY, name: String = "brocade") {
         TileWear.prepareNow()
         val n = ConstellationRepository.levelIndexOf("pillar_of_heaven")!!
         // Zoomed, only a few tiles stay, so the cloth under the lamp can be seen
@@ -41,7 +42,7 @@ class BrocadePreview {
                 GameScreen(
                     gameState = state,
                     levelIndex = n,
-                    settings = GameSettings(tableSurface = TableSurface.BROCADE, fireplaceLit = false),
+                    settings = GameSettings(tableSurface = surface, tileSet = tiles, fireplaceLit = false),
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
                     onReshuffle = {}, onNextLevel = {}, onMainMenu = {},
                 )
@@ -55,7 +56,7 @@ class BrocadePreview {
             }
             compose.waitForIdle()
         }
-        compose.onRoot().captureRoboImage("build/brocade/brocade${if (zoomed) "-zoomed" else ""}.png")
+        compose.onRoot().captureRoboImage("build/brocade/$name${if (zoomed) "-zoomed" else ""}.png")
     }
 
     @Test fun table() = shoot()

@@ -93,6 +93,12 @@ import com.vortessence.mahjong.ui.components.TileKits
 import com.vortessence.mahjong.ui.components.TipCard
 import com.vortessence.mahjong.ui.components.panel
 import com.vortessence.mahjong.ui.components.segmentColors
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.FilterQuality
+import com.vortessence.mahjong.ui.components.SettingsPreviews
 
 private typealias Segment = @Composable (ListItemShapes) -> Unit
 
@@ -227,26 +233,6 @@ fun SettingsScreen(
             SegmentedGroup(
                 listOfNotNull<@Composable (ListItemShapes) -> Unit>(
                     { shapes ->
-                        ToggleRow(
-                            shapes, Icons.Rounded.Speed, "Low-performance mode", "Turns off firelight and fireworks, for slower phones",
-                            settings.lowPerformance,
-                        ) { onSettingsChanged(settings.copy(lowPerformance = it)) }
-                    },
-                    { shapes ->
-                        ChoiceRow(
-                            shapes, Icons.Rounded.Texture, "Table surface", null,
-                            TableSurface.entries.filter { it != TableSurface.BROCADE }, { it.shortName }, settings.tableSurface,
-                            below = brocade?.let { b ->
-                                {
-                                    BrocadeChoice(b, settings.tableSurface == TableSurface.BROCADE) {
-                                        onSettingsChanged(settings.copy(tableSurface = TableSurface.BROCADE))
-                                    }
-                                }
-                            },
-                        ) { onSettingsChanged(settings.copy(tableSurface = it)) }
-                    },
-                    tileSetRow,
-                    { shapes ->
                         SliderRow(shapes, "Lamp brightness", settings.lampBrightness, onSettingsCommit) {
                             onSettingsPreview(settings.copy(lampBrightness = it))
                         }
@@ -273,7 +259,7 @@ fun SettingsScreen(
                     )
                 } else {
                     emptyList()
-                } + listOf<@Composable (ListItemShapes) -> Unit>(
+                } + listOfNotNull<@Composable (ListItemShapes) -> Unit>(
                     // Always shown: the menus crackle softly whether or not the fireplace is lit.
                     // While it's dragged the fire is heard as loud as at the table
                     { shapes ->
@@ -287,6 +273,16 @@ fun SettingsScreen(
                             onSettingsPreview(settings.copy(fireVolume = it))
                         }
                     },
+                    { shapes ->
+                        ToggleRow(
+                            shapes, Icons.Rounded.Speed, "Low-performance mode", "Turns off firelight and fireworks, for slower phones",
+                            settings.lowPerformance,
+                        ) { onSettingsChanged(settings.copy(lowPerformance = it)) }
+                    },
+                    tileSetRow,
+                    { shapes ->
+                        TableSurfaceRow(shapes, settings.tableSurface, brocade) { onSettingsChanged(settings.copy(tableSurface = it)) }
+                    },
                 ),
             )
 
@@ -298,6 +294,17 @@ fun SettingsScreen(
                 SectionHeader("Support")
                 SegmentedGroup(
                     listOfNotNull<Segment>(
+                        if (tipsAvailable) { shapes ->
+                            SegmentedListItem(
+                                onClick = { tipping = true; onTipOpened() },
+                                shapes = shapes,
+                                colors = segmentColors(),
+                                leadingContent = { LeadingIcon(Icons.Rounded.Favorite, color = Color(0xFFE5534B)) },
+                                supportingContent = { Text("Leave a tip if you're enjoying the game") },
+                            ) {
+                                Text("Support Dark Mahjong")
+                            }
+                        } else null,
                         if (onGooglePlay) { shapes ->
                             SegmentedListItem(
                                 onClick = { rateOnGooglePlay(context) },
@@ -318,17 +325,6 @@ fun SettingsScreen(
                                 supportingContent = { Text("Send a friend a link to the game") },
                             ) {
                                 Text("Share Dark Mahjong")
-                            }
-                        } else null,
-                        if (tipsAvailable) { shapes ->
-                            SegmentedListItem(
-                                onClick = { tipping = true; onTipOpened() },
-                                shapes = shapes,
-                                colors = segmentColors(),
-                                leadingContent = { LeadingIcon(Icons.Rounded.Favorite, color = Color(0xFFE5534B)) },
-                                supportingContent = { Text("Leave a tip if you're enjoying the game") },
-                            ) {
-                                Text("Support Dark Mahjong")
                             }
                         } else null,
                     ),
@@ -597,6 +593,53 @@ private fun TileSetChoice(set: TileSet, chosen: Boolean, modifier: Modifier, onS
     }
 }
 
+// The tables as cards, two by two as the tile sets are, each a lamp-lit swatch of its surface, and
+// the silk brocade under them, the full width
+@Composable
+private fun TableSurfaceRow(shapes: ListItemShapes, selected: TableSurface, brocade: BrocadeProgress?, onSelect: (TableSurface) -> Unit) {
+    Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LeadingIcon(Icons.Rounded.Texture)
+                Spacer(Modifier.width(16.dp))
+                Text("Table surface", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+            Spacer(Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TableSurface.entries.filter { it != TableSurface.BROCADE }.chunked(2).forEach { pair ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        pair.forEach { t -> TableSurfaceChoice(t, t == selected, Modifier.weight(1f)) { onSelect(t) } }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                brocade?.let { BrocadeChoice(it, selected == TableSurface.BROCADE) { onSelect(TableSurface.BROCADE) } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TableSurfaceChoice(surface: TableSurface, chosen: Boolean, modifier: Modifier, onSelect: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
+        border = if (chosen) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = modifier
+            .clip(MaterialTheme.shapes.large)
+            .selectable(selected = chosen, role = Role.RadioButton, onClick = onSelect),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(12.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(SettingsPreviews.HEIGHT).clip(MaterialTheme.shapes.medium)) { drawSwatch(surface) }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                surface.shortName,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
 private val BROCADE_SILVER = Color(0xFFB9C1D9)
 
 // The silk brocade table: the full width, under the other tables, a swatch of the cloth. Until
@@ -624,8 +667,8 @@ private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: 
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxWidth().height(76.dp).clip(MaterialTheme.shapes.medium)) {
-                    drawRect(TableSurfaceRenderer.brocadeSwatch(size.width, size.height))
+                Canvas(Modifier.fillMaxWidth().height(SettingsPreviews.HEIGHT).clip(MaterialTheme.shapes.medium)) {
+                    drawSwatch(TableSurface.BROCADE)
                     if (!earned) drawRect(Color.Black.copy(alpha = 0.45f))
                 }
                 if (!earned) {
@@ -641,7 +684,7 @@ private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: 
                 color = if (!earned || chosen) BROCADE_SILVER else MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                if (earned) "Earned with a month of daily puzzles" else "A silk table, earned by solving every daily puzzle in a month",
+                if (earned) "Earned with a month of daily puzzles" else "An elegant silk tablecloth, earned by solving every daily puzzle in a month",
                 style = MaterialTheme.typography.bodySmall, color = muted, textAlign = TextAlign.Center,
             )
             if (!earned) {
@@ -739,7 +782,26 @@ private fun TileSamples(kit: TileKit, modifier: Modifier, tiles: List<Tile> = SA
     }
 }
 
-private val SAMPLE_TILES = listOf(Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3))
+private val SAMPLE_TILES = SampleStrip.SETTINGS_TILES
+
+// A table's swatch: its picture made ahead (SettingsPreviews), the middle of it as wide as the
+// card, or until that's made, drawn here by its shader
+private fun DrawScope.drawSwatch(surface: TableSurface) {
+    val image = TableSurfaceRenderer.swatchImage(surface)
+    if (image == null) {
+        drawRect(TableSurfaceRenderer.swatch(surface, size.width, size.height))
+        return
+    }
+    val k = image.height / size.height
+    val w = (size.width * k).coerceAtMost(image.width.toFloat())
+    drawImage(
+        image,
+        srcOffset = IntOffset(((image.width - w) / 2f).roundToInt(), 0),
+        srcSize = IntSize(w.roundToInt(), image.height),
+        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+        filterQuality = FilterQuality.High,
+    )
+}
 
 // A choice of a few: a connected button group, the chosen one filled in and fully rounded
 @Composable
@@ -751,8 +813,6 @@ private fun <T> ChoiceRow(
     choices: List<T>,
     label: (T) -> String,
     selected: T,
-    // Under the buttons, full width (the brocade table's card)
-    below: (@Composable () -> Unit)? = null,
     onSelect: (T) -> Unit,
 ) {
     Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
@@ -796,10 +856,6 @@ private fun <T> ChoiceRow(
                         Text(label(choice), maxLines = 1)
                     }
                 }
-            }
-            below?.let {
-                Spacer(Modifier.height(12.dp))
-                it()
             }
         }
     }

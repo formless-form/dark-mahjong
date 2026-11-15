@@ -29,6 +29,9 @@ object SampleStrip {
     /** A tile's height in the picture, in pixels: shown smaller, so it stays sharp. */
     const val TILE_HEIGHT = 320
 
+    /** The tiles each set shows in Settings. */
+    val SETTINGS_TILES = listOf(Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3))
+
     /** Imperial's ready-made picture, made from its images (ImperialSettingsSamples, a Play-build test). */
     const val IMPERIAL_ASSET = "imperial/settings-samples.webp"
 

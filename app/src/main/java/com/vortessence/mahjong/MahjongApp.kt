@@ -50,6 +50,10 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
+import com.vortessence.mahjong.ui.components.SettingsPreviews
 
 @Composable
 fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = null) {
@@ -62,6 +66,15 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     // Imperial chosen: its images start loading as the game opens, so its tiles are ready to draw
     LaunchedEffect(settings.tileSet) {
         if (settings.tileSet == TileSet.IMPERIAL && ImperialImages.available) ImperialImages.loadSoon()
+    }
+    // Settings' tile samples and table swatches, made ahead a little after the app opens
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    LaunchedEffect(Unit) {
+        with(density) {
+            val width = maxOf(configuration.screenWidthDp, configuration.screenHeightDp).dp.roundToPx()
+            SettingsPreviews.make(width, SettingsPreviews.HEIGHT.roundToPx())
+        }
     }
     val continueInfo by viewModel.continueInfo.collectAsStateWithLifecycle()
     val tutorialStep by viewModel.tutorialStep.collectAsStateWithLifecycle()

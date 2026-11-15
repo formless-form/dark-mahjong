@@ -110,13 +110,16 @@ class TileSetSettingsPreview {
 
     // The silk brocade table, under the other tables: on track this month, a day missed, and
     // earned and chosen
-    @Test
+    // Taller, so the brocade card under the table row is in the picture
+    @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun brocadeLocked() = shoot(true, TileSet.IVORY, "brocade-locked", brocade = BrocadeProgress(false, 14, 30, YearMonth.of(2026, 11), false))
 
-    @Test
+    // Taller, so the brocade card under the table row is in the picture
+    @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun brocadeMissed() = shoot(true, TileSet.IVORY, "brocade-missed", brocade = BrocadeProgress(false, 12, 30, YearMonth.of(2026, 11), true))
 
-    @Test
+    // Taller, so the brocade card under the table row is in the picture
+    @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun brocadeEarned() = shoot(
         true, TileSet.IVORY, "brocade-earned",
         brocade = BrocadeProgress(true, 3, 31, YearMonth.of(2026, 12), false), surface = TableSurface.BROCADE,

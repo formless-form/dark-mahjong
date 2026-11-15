@@ -25,6 +25,14 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.vortessence.mahjong.data.model.TableSurface
 import kotlin.math.exp
 import kotlin.math.max
+import android.graphics.ColorSpace
+import android.graphics.HardwareRenderer
+import android.graphics.PixelFormat
+import android.graphics.RenderNode
+import android.hardware.HardwareBuffer
+import android.media.ImageReader
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 
 /**
  * Draws the tabletop: procedural green felt, walnut, Thai straw mat (redrawn from measurements
@@ -466,25 +474,80 @@ half4 main(float2 p) {
     }
 
     /**
-     * A swatch of the silk brocade, flat and lit warm in the middle, as Settings shows it: the
-     * cloth itself, without the table's shadows or fire.
+     * A swatch of a table's surface, flat and lit warm in the middle, as Settings shows it: the
+     * surface itself, without the table's shadows or fire.
      */
-    fun brocadeSwatch(width: Float, height: Float): ShaderBrush {
-        val s = swatchShader ?: RuntimeShader(SWATCH_AGSL).also { swatchShader = it }
+    fun swatch(surface: TableSurface, width: Float, height: Float): ShaderBrush {
+        val s = swatchShaders.getOrPut(surface) { RuntimeShader(SWATCH_AGSL) }
         s.setFloatUniform("res", width, height)
+        s.setFloatUniform("mode", surface.ordinal.toFloat())
         return ShaderBrush(s)
     }
 
-    private var swatchShader: RuntimeShader? = null
+    private val swatchShaders = HashMap<TableSurface, RuntimeShader>()
+    private val swatchImages = HashMap<TableSurface, ImageBitmap>()
+
+    /** [surface]'s swatch as made by [prerenderSwatch], or null if it hasn't been. */
+    fun swatchImage(surface: TableSurface): ImageBitmap? = swatchImages[surface]
+
+    /**
+     * Draws [surface]'s swatch, [width] x [height] pixels, once, on the GPU into a picture kept
+     * for Settings (SettingsPreviews), so its shader isn't compiled and run as Settings opens.
+     * Where the GPU can't be drawn to like this, Settings draws the shader itself.
+     */
+    fun prerenderSwatch(surface: TableSurface, width: Int, height: Int) {
+        if (surface in swatchImages || width <= 0 || height <= 0) return
+        val shader = RuntimeShader(SWATCH_AGSL)
+        shader.setFloatUniform("res", width.toFloat(), height.toFloat())
+        shader.setFloatUniform("mode", surface.ordinal.toFloat())
+        val reader = ImageReader.newInstance(
+            width, height, PixelFormat.RGBA_8888, 1,
+            HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE or HardwareBuffer.USAGE_GPU_COLOR_OUTPUT,
+        )
+        val renderer = HardwareRenderer()
+        try {
+            val node = RenderNode("swatch").apply { setPosition(0, 0, width, height) }
+            node.beginRecording().drawRect(0f, 0f, width.toFloat(), height.toFloat(), android.graphics.Paint().apply { this.shader = shader })
+            node.endRecording()
+            renderer.setSurface(reader.surface)
+            renderer.setContentRoot(node)
+            renderer.createRenderRequest().setWaitForPresent(true).syncAndDraw()
+            reader.acquireNextImage()?.use { image ->
+                image.hardwareBuffer?.use { buffer ->
+                    android.graphics.Bitmap.wrapHardwareBuffer(buffer, ColorSpace.get(ColorSpace.Named.SRGB))
+                        ?.let { swatchImages[surface] = it.asImageBitmap() }
+                }
+            }
+        } catch (e: RuntimeException) {
+            // Left to Settings to draw
+        } finally {
+            renderer.destroy()
+            reader.close()
+        }
+    }
 
     private const val SWATCH_AGSL = """
 uniform float2 res;
+uniform float mode;     // TableSurface order, as ALBEDO_AGSL
 $SURFACES_AGSL
+$STONE_AGSL
+$SLATE_TABLE_AGSL
 half4 main(float2 p) {
-    // A little closer than the table seen whole, so the fret reads at the swatch's size
+    // A little closer than the table seen whole, so each surface's pattern reads at the swatch's size
     float scale = 0.2;
     float2 q = float2(p.x - 0.5 * res.x, 0.5 * res.y - p.y) / res.y * scale;
-    float3 c = silkBrocade(q, scale / res.y);
+    float fp = scale / res.y;
+    float3 c;
+    if (mode < 0.5) c = felt(q, fp);
+    else if (mode < 1.5) c = walnut(q * 1.2, fp * 1.2);
+    else if (mode < 2.5) c = straw(q * 1.1, fp * 1.1);
+    else if (mode < 3.5) {
+        // Slate's relief raked by a low lamp from up the table, as on the table
+        float e = max(fp, 1e-5) * SLATE_SCALE;
+        float3 n = stoneNormal(q * SLATE_SCALE, e, e);
+        float lit = SLATE_LAMP_EVEN + (1.0 - SLATE_LAMP_EVEN) * 2.0 * max(dot(n, normalize(float3(0.0, 0.6, SLATE_LAMP_HEIGHT))), 0.0);
+        c = stoneColour(q * SLATE_SCALE) * SLATE_GAIN * lit;
+    } else c = silkBrocade(q, fp);
     float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
     float lamp = 0.7 + 1.5 * exp(-dot(d, d) * 2.5);
     return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);

@@ -5,7 +5,7 @@ package com.vortessence.mahjong.data.model
 enum class TableSurface(val displayName: String, val shortName: String) {
     GREEN_MAT("Green mat", "Felt"),
     WALNUT("Walnut", "Walnut"),
-    THAI_STRAW("Thai straw", "Straw"),
+    THAI_STRAW("Thai straw", "Thai Straw Mat"),
     SLATE("Slate", "Slate"),
     // The reward for solving every one of a month's daily puzzles
     BROCADE("Silk brocade", "Brocade"),
