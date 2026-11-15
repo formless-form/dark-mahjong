@@ -32,7 +32,11 @@ object SampleStrip {
     /** The tiles each set shows in Settings. */
     val SETTINGS_TILES = listOf(Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3))
 
-    /** Imperial's ready-made picture, made from its images (ImperialSettingsSamples, a Play-build test). */
+    /**
+     * Imperial's ready-made picture, made from its images (ImperialSettingsSamples, a Play-build
+     * test) and saved as lossless WebP, every pixel as drawn (Gareth, 2026-11-15: no compression
+     * artifacts; lossless AVIF showed green on the Pixel)
+     */
     const val IMPERIAL_ASSET = "imperial/settings-samples.webp"
 
     /** The tiles Imperial shows, across the full width. */

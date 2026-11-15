@@ -549,7 +549,8 @@ half4 main(float2 p) {
         c = stoneColour(q * SLATE_SCALE) * SLATE_GAIN * lit;
     } else c = silkBrocade(q, fp);
     float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
-    float lamp = 0.7 + 1.5 * exp(-dot(d, d) * 2.5);
+    // 15% less lit than first made (Gareth, 2026-11-15)
+    float lamp = 0.85 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
     return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
 }
 """

@@ -88,13 +88,13 @@ class TileSetSettingsPreview {
         return ImperialImages.available && ImperialImages.load() != null
     }
 
-    @Test
+    @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun imperialLocked() {
         assumeTrue("The Imperial images are not in this build", imperial())
         shoot(true, TileSet.JADE, "imperial-locked", ImperialProgress(36, 100))
     }
 
-    @Test
+    @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun imperialEarned() {
         assumeTrue("The Imperial images are not in this build", imperial())
         shoot(true, TileSet.IMPERIAL, "imperial-earned", ImperialProgress(100, 100))

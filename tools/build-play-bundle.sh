@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 # .git/info/exclude), so a checkout can lack them: without them the game quietly leaves Imperial
 # out, so a release must not be built without the full set: 12 bodies and 42 faces, each with
 # its surface map, and the ready-made picture of its tiles for Settings (made by
-# ImperialSettingsSamples, a Play-build test)
+# ImperialSettingsSamples, a Play-build test, saved as lossless WebP by tools/imperial-samples-webp.sh)
 IMPERIAL="app/src/play/assets/imperial"
 pictures=$(find "$IMPERIAL" -maxdepth 1 -name '*.webp' ! -name '*-surface.webp' 2>/dev/null | wc -l)
 maps=$(find "$IMPERIAL" -maxdepth 1 -name '*-surface.webp' 2>/dev/null | wc -l)
