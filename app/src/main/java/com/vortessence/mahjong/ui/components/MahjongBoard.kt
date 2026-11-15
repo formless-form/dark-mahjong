@@ -81,7 +81,6 @@ import com.vortessence.mahjong.data.model.BoardTile
 import com.vortessence.mahjong.data.model.TilePosition
 import com.vortessence.mahjong.data.model.GameSettings
 import com.vortessence.mahjong.data.model.GameState
-import com.vortessence.mahjong.data.model.TableSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -451,23 +450,24 @@ private fun BoardContent(
     }
     // For the layers drawn each frame
     val layerPaint = remember { Paint() }
-    // The slate's surface map, which way each spot of it faces, so the lamp and the fire catch
-    // its ridges: worked out on the GPU for the view once it settles (as the table's colour is
-    // drawn afresh), and kept, still placed right, while the view moves
+    // A table with a relief (slate, elm wood): its surface map, which way each spot of it
+    // faces, so the lamp and the fire catch its ridges: worked out on the GPU for the view once
+    // it settles (as the table's colour is drawn afresh), and kept, still placed right, while
+    // the view moves
     val surfaceLayer = rememberGraphicsLayer()
-    var slateSurface by remember { mutableStateOf<TableSurfaceRenderer.SlateSurface?>(null) }
+    var tableRelief by remember { mutableStateOf<TableSurfaceRenderer.Relief?>(null) }
     val layoutDirection = LocalLayoutDirection.current
     val boardHeight = canvasH + with(density) { bottomOverlap.toPx() }
-    LaunchedEffect(settings.tableSurface, canvasW, boardHeight, viewSettled) {
-        if (settings.tableSurface != TableSurface.SLATE) {
-            slateSurface = null
+    LaunchedEffect(settings.tableSurface, canvasW, boardHeight, viewSettled, baseTransform.tileWidth) {
+        if (!TableSurfaceRenderer.hasRelief(settings.tableSurface)) {
+            tableRelief = null
             return@LaunchedEffect
         }
-        if (!viewSettled && (slateSurface != null)) return@LaunchedEffect
-        TableSurfaceRenderer.bakeSlateSurface(
-            surfaceLayer, density, layoutDirection, IntSize(canvasW.roundToInt(), boardHeight.roundToInt()),
-            canvasW, canvasH, zoom, pan,
-        )?.let { slateSurface = it }
+        if (!viewSettled && (tableRelief?.surface == settings.tableSurface)) return@LaunchedEffect
+        TableSurfaceRenderer.bakeRelief(
+            settings.tableSurface, surfaceLayer, density, layoutDirection,
+            IntSize(canvasW.roundToInt(), boardHeight.roundToInt()), canvasW, canvasH, zoom, pan, baseTransform.tileWidth,
+        )?.let { tableRelief = it }
     }
     val tapAt = { offset: Offset ->
         // Back through the zoom and the camera to the flat layout
@@ -555,6 +555,7 @@ private fun BoardContent(
             // is drawn afresh once the view settles)
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableAlbedo(
                 this, tableAlbedo, settings.tableSurface, canvasW, canvasH, context, zoom, pan, viewSettled,
+                tile = baseTransform.tileWidth,
             )
             drawContext.canvas.save()
             drawContext.canvas.translate(pan.x, pan.y)
@@ -574,7 +575,7 @@ private fun BoardContent(
                 shadowMap = placedShadows,
                 fireShadows = tracedShadows,
                 cullUnder = shadowsFresh,
-                slateSurface = slateSurface,
+                relief = tableRelief,
             )
             TileRenderer.TileAtlas.screenScale = zoom * TableCamera.nearEdgeScale()
 

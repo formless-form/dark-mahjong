@@ -96,6 +96,7 @@ class ScreenshotTour {
     @Test fun tabletopWalnut() = tabletop(TableSurface.WALNUT)
     @Test fun tabletopThaiStraw() = tabletop(TableSurface.THAI_STRAW)
     @Test fun tabletopSlate() = tabletop(TableSurface.SLATE)
+    @Test fun tabletopElmWood() = tabletop(TableSurface.ELM_WOOD)
 
     @Composable
     private fun TitleScreen(style: TitleMenuStyle = TitleMenuStyle.SANS) = MainMenuScreen(
@@ -520,6 +521,7 @@ class ScreenshotTour {
     @Test fun gameWalnut() { game(TableSurface.WALNUT, 11); shoot("game_walnut") }
     @Test fun gameThaiStraw() { game(TableSurface.THAI_STRAW, 12); shoot("game_thai_straw") }
     @Test fun gameSlate() { game(TableSurface.SLATE, 8); shoot("game_slate") }
+    @Test fun gameElmWood() { game(TableSurface.ELM_WOOD, 9); shoot("game_elm_wood") }
 
     // Pinched in to about 2.2x near the top of the board: the zoom-out button appears
     @Test

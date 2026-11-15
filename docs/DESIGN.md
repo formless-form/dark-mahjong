@@ -92,6 +92,11 @@ A family of **AGSL fragment shaders**, one palette per journey chapter: e.g. mid
     - **Weave:** tightly packed reed spindles about 11.5 strand-widths long with slightly staggered pointed tips, binding thread glimpsed between the tips.
     - **Pattern:** straw/jade stripe bands, rose separator rows, and rose motif rows with stepped blocks.
     - **Wear:** sun-faded scuffed patches, the odd frayed reed, faint stains with tide-marks, and loose fibres.
+  - **Elm Wood:** honey-brown elm boards, 70 mm wide, running away up the table, each cut from its own part of the tree. The grain loops and swirls round eyes, as elm's does.
+    - **Life-size:** it is drawn in millimetres against the tiles (a tile is 24 mm wide on the whole board), so rings lie about 3 mm apart whatever the level.
+    - **One field:** how many growth rings have been crossed at each point gives both the colour and the surface. Rings follow its contours, crowding where it climbs and opening out where it levels.
+    - **Surface map:** brushed, so every ring stands as a slight ridge and the boards' edges are barely eased. It is worked out once per view, like the colour, and the lamp and the fire rake across it. The oiled finish breaks the lamp's reflection up along the ridges.
+    - **Rough, not plastic:** no two rings the same width, ridges that swell and sink, fibres, open pores, grit and mottling, each coming in as the view closes on it.
 
 ### Winning: fireworks and a warm message
 

@@ -7,6 +7,8 @@ enum class TableSurface(val displayName: String, val shortName: String) {
     WALNUT("Walnut", "Walnut"),
     THAI_STRAW("Thai straw", "Thai Straw Mat"),
     SLATE("Slate", "Slate"),
+    // Elm boards, honey brown, the grain looping round its eyes (Gareth, 2026-11-15)
+    ELM_WOOD("Elm wood", "Elm Wood"),
     // The reward for solving every one of a month's daily puzzles
     BROCADE("Silk brocade", "Brocade"),
 }

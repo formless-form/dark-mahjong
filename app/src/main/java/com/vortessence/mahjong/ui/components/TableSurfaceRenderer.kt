@@ -36,7 +36,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 
 /**
  * Draws the tabletop: procedural green felt, walnut, Thai straw mat (redrawn from measurements
- * of a real woven sedge mat), the menus' slate or silk brocade (earned with the daily puzzles), seen through [TableCamera]'s tilted perspective and lit
+ * of a real woven sedge mat), the menus' slate, elm wood boards or silk brocade (earned with the daily puzzles), seen through [TableCamera]'s tilted perspective and lit
  * by a single warm lamp above the middle of the table, with the room falling away into darkness
  * around it. Its colour never changes, so it is drawn once and kept; only its light is worked out
  * each frame.
@@ -70,7 +70,7 @@ float2 tablePoint(float2 p, out float fp) {
      * size or surface changes.
      */
     private const val ALBEDO_AGSL = """
-uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat, 3 slate, 4 silk brocade (TableSurface order)
+uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat, 3 slate, 5 silk brocade (TableSurface order; 4, the elm wood, has its own shader, ELM_ALBEDO_AGSL)
 const float WALNUT_SCALE = 1.2;
 const float STRAW_SCALE = 1.1;
 $CAMERA_AGSL
@@ -94,6 +94,23 @@ half4 main(float2 p) {
 """
 
     /**
+     * The elm wood's own colour, as [ALBEDO_AGSL]: life-size against the tiles, its relief lit as
+     * the slate's (ELM_SURFACE_AGSL). A shader of its own: it is the costliest table to draw, and
+     * in one shader with the others every table would carry it wherever a shader's branches are
+     * all worked out (the JVM's renders, some phones).
+     */
+    private const val ELM_ALBEDO_AGSL = """
+$CAMERA_AGSL
+$SURFACES_AGSL
+$ELM_WOOD_AGSL
+half4 main(float2 p) {
+    float fp;
+    float2 q = tablePoint((p - pan) / zoom, fp);
+    return half4(half3(elmWood(q * elmMm, fp * elmMm)), 1.0);
+}
+"""
+
+    /**
      * The slate tabletop's surface: which way it faces at each screen pixel (0.5 + 0.5 n, n with
      * x right, y up the table, z up), worked out once for a view, as its colour is, so the lamp
      * and the fire can catch its ridges each frame (TABLE_LIGHT_AGSL).
@@ -113,6 +130,41 @@ half4 main(float2 p) {
 }
 """
 
+    /** The elm wood's surface, as the slate's: its rings' ridges and grooves, and its boards' eased edges. */
+    private const val ELM_SURFACE_AGSL = """
+$CAMERA_AGSL
+$SURFACES_AGSL
+$ELM_WOOD_AGSL
+half4 main(float2 p) {
+    float fp;
+    float2 q = tablePoint((p - pan) / zoom, fp);
+    float3 n = elmWoodNormal(q * elmMm, fp * elmMm);
+    return half4(half3(n * 0.5 + 0.5), 1.0);
+}
+"""
+
+    /**
+     * A surface map in the table's light and its reflections: which way the table faces under an
+     * unzoomed canvas point, level where there is no map.
+     */
+    private const val RELIEF_AGSL = """
+uniform shader surface;      // the table's surface map (SLATE_SURFACE_AGSL, ELM_SURFACE_AGSL) for the view it was made for
+uniform float4 surfaceXform; // unzoomed canvas point to that map's pixel: scale x, y, then offset x, y
+uniform float2 surfaceSize;  // that map's size in pixels
+uniform float relief;        // 1 on a surface with a map, whose ridges catch the lamp and the fire
+uniform float3 reliefLight;  // the lamp's height for the relief, in table heights; the share of its light whichever way the surface faces; and of the fire's
+float3 surfaceNormal(float2 p) {
+    if (relief < 0.5) return float3(0.0, 0.0, 1.0);
+    // Where a pinch or pan has moved past the map (made for the view before), the surface is
+    // lit as level, fading in over a few pixels, rather than smearing the map's edge into
+    // streaks; it is made afresh once the view settles
+    float2 at = p * surfaceXform.xy + surfaceXform.zw;
+    float2 inside = min(at, surfaceSize - at);
+    float cover = clamp(min(inside.x, inside.y) / 8.0, 0.0, 1.0);
+    return normalize(mix(float3(0.0, 0.0, 1.0), surface.eval(at).rgb * 2.0 - 1.0, cover));
+}
+"""
+
     /**
      * The light on the table, multiplied over its colour every frame: the lamp's pool, the
      * firelight and its traced shadows, the table's ambient occlusion, the screen's vignette and
@@ -122,11 +174,7 @@ half4 main(float2 p) {
     private const val TABLE_LIGHT_AGSL = """
 $CAMERA_AGSL
 $FLAME_AGSL
-$SLATE_TABLE_AGSL
-uniform shader surface;      // the slate's surface (SLATE_SURFACE_AGSL) for the view it was made for
-uniform float4 surfaceXform; // unzoomed canvas point to that map's pixel: scale x, y, then offset x, y
-uniform float2 surfaceSize;  // that map's size in pixels
-uniform float relief;        // 1 on slate, whose ridges catch the lamp and the fire
+$RELIEF_AGSL
 // How much brighter (or darker) a surface facing n is than a flat one, in light from direction
 // l: a share of the light whatever it faces ([even]), the rest as it turns towards the light
 float facing(float3 n, float3 l, float even) {
@@ -139,20 +187,15 @@ half4 main(float2 p) {
     float2 lq = fromLamp(q, LAMP_AT) * float2(1.0, 0.85);
     float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
     float fire = fireShadow(q, 0.0);
-    // Slate's relief: lit as in the menus by a lamp low enough to rake it, and by the fire, which
-    // burns low beside the table, so ridges turned towards it catch its flicker
+    // A surface's relief (slate, elm wood): lit as in the menus by a lamp low enough to rake
+    // it, and by the fire, which burns low beside the table, so ridges turned towards it catch
+    // its flicker
     float lampFacing = 1.0;
     float fireFacing = 1.0;
     if (relief > 0.5) {
-        // Where a pinch or pan has moved past the map (made for the view before), the stone is
-        // lit as level, fading in over a few pixels, rather than smearing the map's edge into
-        // streaks; it is made afresh once the view settles
-        float2 sp = p * surfaceXform.xy + surfaceXform.zw;
-        float2 inside = min(sp, surfaceSize - sp);
-        float cover = clamp(min(inside.x, inside.y) / 8.0, 0.0, 1.0);
-        float3 n = normalize(mix(float3(0.0, 0.0, 1.0), surface.eval(sp).rgb * 2.0 - 1.0, cover));
-        lampFacing = facing(n, normalize(float3(lampAt(LAMP_AT) - q, SLATE_LAMP_HEIGHT)), SLATE_LAMP_EVEN);
-        fireFacing = min(facing(n, normalize(float3(flame.xy - q, flameHeight)), SLATE_FIRE_EVEN), 3.0);
+        float3 n = surfaceNormal(p);
+        lampFacing = facing(n, normalize(float3(lampAt(LAMP_AT) - q, reliefLight.x)), reliefLight.y);
+        fireFacing = min(facing(n, normalize(float3(flame.xy - q, flameHeight)), reliefLight.z), 3.0);
     }
     // In the fire's shadow, some of the lamp's light is lost too, so shadows read deeper
     float3 c = (lampLevel * pool * (1.0 - 0.5 * (1.0 - fire)) * LAMP_ON_TABLE * lampFacing
@@ -174,20 +217,34 @@ half4 main(float2 p) {
     private const val TABLE_GLOSS_AGSL = """
 uniform float gloss;
 uniform float grained;  // 1 for walnut: its grain breaks up the reflection
+uniform float2 polish;  // a polished relief (elm wood): how far its slopes throw the reflections aside, and how brightly its crests shine
 $CAMERA_AGSL
 $FLAME_AGSL
 $SURFACES_AGSL
+$RELIEF_AGSL
+// From the table towards the eye: the camera's tilt from overhead (TableCamera)
+const float3 TO_EYE = float3(0.0, -0.342, 0.940);
 half4 main(float2 p) {
     float fp;
     float2 q = tablePoint(p, fp);
     if (underTiles(q)) return half4(0.0, 0.0, 0.0, 1.0);
+    float3 n = surfaceNormal(p);
     // Glossy surfaces reflect the lamp a little beyond it, stretched by the low viewing angle,
-    // and the fire just in front of its flames
-    float2 m = fromLamp(q, LAMP_MIRROR) * float2(3.4, 1.3);
-    float2 mc = (q - flame.xy + float2(0.0, 0.05)) * float2(3.4 / flameSpread, 2.2);
+    // and the fire just in front of its flames; a polished relief's slopes each find their
+    // reflection a little aside, so it breaks up along the ridges
+    float2 thrown = q + n.xy * polish.x;
+    float2 m = fromLamp(thrown, LAMP_MIRROR) * float2(3.4, 1.3);
+    float2 mc = (thrown - flame.xy + float2(0.0, 0.05)) * float2(3.4 / flameSpread, 2.2);
     float grain = grained > 0.5 ? 0.75 + 0.5 * vnoise(q * 1.2 * float2(60.0, 6.0)) : 1.0;
     float3 c = gloss * grain * (lampLevel * exp(-dot(m, m) * 5.0) * 0.24 * LAMP_ON_TABLE
         + 0.85 * flame.z * exp(-dot(mc, mc) * 4.0) * flameColour * float3(0.26, 0.24, 0.2));
+    // ...and its crests, turned halfway between the lamp and the eye, shine across the lamp's pool
+    if (polish.y > 0.0 && relief > 0.5) {
+        float2 lq = fromLamp(q, LAMP_AT) * float2(1.0, 0.85);
+        float pool = 0.12 + 0.95 * exp(-dot(lq, lq) * 2.6);
+        float3 h = normalize(normalize(float3(lampAt(LAMP_AT) - q, reliefLight.x)) + TO_EYE);
+        c += polish.y * lampLevel * pool * pow(max(dot(n, h), 0.0), 64.0) * LAMP_ON_TABLE;
+    }
     float2 sp = p * zoom + pan;
     float2 e = (sp / res - 0.5) * float2(1.25, 1.0);
     c *= mix(0.55, 1.0, smoothstep(0.75, 0.2, length(e))) * 0.9;
@@ -199,12 +256,16 @@ half4 main(float2 p) {
     /** The board's cached table colour: a layer, and the table and view it was drawn for. */
     class AlbedoCache(val layer: GraphicsLayer) {
         internal var shader: RuntimeShader? = null
+        // The AGSL [shader] was made from: the elm wood has its own
+        internal var shaderOf: String? = null
         internal var surface: TableSurface? = null
         internal var width = 0f
         internal var height = 0f
         internal var size = IntSize.Zero
         internal var zoom = 1f
         internal var pan = Offset.Zero
+        // The tiles' width on the table, which sets the elm wood's size
+        internal var tile = 0f
         // How far the layer reaches beyond the screen on each side, in pixels
         internal var margin = IntOffset.Zero
 
@@ -219,12 +280,65 @@ half4 main(float2 p) {
         }
     }
 
-    /** The slate's surface map for the view it was made for (SLATE_SURFACE_AGSL), and where it lies. */
-    class SlateSurface internal constructor(internal val shader: BitmapShader, internal val xform: FloatArray, internal val width: Float, internal val height: Float)
+    /**
+     * A table's surface map for the view it was made for (SLATE_SURFACE_AGSL, ELM_SURFACE_AGSL),
+     * and where it lies.
+     */
+    class Relief internal constructor(
+        val surface: TableSurface,
+        internal val shader: BitmapShader,
+        internal val xform: FloatArray,
+        internal val width: Float,
+        internal val height: Float,
+    )
+
+    /** [surface] has a relief, lit through a surface map ([bakeRelief]). */
+    fun hasRelief(surface: TableSurface) = surface == TableSurface.SLATE || surface == TableSurface.ELM_WOOD
+
+    /** A real tile's width in millimetres: the elm wood is drawn life-size against the tiles. */
+    const val TILE_MM = 24f
+
+    // Millimetres to a table height on a usual board (a tile about 0.04 of it), where none says
+    private const val USUAL_TABLE_MM = 600f
+
+    // Millimetres to a table height, on a table [height] pixels high whose tiles are [tile] wide
+    private fun tableMm(tile: Float, height: Float) = if (tile > 0f) TILE_MM * height / tile else USUAL_TABLE_MM
+
+    /**
+     * For the JVM's renders (previews), which can't read a layer back: the surface map is drawn
+     * on the CPU instead, so a relief shows in them.
+     */
+    var softwareRelief = false
+
+    private fun setElmUniforms(s: RuntimeShader, mm: Float) {
+        s.setFloatUniform("elmMm", mm)
+    }
+
+    // How a surface's relief takes the light: the lamp's height for it (table heights), then the
+    // share of the lamp's light and of the fire's that falls whichever way the surface faces
+    private fun reliefLight(surface: TableSurface): FloatArray = when (surface) {
+        TableSurface.ELM_WOOD -> floatArrayOf(ELM_LAMP_HEIGHT, ELM_LAMP_EVEN, ELM_FIRE_EVEN)
+        else -> floatArrayOf(RELIEF_LAMP_HEIGHT, SLATE_LAMP_EVEN, SLATE_FIRE_EVEN)
+    }
+
+    private fun setReliefUniforms(s: RuntimeShader, surface: TableSurface, relief: Relief?) {
+        if (relief != null && relief.surface == surface) {
+            s.setInputShader("surface", relief.shader)
+            s.setFloatUniform("surfaceXform", relief.xform)
+            s.setFloatUniform("surfaceSize", relief.width, relief.height)
+            s.setFloatUniform("relief", 1f)
+        } else {
+            s.setInputShader("surface", flatSurface)
+            s.setFloatUniform("surfaceXform", 1f, 1f, 0f, 0f)
+            s.setFloatUniform("surfaceSize", 1f, 1f)
+            s.setFloatUniform("relief", 0f)
+        }
+        s.setFloatUniform("reliefLight", reliefLight(surface))
+    }
 
     private var lightShader: RuntimeShader? = null
-    private var surfaceShader: RuntimeShader? = null
-    // A level surface, where there is no slate to light
+    private val surfaceShaders = HashMap<TableSurface, RuntimeShader>()
+    // A level surface, where there is no relief to light
     private val flatSurface by lazy {
         BitmapShader(Bitmap.createBitmap(intArrayOf(0xFF8080FF.toInt()), 1, 1, Bitmap.Config.ARGB_8888), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
     }
@@ -239,7 +353,10 @@ half4 main(float2 p) {
 
     private var flameShader: RuntimeShader? = null
     private var raisedShader: RuntimeShader? = null
-    private var previewAlbedo: RuntimeShader? = null
+    private val previewAlbedos = HashMap<String, RuntimeShader>()
+
+    // The colour shader for [surface]
+    private fun albedoAgsl(surface: TableSurface) = if (surface == TableSurface.ELM_WOOD) ELM_ALBEDO_AGSL else ALBEDO_AGSL
 
     /**
      * Draws the whole table at once (previews): its colour, then its light. The board instead
@@ -257,9 +374,11 @@ half4 main(float2 p) {
         flame: FlameLight = FlameLight.NONE,
         shadowMap: BoardShadowMap.Placed? = null,
         fireShadows: Boolean = false,
+        // The tiles' width in table pixels, where there is a board: the elm wood's scale
+        tile: Float = 0f,
     ) {
-        val s = previewAlbedo ?: RuntimeShader(ALBEDO_AGSL).also { previewAlbedo = it }
-        setAlbedoUniforms(s, surface, width, height, context, zoom, pan)
+        val s = albedoAgsl(surface).let { agsl -> previewAlbedos.getOrPut(agsl) { RuntimeShader(agsl) } }
+        setAlbedoUniforms(s, surface, width, height, context, zoom, pan, tile)
         scope.drawRect(ShaderBrush(s))
         drawTableLight(scope, surface, width, height, zoom, pan, flame, shadowMap, fireShadows)
     }
@@ -284,16 +403,23 @@ half4 main(float2 p) {
         zoom: Float,
         pan: Offset,
         settled: Boolean = true,
+        // The tiles' width in table pixels on the whole board: the elm wood's scale
+        tile: Float = 0f,
     ) {
         val size = IntSize(scope.size.width.roundToInt(), scope.size.height.roundToInt())
-        val sameTable = cache.surface == surface && cache.width == width && cache.height == height && cache.size == size
+        val sameTable = cache.surface == surface && cache.width == width && cache.height == height && cache.size == size &&
+            cache.tile == tile
         val sameView = cache.zoom == zoom && cache.pan == pan
         if (!sameTable || (!sameView && (settled || !cache.covers(zoom, pan)))) {
             // The whole board can't pan, and zooming in from it stays within the view; zoomed in,
             // the layer reaches past the screen, so a pan or a pinch out can follow it for a while
             val m = viewMargin(size, zoom)
-            val s = cache.shader ?: RuntimeShader(ALBEDO_AGSL).also { cache.shader = it }
-            setAlbedoUniforms(s, surface, width, height, context, zoom, pan + Offset(m.x.toFloat(), m.y.toFloat()))
+            val agsl = albedoAgsl(surface)
+            val s = cache.shader?.takeIf { cache.shaderOf === agsl } ?: RuntimeShader(agsl).also {
+                cache.shader = it
+                cache.shaderOf = agsl
+            }
+            setAlbedoUniforms(s, surface, width, height, context, zoom, pan + Offset(m.x.toFloat(), m.y.toFloat()), tile)
             cache.layer.compositingStrategy = CompositingStrategy.Offscreen
             cache.layer.topLeft = IntOffset(-m.x, -m.y)
             with(scope) {
@@ -305,6 +431,7 @@ half4 main(float2 p) {
             cache.size = size
             cache.zoom = zoom
             cache.pan = pan
+            cache.tile = tile
             cache.margin = m
         }
         if (cache.zoom == zoom && cache.pan == pan) {
@@ -334,11 +461,13 @@ half4 main(float2 p) {
     }
 
     /**
-     * Works out the slate's surface map on the GPU for the board seen at [zoom] and [pan], over
-     * [size] (the board's whole area) and with the cached colour's margin; null where nothing
-     * can be read back (the JVM's renders), where the slate stays level.
+     * Works out [surface]'s surface map (slate, elm wood) on the GPU for the board seen at
+     * [zoom] and [pan], over [size] (the board's whole area) and with the cached colour's margin;
+     * null where nothing can be read back (the JVM's renders, unless [softwareRelief]), where the
+     * surface stays level. [tile]: the tiles' width in table pixels on the whole board.
      */
-    suspend fun bakeSlateSurface(
+    suspend fun bakeRelief(
+        surface: TableSurface,
         layer: GraphicsLayer,
         density: Density,
         layoutDirection: LayoutDirection,
@@ -347,16 +476,28 @@ half4 main(float2 p) {
         height: Float,
         zoom: Float,
         pan: Offset,
-    ): SlateSurface? = runCatching {
+        tile: Float = 0f,
+    ): Relief? = runCatching {
         val m = viewMargin(size, zoom)
-        val s = surfaceShader ?: RuntimeShader(SLATE_SURFACE_AGSL).also { surfaceShader = it }
-        setCameraUniforms(s, width, height, zoom, pan + Offset(m.x.toFloat(), m.y.toFloat()))
-        layer.record(density, layoutDirection, IntSize(size.width + 2 * m.x, size.height + 2 * m.y)) {
-            drawRect(ShaderBrush(s))
+        val s = surfaceShaders.getOrPut(surface) {
+            RuntimeShader(if (surface == TableSurface.ELM_WOOD) ELM_SURFACE_AGSL else SLATE_SURFACE_AGSL)
         }
-        val bitmap = layer.toImageBitmap().asAndroidBitmap()
+        setCameraUniforms(s, width, height, zoom, pan + Offset(m.x.toFloat(), m.y.toFloat()))
+        if (surface == TableSurface.ELM_WOOD) setElmUniforms(s, tableMm(tile, height))
+        val mapSize = IntSize(size.width + 2 * m.x, size.height + 2 * m.y)
+        val bitmap = if (softwareRelief) {
+            Bitmap.createBitmap(mapSize.width, mapSize.height, Bitmap.Config.ARGB_8888).also {
+                android.graphics.Canvas(it).drawRect(
+                    0f, 0f, mapSize.width.toFloat(), mapSize.height.toFloat(), android.graphics.Paint().apply { shader = s },
+                )
+            }
+        } else {
+            layer.record(density, layoutDirection, mapSize) { drawRect(ShaderBrush(s)) }
+            layer.toImageBitmap().asAndroidBitmap()
+        }
         // Its pixel for an unzoomed canvas point p: p * zoom + pan, plus the margin
-        SlateSurface(
+        Relief(
+            surface,
             BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply { filterMode = BitmapShader.FILTER_MODE_LINEAR },
             floatArrayOf(zoom, zoom, pan.x + m.x, pan.y + m.y),
             bitmap.width.toFloat(),
@@ -380,27 +521,19 @@ half4 main(float2 p) {
         shadowMap: BoardShadowMap.Placed?,
         fireShadows: Boolean,
         cullUnder: Boolean = false,
-        // The slate's surface map, when the table is slate and it has been worked out
-        slateSurface: SlateSurface? = null,
+        // The table's surface map, when it has a relief and the map has been worked out
+        relief: Relief? = null,
     ) {
         val light = lightShader ?: RuntimeShader(TABLE_LIGHT_AGSL).also { lightShader = it }
         setCameraUniforms(light, width, height, zoom, pan)
         flame.setUniforms(light)
         setShadowUniforms(light, shadowMap, fireShadows, cullUnder)
-        if ((surface == TableSurface.SLATE) && (slateSurface != null)) {
-            light.setInputShader("surface", slateSurface.shader)
-            light.setFloatUniform("surfaceXform", slateSurface.xform)
-            light.setFloatUniform("surfaceSize", slateSurface.width, slateSurface.height)
-            light.setFloatUniform("relief", 1f)
-        } else {
-            light.setInputShader("surface", flatSurface)
-            light.setFloatUniform("surfaceXform", 1f, 1f, 0f, 0f)
-            light.setFloatUniform("surfaceSize", 1f, 1f)
-            light.setFloatUniform("relief", 0f)
-        }
+        setReliefUniforms(light, surface, relief)
         scope.drawRect(ShaderBrush(light), blendMode = BlendMode.Modulate)
         val gloss = when (surface) {
             TableSurface.WALNUT -> 1f
+            // Oiled elm: a soft sheen, over its relief
+            TableSurface.ELM_WOOD -> 0.5f
             TableSurface.THAI_STRAW -> 0.1f
             // Honed slate: a faint satin sheen
             TableSurface.SLATE -> 0.18f
@@ -415,6 +548,14 @@ half4 main(float2 p) {
             setShadowUniforms(g, shadowMap, fireShadows, cullUnder)
             g.setFloatUniform("gloss", gloss)
             g.setFloatUniform("grained", if (surface == TableSurface.WALNUT) 1f else 0f)
+            // Only the elm's oiled finish follows its relief: the slate's faint sheen lies level
+            if (surface == TableSurface.ELM_WOOD) {
+                setReliefUniforms(g, surface, relief)
+                g.setFloatUniform("polish", ELM_THROW, ELM_SHEEN)
+            } else {
+                setReliefUniforms(g, surface, null)
+                g.setFloatUniform("polish", 0f, 0f)
+            }
             scope.drawRect(ShaderBrush(g), blendMode = BlendMode.Plus)
         }
     }
@@ -468,9 +609,9 @@ half4 main(float2 p) {
         s.setFloatUniform("pan", pan.x, pan.y)
     }
 
-    private fun setAlbedoUniforms(s: RuntimeShader, surface: TableSurface, width: Float, height: Float, context: Context?, zoom: Float, pan: Offset) {
+    private fun setAlbedoUniforms(s: RuntimeShader, surface: TableSurface, width: Float, height: Float, context: Context?, zoom: Float, pan: Offset, tile: Float = 0f) {
         setCameraUniforms(s, width, height, zoom, pan)
-        s.setFloatUniform("mode", surface.ordinal.toFloat())
+        if (surface == TableSurface.ELM_WOOD) setElmUniforms(s, tableMm(tile, height)) else s.setFloatUniform("mode", surface.ordinal.toFloat())
     }
 
     /**
@@ -478,13 +619,19 @@ half4 main(float2 p) {
      * surface itself, without the table's shadows or fire.
      */
     fun swatch(surface: TableSurface, width: Float, height: Float): ShaderBrush {
-        val s = swatchShaders.getOrPut(surface) { RuntimeShader(SWATCH_AGSL) }
-        s.setFloatUniform("res", width, height)
-        s.setFloatUniform("mode", surface.ordinal.toFloat())
+        val s = swatchShaders.getOrPut(surface) { RuntimeShader(swatchAgsl(surface)) }
+        setSwatchUniforms(s, surface, width, height)
         return ShaderBrush(s)
     }
 
     private val swatchShaders = HashMap<TableSurface, RuntimeShader>()
+
+    private fun swatchAgsl(surface: TableSurface) = if (surface == TableSurface.ELM_WOOD) ELM_SWATCH_AGSL else SWATCH_AGSL
+
+    private fun setSwatchUniforms(s: RuntimeShader, surface: TableSurface, width: Float, height: Float) {
+        s.setFloatUniform("res", width, height)
+        if (surface == TableSurface.ELM_WOOD) setElmUniforms(s, USUAL_TABLE_MM) else s.setFloatUniform("mode", surface.ordinal.toFloat())
+    }
     private val swatchImages = HashMap<TableSurface, ImageBitmap>()
 
     /** [surface]'s swatch as made by [prerenderSwatch], or null if it hasn't been. */
@@ -497,9 +644,8 @@ half4 main(float2 p) {
      */
     fun prerenderSwatch(surface: TableSurface, width: Int, height: Int) {
         if (surface in swatchImages || width <= 0 || height <= 0) return
-        val shader = RuntimeShader(SWATCH_AGSL)
-        shader.setFloatUniform("res", width.toFloat(), height.toFloat())
-        shader.setFloatUniform("mode", surface.ordinal.toFloat())
+        val shader = RuntimeShader(swatchAgsl(surface))
+        setSwatchUniforms(shader, surface, width.toFloat(), height.toFloat())
         val reader = ImageReader.newInstance(
             width, height, PixelFormat.RGBA_8888, 1,
             HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE or HardwareBuffer.USAGE_GPU_COLOR_OUTPUT,
@@ -551,6 +697,24 @@ half4 main(float2 p) {
     float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
     // 15% less lit than first made (Gareth, 2026-11-15)
     float lamp = 0.85 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
+    return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
+}
+"""
+
+    /** The elm wood's swatch, as [SWATCH_AGSL]: its ridges raked by a low lamp from up the table, as the slate's. */
+    private const val ELM_SWATCH_AGSL = """
+uniform float2 res;
+$SURFACES_AGSL
+$ELM_WOOD_AGSL
+half4 main(float2 p) {
+    float scale = 0.2;
+    float2 q = float2(p.x - 0.5 * res.x, 0.5 * res.y - p.y) / res.y * scale;
+    float fp = scale / res.y;
+    float3 n = elmWoodNormal(q * elmMm, fp * elmMm);
+    float3 l = normalize(float3(0.0, 0.6, $RELIEF_LAMP_HEIGHT));
+    float3 c = elmWood(q * elmMm, fp * elmMm) * (0.4 + max(dot(n, l), 0.0)) / (0.4 + l.z);
+    float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
+    float lamp = 0.7 + 1.5 * exp(-dot(d, d) * 2.5);
     return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
 }
 """
@@ -607,6 +771,23 @@ internal const val LAMP_DEPTH = 0.3f
 private const val LAMP_MIRROR_U = LAMP_U * 0.6f
 private const val LAMP_MIRROR_V = LAMP_V + 0.2f
 
+// The lamp's height for the slate's relief, in table heights: low enough to rake it
+private const val RELIEF_LAMP_HEIGHT = 0.3f
+// The share of the lamp's light that falls whichever way the slate faces
+private const val SLATE_LAMP_EVEN = 0.7f
+// ...and of the fire's: little, as it rakes across from low down
+private const val SLATE_FIRE_EVEN = 0.15f
+
+// The elm wood's relief: its ridges are shallower than the slate's, so its lamp is lower still
+// and less of the light falls evenly
+private const val ELM_LAMP_HEIGHT = 0.2f
+private const val ELM_LAMP_EVEN = 0.3f
+private const val ELM_FIRE_EVEN = 0.15f
+// Its oiled finish: how far its slopes throw the lamp's reflection aside (table heights for a
+// slope of one), and how brightly its crests shine
+private const val ELM_THROW = 0.35f
+private const val ELM_SHEEN = 0.4f
+
 /**
  * The menus' slate as a tabletop: about as large against the tiles as it is against the menus'
  * screen, brighter (the table's light falls away into the dark around it), and its relief lit by
@@ -615,10 +796,10 @@ private const val LAMP_MIRROR_V = LAMP_V + 0.2f
 private const val SLATE_TABLE_AGSL = """
 const float SLATE_SCALE = 7.0;       // slate units per table height
 const float SLATE_GAIN = 2.2;
-const float SLATE_LAMP_HEIGHT = 0.3; // the lamp's height for the slate's relief, in table heights
-const float SLATE_LAMP_EVEN = 0.7;   // the share of the lamp's light whichever way the stone faces
-const float SLATE_FIRE_EVEN = 0.15;  // and of the fire's: little, as it rakes across from low down
+const float SLATE_LAMP_HEIGHT = $RELIEF_LAMP_HEIGHT;
+const float SLATE_LAMP_EVEN = $SLATE_LAMP_EVEN;
 """
+
 
 /**
  * Firelight at plane point q (in table heights, v up), shared by both shaders: one warm source
@@ -803,6 +984,249 @@ half4 main(float2 p) {
 }
 """
 
+
+/**
+ * Elm wood (Gareth, 2026-11-15): a table of elm boards running away up it, honey brown, their
+ * grain looping and swirling round eyes as elm's does. Brushed and oiled, so every growth ring
+ * stands as a slight ridge: the surface map (ELM_SURFACE_AGSL) the lamp and the fire rake across.
+ *
+ * Chosen from numbered mock-ups, starting from his photo of wildly figured wood and ending
+ * simpler: the wood is round 3's 16 ("16 looks really good though"), after he found the first,
+ * bolder designs "too flat and fake" and asked for "a rougher, less \"plastic\" like surface";
+ * then "Make the table up from boards, not just one big slab", "Vertical boards", "boards 70mm
+ * wide", and of the joints between them "actually lets go 22" (the closest fit). Shown together
+ * as 24: "That looks great". Named by him: "Just call it Elm Wood".
+ *
+ * It is drawn life-size against the tiles ("the size of the render has to be matched to what
+ * mahjong tiles are sized like in real life"): its measures are millimetres, a tile 24 across
+ * (elmMm). Rings about 3 mm apart, a board 70 mm wide.
+ *
+ * One field gives both its colour and its surface: how many growth rings have been crossed at
+ * each point (elmRings). Rings follow that field's contours, so it is built from smooth noise
+ * only; where it climbs steeply they crowd, where it levels out they open wide.
+ */
+private const val ELM_WOOD_AGSL = """
+uniform float elmMm;   // millimetres to a table height: 24 to a tile's width, as in life
+
+const float ELM_BOARD = 70.0;     // a board's width, mm
+const float ELM_FIGURE = 110.0;   // the figure's size, mm: about how far apart its swirls and eyes lie
+const float ELM_RINGS = 36.667;   // rings crossed in that length where the grain runs straight: 3 mm apart
+// Which way the rings are crossed: nearly straight across a board (4 degrees off), so the grain
+// runs up it
+const float2 ELM_ACROSS = float2(0.99756, 0.06976);
+const float3 ELM_PALE = float3(0.76, 0.58, 0.32);   // the pale bands' honey
+const float3 ELM_LATE = float3(0.56, 0.37, 0.17);   // a ring's darker latewood in them, and the crests' line in the deep bands
+const float3 ELM_DEEP = float3(0.47, 0.29, 0.12);   // the deeper bands
+const float3 ELM_OPEN = float3(0.40, 0.24, 0.11);   // where the rings open right out and the wood lies level
+const float ELM_RIDGE = 0.3;      // the ridges' height, mm
+const float ELM_STEP = 0.15;      // how far the pale bands stand proud of the deep, mm
+
+// Smooth noise whose contours run unbroken across its lattice (gradient noise, quintic), about
+// -0.5 to 0.5: the rings follow its contours, so it must never kink
+float2 elmTurn(float2 i) {
+    float a = 6.2831853 * hash21(i);
+    return float2(cos(a), sin(a));
+}
+float gnoise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    float2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float a = dot(elmTurn(i), f);
+    float b = dot(elmTurn(i + float2(1.0, 0.0)), f - float2(1.0, 0.0));
+    float c = dot(elmTurn(i + float2(0.0, 1.0)), f - float2(0.0, 1.0));
+    float d = dot(elmTurn(i + float2(1.0, 1.0)), f - float2(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+// Smooth noise along a line, 0 to 1
+float noise1(float x) {
+    float i = floor(x);
+    float f = x - i;
+    return mix(hash11(i * 1.7 + 3.0), hash11((i + 1.0) * 1.7 + 3.0), f * f * (3.0 - 2.0 * f));
+}
+// The tree's flow at p (mm), in figure sizes: straight grain swirled by a broad slow warp and a
+// tighter one over it
+float2 elmFlow(float2 p) {
+    float2 s = p / ELM_FIGURE;
+    s += 0.5 * float2(gnoise(s * 0.55 + float2(3.1, 7.7)), gnoise(s * 0.55 + float2(11.3, 1.9)));
+    s += 0.2 * float2(gnoise(s * 1.3 + float2(5.2, 9.4)), gnoise(s * 1.3 + float2(2.6, 13.8)));
+    return s;
+}
+// How many rings have been crossed by p: each whole number is a ring's edge. Rings run across
+// the flow, and swell strongly where the trunk did: those swells are the eyes the grain loops round
+float elmRings(float2 p, out float2 s) {
+    s = elmFlow(p);
+    float n = ELM_RINGS * (dot(s, ELM_ACROSS) + 1.1 * gnoise(s * 0.8 + float2(17.0, 4.0)));
+    // No two rings the same width: good years and lean ones, in runs (never so much that a ring
+    // turns back on itself)
+    return n + 0.35 * (noise1(n * 0.83 + 11.0) - 0.5) + 0.12 * (noise1(n * 2.7 + 5.0) - 0.5);
+}
+// Which board p lies on, counted across the table, and how far p is from that board's middle
+// (lx, mm). A joint passes a little left of the table's middle, so one is in view zoomed in
+float elmBoardAt(float2 p, out float lx) {
+    float b = floor(p.x / ELM_BOARD + 0.2);
+    lx = p.x - (b + 0.3) * ELM_BOARD;
+    return b;
+}
+// p on board b, as a point of the tree: every board is cut from its own part of it, and
+// turned a little, so no figure carries on across a joint
+float2 elmOnBoard(float2 p, float b) {
+    float seed = hash11(b * 1.7 + 11.0);
+    float a = (seed - 0.5) * 0.3;
+    float2 turned = float2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a));
+    return turned + float2(seed * 400.0, hash11(b * 2.3 + 5.0) * 300.0);
+}
+// The rings at p (on board b) and their slope g (rings per mm), measured over a pixel (e)
+float elmAt(float2 p, float e, float b, out float2 g, out float2 s) {
+    float2 unused;
+    float ph = elmRings(elmOnBoard(p, b), s);
+    g = float2(
+        elmRings(elmOnBoard(p + float2(e, 0.0), b), unused) - ph,
+        elmRings(elmOnBoard(p + float2(0.0, e), b), unused) - ph) / e;
+    return ph;
+}
+// A ring's tone, 0 deep to 1 pale: bands a few rings wide, and broader ones over them
+float elmBand(float x) {
+    return 0.55 * noise1(x / 5.0) + 0.45 * noise1(x / 16.5 + 40.0);
+}
+float elmTone(float k) {
+    return elmBand(k + 0.5) + 0.22 * (hash11(k * 0.37 + 5.0) - 0.5);
+}
+// Brushing wears the soft earlywood at a ring's start into a groove; the wood rises from it to
+// the hard latewood's crest, which drops steeply into the next ring's groove. Where ring k's
+// crest lies across it: every ring's a little differently
+float elmCrest(float k) {
+    return 0.58 + 0.26 * hash11(k * 0.83 + 9.0);
+}
+// A ring's height across it (r, 0 to 1): 0 in the groove, 1 on the crest, rounded over
+float elmRidge(float r, float crest) {
+    return r < crest ? sin(1.5708 * r / crest) : cos(1.5708 * (r - crest) / (1.0 - crest));
+}
+// ...and its slope there, per ring: it leans all the way across, so the light models every ring
+float elmRidgeSlope(float r, float crest) {
+    return r < crest
+        ? 1.5708 / crest * cos(1.5708 * r / crest)
+        : -1.5708 / (1.0 - crest) * sin(1.5708 * (r - crest) / (1.0 - crest));
+}
+// How pale a ring of tone [t] is, 0 deep to 1 pale: the bands grade softly into each other, a
+// little more of the wood pale than deep
+float elmPale01(float t) {
+    return smoothstep(0.2, 0.8, t + 0.1);
+}
+
+// Its colour at p (mm); fp is a pixel's size there, in mm
+float3 elmWood(float2 p, float fp) {
+    float2 g;
+    float2 s;
+    float lx;
+    float b = elmBoardAt(p, lx);
+    float seed = hash11(b * 1.7 + 11.0);
+    // Where the board's own broad patterns are looked up, and its fine ones
+    float2 pb = elmOnBoard(p, b);
+    float2 pg = p + seed * float2(41.0, 23.0);
+    float ph = elmAt(p, max(fp, 0.02), b, g, s);
+    float dens = length(g) + 1e-6;
+    // How many pixels a ring spans: rings finer than the pixels are left out, their band's
+    // colour standing for them (they would only shimmer)
+    float ringPx = 1.0 / (dens * fp);
+    float see = smoothstep(1.3, 3.2, ringPx);
+    float k = floor(ph);
+    float r = ph - k;
+    // Each ring keeps something of its own tone, softened over a pixel where two rings meet;
+    // the rest blends along with the bands
+    float beside = r < 0.5 ? k - 1.0 : k + 1.0;
+    float edge = 0.5 * (1.0 - smoothstep(0.0, 1.0 / ringPx, r < 0.5 ? r : 1.0 - r));
+    float stepped = mix(elmTone(k), elmTone(beside), edge);
+    float lie = 0.22 * (vnoise(pb / 140.0 + float2(9.0, 2.0)) - 0.5);
+    float tone = elmPale01(mix(elmBand(ph), stepped, see * 0.6) + lie);
+    // The ring: pale earlywood, and a darker line of latewood down the crest's drop
+    float crest = elmCrest(k);
+    float ridge = elmRidge(r, crest);
+    float mid = 0.5 * (1.0 + crest);
+    float dl = min(abs(r - mid), abs(r + 1.0 - mid)) / (0.5 * (1.0 - crest));
+    float late = exp(-dl * dl) * see;
+    float3 c = mix(mix(ELM_DEEP, ELM_PALE, tone), mix(ELM_DEEP * 0.45, ELM_LATE, tone), 0.45 * late);
+    // Its grooves lie a little in their own shade, whatever the light
+    c *= mix(0.92, 0.77 + 0.22 * ridge, see);
+    // In the deep bands each crest shows a thin paler line, so their rings read too
+    float dc = (r - crest) / 0.12;
+    c = mix(c, ELM_LATE, 0.4 * exp(-dc * dc) * (1.0 - tone) * see);
+    // Where the rings open right out the wood lies level, and darkens
+    float level = smoothstep(0.16, 0.05, dens);
+    c = mix(c, ELM_OPEN, 0.8 * level * (1.0 - 0.6 * tone));
+
+    // Brushed wood: nothing on it is even. Mottled in patches, and streaked along the rings
+    float along = (s.x * ELM_ACROSS.y - s.y * ELM_ACROSS.x) * ELM_FIGURE;
+    c *= 0.80 + 0.40 * (0.6 * vnoise(pb / 9.0 + float2(4.0, 8.0)) + 0.4 * vnoise(pb / 3.3 + float2(21.0, 5.0)));
+    c *= 0.86 + 0.28 * vnoise(float2(ph * 1.9, along * 0.12));
+    // Seen close: open pores in the soft wood of each groove, short dark pits lying along the
+    // rings; fine striations, several to a ring; and the grain's speckle, which shows from
+    // further off too
+    float fine = 1.0 - smoothstep(0.12, 0.35, fp);
+    float coarse = 1.0 - smoothstep(0.35, 0.7, fp);
+    float pit = smoothstep(0.70, 0.90, vnoise(float2(ph * 9.0, along * 1.3))) * (1.0 - 0.7 * ridge) * fine;
+    c *= 1.0 - 0.5 * pit;
+    c *= 1.0 + 0.22 * (vnoise(float2(ph * 7.0, along * 0.22)) - 0.5) * fine;
+    c *= 1.0 + 0.16 * (vnoise(pg * 1.5) - 0.5) * coarse + 0.12 * (vnoise(pg * 5.0) - 0.5) * fine;
+    // ...and the board's slow change of colour along it
+    c *= 0.9 + 0.22 * vnoise(pb / 37.0 + float2(4.0, 8.0));
+    // Each board a little lighter or darker, warmer or cooler, than its neighbours
+    c *= (0.9 + 0.2 * hash11(b * 3.3 + 2.0)) * mix(float3(0.95, 0.97, 1.0), float3(1.05, 1.0, 0.94), seed);
+    // The joint between two boards, a close fit: a faint hairline, never finer than the pixels
+    // can show, the boards' barely eased edges a shade darker beside it
+    float d = 0.5 * ELM_BOARD - abs(lx);
+    float gap = max(0.0625, 0.575 * fp);
+    c *= 1.0 - 0.56 * (1.0 - smoothstep(gap * 0.5, gap * 1.5, d));
+    c *= 1.0 - 0.0375 * (1.0 - smoothstep(0.0, 1.0, d));
+    return c;
+}
+
+// Which way its surface faces at p (mm): x right, y up the table, z up
+float3 elmWoodNormal(float2 p, float fp) {
+    float2 g;
+    float2 s;
+    float lx;
+    float b = elmBoardAt(p, lx);
+    float2 pb = elmOnBoard(p, b);
+    float2 pg = p + hash11(b * 1.7 + 11.0) * float2(41.0, 23.0);
+    float ph = elmAt(p, max(fp, 0.02), b, g, s);
+    float dens = length(g) + 1e-6;
+    float ringPx = 1.0 / (dens * fp);
+    float see = smoothstep(1.3, 3.2, ringPx);
+    float k = floor(ph);
+    float r = ph - k;
+    float crest = elmCrest(k);
+    float along = (s.x * ELM_ACROSS.y - s.y * ELM_ACROSS.x) * ELM_FIGURE;
+    // Some rings stand prouder than others, and every ridge swells and sinks along its length.
+    // The groove's bed is rounded over a pixel, where its two sides meet
+    float depth = ELM_RIDGE * (0.6 + 0.8 * hash11(k * 0.61 + 2.0)) * (0.55 + 0.9 * vnoise(float2(k * 3.7 + 1.0, along * 0.07)));
+    float bed = smoothstep(0.0, 0.5 / ringPx, min(r, 1.0 - r));
+    float across = depth * elmRidgeSlope(r, crest) * bed;
+    // The pale bands stand a little proud of the deep: where one ring's tone gives way to the
+    // next's, the drop between them is that much deeper, or climbs instead
+    float lie = 0.22 * (vnoise(pb / 140.0 + float2(9.0, 2.0)) - 0.5);
+    float y = clamp((r - crest) / (1.0 - crest), 0.0, 1.0);
+    float down = elmPale01(elmTone(k) + lie) - elmPale01(elmTone(k + 1.0) + lie);
+    across -= ELM_STEP * down * 6.0 * y * (1.0 - y) / (1.0 - crest);
+    // Its slope along the rings' own direction (mm per ring, times rings per mm)
+    float slope = clamp(across * dens, -2.4, 2.4) * see;
+    float2 dir = g / dens;
+    float2 lean = -slope * dir;
+    // The brushed surface. Fibres: fine ridges running with the rings, at two sizes, each
+    // coming in as the view closes on it
+    float f1 = vnoise(float2(ph * 5.0 + 0.5, along * 0.18)) - vnoise(float2(ph * 5.0 - 0.5, along * 0.18));
+    float f2 = vnoise(float2(ph * 13.0 + 0.5, along * 0.4)) - vnoise(float2(ph * 13.0 - 0.5, along * 0.4));
+    lean -= dir * (0.45 * f1 * smoothstep(8.0, 16.0, ringPx) + 0.3 * f2 * smoothstep(20.0, 40.0, ringPx));
+    // ...and its tooth: grit that shows from further off, and finer grit seen close
+    float fine = 1.0 - smoothstep(0.12, 0.35, fp);
+    float coarse = 1.0 - smoothstep(0.35, 0.7, fp);
+    lean += 0.30 * (float2(vnoise(pg * 1.5 + 3.0), vnoise(pg * 1.5 + float2(31.0, 17.0))) - 0.5) * coarse;
+    lean += 0.24 * (float2(vnoise(pg * 5.0), vnoise(pg * 5.0 + float2(13.0, 47.0))) - 0.5) * fine;
+    // A board's edges are barely eased: they roll off into the joint, and catch the light along it
+    float d = 0.5 * ELM_BOARD - abs(lx);
+    lean.x += sign(lx) * 0.225 * (1.0 - smoothstep(0.0, max(0.35, 2.0 * fp), d));
+    return normalize(float3(lean, 1.0));
+}
+"""
 
 private const val SURFACES_AGSL = """
 const float PI = 3.14159265;
