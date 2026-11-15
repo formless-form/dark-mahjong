@@ -50,8 +50,8 @@ class TileKitPreview {
     private data class Scene(val layout: String, val surface: TableSurface, val fire: Boolean, val name: String)
 
     private val scenes = listOf(
-        Scene(ConstellationRepository.TUTORIAL_ID, TableSurface.WALNUT, true, "1-close-walnut-fire"),
-        Scene("pagoda", TableSurface.WALNUT, true, "2-board-walnut-fire"),
+        Scene(ConstellationRepository.TUTORIAL_ID, TableSurface.ELM_WOOD, true, "1-close-walnut-fire"),
+        Scene("pagoda", TableSurface.ELM_WOOD, true, "2-board-walnut-fire"),
         Scene("pagoda", TableSurface.GREEN_MAT, false, "3-board-felt-lamp"),
     )
 

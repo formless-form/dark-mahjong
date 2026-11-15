@@ -66,7 +66,7 @@ class TileSetSettingsPreview {
             MahjongTheme {
                 com.vortessence.mahjong.ui.screens.GameScreen(
                     gameState = state, levelIndex = null,
-                    settings = GameSettings(tileSet = TileSet.CHARCOAL, fireplaceLit = true, tableSurface = com.vortessence.mahjong.data.model.TableSurface.WALNUT),
+                    settings = GameSettings(tileSet = TileSet.CHARCOAL, fireplaceLit = true, tableSurface = com.vortessence.mahjong.data.model.TableSurface.ELM_WOOD),
                     winMessage = null,
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
                     onReshuffle = {}, onNextLevel = {}, onMainMenu = {},

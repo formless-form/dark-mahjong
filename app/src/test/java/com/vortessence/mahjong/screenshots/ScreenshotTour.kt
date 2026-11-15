@@ -93,7 +93,6 @@ class ScreenshotTour {
     }
 
     @Test fun tabletopGreenMat() = tabletop(TableSurface.GREEN_MAT)
-    @Test fun tabletopWalnut() = tabletop(TableSurface.WALNUT)
     @Test fun tabletopThaiStraw() = tabletop(TableSurface.THAI_STRAW)
     @Test fun tabletopSlate() = tabletop(TableSurface.SLATE)
     @Test fun tabletopElmWood() = tabletop(TableSurface.ELM_WOOD)
@@ -243,7 +242,7 @@ class ScreenshotTour {
     }
 
     @Test fun mahCactus() = mahGame("Cactus", TableSurface.GREEN_MAT, "mah_cactus")
-    @Test fun mahFence() = mahGame("Fence", TableSurface.WALNUT, "mah_fence")
+    @Test fun mahFence() = mahGame("Fence", TableSurface.ELM_WOOD, "mah_fence")
 
     @Test
     fun layoutsMah() {
@@ -362,7 +361,7 @@ class ScreenshotTour {
                     gameState = state,
                     levelIndex = null,
                     settings = GameSettings(
-                        tableSurface = TableSurface.WALNUT, wideBoards = wideBoards, animationsEnabled = animations, fireplaceLit = fireplace,
+                        tableSurface = TableSurface.ELM_WOOD, wideBoards = wideBoards, animationsEnabled = animations, fireplaceLit = fireplace,
                     ),
                     winMessage = "The mist lifts, and so do the tiles.",
                     onBack = {}, onTileClick = {}, onHint = {}, onUndo = {}, onRestart = {},
@@ -518,7 +517,6 @@ class ScreenshotTour {
     }
 
     @Test fun gameGreenMat() { game(TableSurface.GREEN_MAT, 8); shoot("game_green_mat") }
-    @Test fun gameWalnut() { game(TableSurface.WALNUT, 11); shoot("game_walnut") }
     @Test fun gameThaiStraw() { game(TableSurface.THAI_STRAW, 12); shoot("game_thai_straw") }
     @Test fun gameSlate() { game(TableSurface.SLATE, 8); shoot("game_slate") }
     @Test fun gameElmWood() { game(TableSurface.ELM_WOOD, 9); shoot("game_elm_wood") }
@@ -526,7 +524,7 @@ class ScreenshotTour {
     // Pinched in to about 2.2x near the top of the board: the zoom-out button appears
     @Test
     fun gameZoomedIn() {
-        game(TableSurface.WALNUT, 11)
+        game(TableSurface.ELM_WOOD, 11)
         compose.waitForIdle()
         compose.onRoot().performTouchInput {
             val c = Offset(centerX, height * 0.35f)
@@ -546,7 +544,7 @@ class ScreenshotTour {
     fun celebrationQuickGame() {
         compose.mainClock.autoAdvance = false
         val won = level(9).let { s -> s.copy(tiles = s.tiles.map { it.copy(isRemoved = true) }, isWon = true) }
-        game(TableSurface.WALNUT, null, won, message = "The mist lifts, and so do the tiles.", quickGame = true)
+        game(TableSurface.ELM_WOOD, null, won, message = "The mist lifts, and so do the tiles.", quickGame = true)
         compose.mainClock.advanceTimeBy(2200)
         shoot("celebration_quick_game")
     }
@@ -555,7 +553,7 @@ class ScreenshotTour {
     fun celebration() {
         compose.mainClock.autoAdvance = false
         val won = level(5).let { s -> s.copy(tiles = s.tiles.map { it.copy(isRemoved = true) }, isWon = true) }
-        game(TableSurface.WALNUT, 5, won, message = "The mist lifts, and so do the tiles.")
+        game(TableSurface.ELM_WOOD, 5, won, message = "The mist lifts, and so do the tiles.")
         // The 600 ms smash, then the card's 1.1 s, and a little of its fade
         compose.mainClock.advanceTimeBy(2200)
         shoot("celebration")
@@ -582,7 +580,7 @@ class ScreenshotTour {
     fun celebrationFirstRibbon() {
         compose.mainClock.autoAdvance = false
         val won = level(5).let { s -> s.copy(tiles = s.tiles.map { it.copy(isRemoved = true) }, isWon = true) }
-        game(TableSurface.WALNUT, 5, won, message = "The mist lifts, and so do the tiles.", firstRibbon = true)
+        game(TableSurface.ELM_WOOD, 5, won, message = "The mist lifts, and so do the tiles.", firstRibbon = true)
         // The 600 ms smash, then the card's 1.1 s, and a little of its fade
         compose.mainClock.advanceTimeBy(2200)
         shoot("celebration_first_ribbon")

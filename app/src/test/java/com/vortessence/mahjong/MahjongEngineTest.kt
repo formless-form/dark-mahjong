@@ -376,9 +376,15 @@ class MahjongEngineTest {
         val defaultSettings = GameSettings()
         assertEquals(TableSurface.GREEN_MAT, defaultSettings.tableSurface)
 
-        val walnutSettings = defaultSettings.copy(tableSurface = TableSurface.WALNUT)
-        assertEquals(TableSurface.WALNUT, walnutSettings.tableSurface)
-        assertEquals("Walnut", TableSurface.WALNUT.displayName)
+        val elmSettings = defaultSettings.copy(tableSurface = TableSurface.ELM_WOOD)
+        assertEquals(TableSurface.ELM_WOOD, elmSettings.tableSurface)
+        assertEquals("Elm Wood", TableSurface.ELM_WOOD.shortName)
+        // The elm replaced the walnut: a player who chose walnut gets the elm, not the default
+        assertEquals(TableSurface.ELM_WOOD, TableSurface.fromStoredName("WALNUT"))
+        assertEquals(TableSurface.SLATE, TableSurface.fromStoredName("SLATE"))
+        assertEquals(null, TableSurface.fromStoredName("NOT_A_TABLE"))
+        // The table shader picks the shared surfaces by ordinal: these must not move
+        assertEquals(listOf(0, 1, 2, 3, 4), listOf(TableSurface.GREEN_MAT, TableSurface.ELM_WOOD, TableSurface.THAI_STRAW, TableSurface.SLATE, TableSurface.BROCADE).map { it.ordinal })
     }
 
     @Test

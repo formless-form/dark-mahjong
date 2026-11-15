@@ -35,7 +35,7 @@ fun TableSurfacesPreview() {
         ) {
             TableSurfaceItem("Green Mat", TableSurface.GREEN_MAT)
             Spacer(modifier = Modifier.height(24.dp))
-            TableSurfaceItem("Walnut Wood", TableSurface.WALNUT)
+            TableSurfaceItem("Elm Wood", TableSurface.ELM_WOOD)
         }
     }
 }
@@ -79,7 +79,7 @@ fun BoardWithWalnutPreview() {
             MahjongBoard(
                 gameState = state,
                 settings = GameSettings(
-                    tableSurface = TableSurface.WALNUT,
+                    tableSurface = TableSurface.ELM_WOOD,
                     highlightFreeTiles = false
                 ),
                 onTileClick = {}

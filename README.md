@@ -38,7 +38,7 @@ If you build on it, **please keep it that way too: no ads, no in-app purchases, 
 ### A different look
 - **Seen at an angle.** The table is viewed slightly away from overhead, in true perspective: far rows recede and each tile's front edge shows, without ever hiding a tile's face.
 - **Glossy, well-used tiles.** A thick clear glaze reflects the lamp in streaks, broken up by tiny ripples in the glaze. Every tile is a little different: hairline scratches, grime in patches, the odd ding, sitting a fraction off-square, all from one evenly aged set. The artwork is engraved into the face.
-- **Three tabletops,** all rendered live in perspective: **Walnut** (lacquered boards), **Green Mat** (felt) and **Thai Straw** (a well-used woven sedge mat).
+- **Four tabletops,** all rendered live in perspective: **Felt**, **Elm Wood** (honey elm boards, drawn life-size against the tiles), **Thai Straw Mat** (a well-used woven sedge mat) and **Slate**, plus **Silk Brocade**, earned by solving every daily puzzle in a month.
 - **Portrait-first,** because most layouts are taller than they are wide.
 - **145 layouts:** the original's, 76 boards from [Mah](https://github.com/ffalt/mah) (animals, plants, symbols, shapes and buildings; the widest played with the phone on its side), and themed boards made for Dark Mahjong. Pinch to zoom in on any of them. The 100-level Journey and the Layouts list both run from easy to hard.
 

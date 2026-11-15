@@ -125,7 +125,7 @@ class ColourCuePreview {
         val layout = ConstellationRepository.getById("mah_773823936")!!
         val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(layout, Random(7)))
         val state = MahjongGameEngine.startNewGame(layout).copy(tiles = tiles)
-        val scenes = listOf(Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp"), Scene(TableSurface.WALNUT, true, "board-walnut-fire"))
+        val scenes = listOf(Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp"), Scene(TableSurface.ELM_WOOD, true, "board-walnut-fire"))
         var scene by mutableStateOf(scenes.first())
         compose.mainClock.autoAdvance = false
         compose.setContent {

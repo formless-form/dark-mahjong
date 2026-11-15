@@ -4,13 +4,19 @@ package com.vortessence.mahjong.data.model
 // shortName: one word, for the four buttons in Settings, where the full names don't fit
 enum class TableSurface(val displayName: String, val shortName: String) {
     GREEN_MAT("Green mat", "Felt"),
-    WALNUT("Walnut", "Walnut"),
+    // Elm boards, honey brown, the grain looping round its eyes (Gareth, 2026-11-15). It replaced
+    // the walnut table, in its place: a stored "WALNUT" loads as this (fromStoredName)
+    ELM_WOOD("Elm wood", "Elm Wood"),
     THAI_STRAW("Thai straw", "Thai Straw Mat"),
     SLATE("Slate", "Slate"),
-    // Elm boards, honey brown, the grain looping round its eyes (Gareth, 2026-11-15)
-    ELM_WOOD("Elm wood", "Elm Wood"),
     // The reward for solving every one of a month's daily puzzles
-    BROCADE("Silk brocade", "Brocade"),
+    BROCADE("Silk brocade", "Brocade");
+
+    companion object {
+        /** The table stored as [name], or null; walnut, which the elm replaced (2026-11-15), is the elm. */
+        fun fromStoredName(name: String): TableSurface? =
+            if (name == "WALNUT") ELM_WOOD else entries.firstOrNull { it.name == name }
+    }
 }
 
 // The tiles' set (TileKits): the classic ivory, or charcoal terrazzo, jade or wood with soft gold

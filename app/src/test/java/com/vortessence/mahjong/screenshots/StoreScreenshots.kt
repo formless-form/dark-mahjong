@@ -83,7 +83,7 @@ class StoreScreenshots {
         shoot("1-title")
     }
 
-    @Test fun s2Walnut() { game(TableSurface.WALNUT, "pillar_of_heaven"); shoot("2-walnut") }
+    @Test fun s2Walnut() { game(TableSurface.ELM_WOOD, "pillar_of_heaven"); shoot("2-walnut") }
 
     @Test
     fun s3Zoomed() {
@@ -102,7 +102,7 @@ class StoreScreenshots {
     @Test
     fun s5Celebration() {
         compose.mainClock.autoAdvance = false
-        game(TableSurface.WALNUT, "torii_arch", message = "The mist lifts, and so do the tiles.", won = true)
+        game(TableSurface.ELM_WOOD, "torii_arch", message = "The mist lifts, and so do the tiles.", won = true)
         // The 600 ms smash, then the card's 1.1 s, and a little of its fade
         compose.mainClock.advanceTimeBy(2200)
         shoot("5-celebration")

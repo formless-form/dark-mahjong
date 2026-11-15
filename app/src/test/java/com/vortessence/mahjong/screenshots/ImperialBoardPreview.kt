@@ -69,8 +69,8 @@ class ImperialBoardPreview {
         val state = MahjongGameEngine.startNewGame(layout).copy(tiles = tiles)
         val scenes = listOf(
             Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp"),
-            Scene(TableSurface.WALNUT, true, "board-walnut-fire-as-made", relief = false),
-            Scene(TableSurface.WALNUT, true, "board-walnut-fire"),
+            Scene(TableSurface.ELM_WOOD, true, "board-walnut-fire-as-made", relief = false),
+            Scene(TableSurface.ELM_WOOD, true, "board-walnut-fire"),
         )
         var scene by mutableStateOf(scenes.first())
         compose.mainClock.autoAdvance = false

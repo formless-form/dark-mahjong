@@ -124,7 +124,7 @@ class PreferencesRepository(private val context: Context) {
             highlightFreeTiles = prefs[Keys.HIGHLIGHT_FREE_TILES] ?: d.highlightFreeTiles,
             vibrationEnabled = prefs[Keys.VIBRATION] ?: d.vibrationEnabled,
             tableSurface = prefs[Keys.TABLE_SURFACE]
-                ?.let { name -> TableSurface.entries.firstOrNull { it.name == name } }
+                ?.let(TableSurface::fromStoredName)
                 ?: d.tableSurface,
             tileSet = prefs[Keys.TILE_SET]
                 ?.let { name -> TileSet.entries.firstOrNull { it.name == name } }

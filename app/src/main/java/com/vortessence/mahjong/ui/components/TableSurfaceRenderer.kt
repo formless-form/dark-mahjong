@@ -35,7 +35,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 
 /**
- * Draws the tabletop: procedural green felt, walnut, Thai straw mat (redrawn from measurements
+ * Draws the tabletop: procedural green felt, Thai straw mat (redrawn from measurements
  * of a real woven sedge mat), the menus' slate, elm wood boards or silk brocade (earned with the daily puzzles), seen through [TableCamera]'s tilted perspective and lit
  * by a single warm lamp above the middle of the table, with the room falling away into darkness
  * around it. Its colour never changes, so it is drawn once and kept; only its light is worked out
@@ -64,14 +64,13 @@ float2 tablePoint(float2 p, out float fp) {
 """
 
     /**
-     * The tabletop's own colour, unlit: procedural felt, walnut, straw or slate, in screen
+     * The tabletop's own colour, unlit: procedural felt, straw, slate or brocade, in screen
      * pixels (the zoom and pan are worked into it, so fine detail stays sharp when zoomed). It
      * never flickers, so the board draws it into a cached layer, remade only when the zoom, pan,
      * size or surface changes.
      */
     private const val ALBEDO_AGSL = """
-uniform float mode;     // 0 green felt mat, 1 walnut, 2 Thai straw mat, 3 slate, 5 silk brocade (TableSurface order; 4, the elm wood, has its own shader, ELM_ALBEDO_AGSL)
-const float WALNUT_SCALE = 1.2;
+uniform float mode;     // 0 green felt mat, 2 Thai straw mat, 3 slate, 4 silk brocade (TableSurface order; 1, the elm wood, has its own shader, ELM_ALBEDO_AGSL)
 const float STRAW_SCALE = 1.1;
 $CAMERA_AGSL
 $SURFACES_AGSL
@@ -82,8 +81,6 @@ half4 main(float2 p) {
     float2 q = tablePoint((p - pan) / zoom, fp);
     float3 albedo;
     if (mode < 0.5) albedo = felt(q, fp);
-    // The walnut a little finer than life, narrower boards, so the tiles on it read larger
-    else if (mode < 1.5) albedo = walnut(q * WALNUT_SCALE, fp * WALNUT_SCALE);
     // The straw mat a little finer too, for the same reason
     else if (mode < 2.5) albedo = straw(q * STRAW_SCALE, fp * STRAW_SCALE);
     // The menus' slate, its colour here and its relief lit by the table's light (SLATE_SURFACE_AGSL)
@@ -216,7 +213,6 @@ half4 main(float2 p) {
     /** Glossy tables' reflections of the lamp and the fire, added over the lit table. */
     private const val TABLE_GLOSS_AGSL = """
 uniform float gloss;
-uniform float grained;  // 1 for walnut: its grain breaks up the reflection
 uniform float2 polish;  // a polished relief (elm wood): how far its slopes throw the reflections aside, and how brightly its crests shine
 $CAMERA_AGSL
 $FLAME_AGSL
@@ -235,8 +231,7 @@ half4 main(float2 p) {
     float2 thrown = q + n.xy * polish.x;
     float2 m = fromLamp(thrown, LAMP_MIRROR) * float2(3.4, 1.3);
     float2 mc = (thrown - flame.xy + float2(0.0, 0.05)) * float2(3.4 / flameSpread, 2.2);
-    float grain = grained > 0.5 ? 0.75 + 0.5 * vnoise(q * 1.2 * float2(60.0, 6.0)) : 1.0;
-    float3 c = gloss * grain * (lampLevel * exp(-dot(m, m) * 5.0) * 0.24 * LAMP_ON_TABLE
+    float3 c = gloss * (lampLevel * exp(-dot(m, m) * 5.0) * 0.24 * LAMP_ON_TABLE
         + 0.85 * flame.z * exp(-dot(mc, mc) * 4.0) * flameColour * float3(0.26, 0.24, 0.2));
     // ...and its crests, turned halfway between the lamp and the eye, shine across the lamp's pool
     if (polish.y > 0.0 && relief > 0.5) {
@@ -531,7 +526,6 @@ half4 main(float2 p) {
         setReliefUniforms(light, surface, relief)
         scope.drawRect(ShaderBrush(light), blendMode = BlendMode.Modulate)
         val gloss = when (surface) {
-            TableSurface.WALNUT -> 1f
             // Oiled elm: a soft sheen, over its relief
             TableSurface.ELM_WOOD -> 0.5f
             TableSurface.THAI_STRAW -> 0.1f
@@ -547,7 +541,6 @@ half4 main(float2 p) {
             flame.setUniforms(g)
             setShadowUniforms(g, shadowMap, fireShadows, cullUnder)
             g.setFloatUniform("gloss", gloss)
-            g.setFloatUniform("grained", if (surface == TableSurface.WALNUT) 1f else 0f)
             // Only the elm's oiled finish follows its relief: the slate's faint sheen lies level
             if (surface == TableSurface.ELM_WOOD) {
                 setReliefUniforms(g, surface, relief)
@@ -685,7 +678,6 @@ half4 main(float2 p) {
     float fp = scale / res.y;
     float3 c;
     if (mode < 0.5) c = felt(q, fp);
-    else if (mode < 1.5) c = walnut(q * 1.2, fp * 1.2);
     else if (mode < 2.5) c = straw(q * 1.1, fp * 1.1);
     else if (mode < 3.5) {
         // Slate's relief raked by a low lamp from up the table, as on the table
@@ -695,8 +687,8 @@ half4 main(float2 p) {
         c = stoneColour(q * SLATE_SCALE) * SLATE_GAIN * lit;
     } else c = silkBrocade(q, fp);
     float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
-    // 15% less lit than first made (Gareth, 2026-11-15)
-    float lamp = 0.85 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
+    // 15% less lit than first made, then 15% less twice more (Gareth, 2026-11-15: "still quite bright", "darker still")
+    float lamp = 0.61 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
     return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
 }
 """
@@ -714,8 +706,9 @@ half4 main(float2 p) {
     float3 l = normalize(float3(0.0, 0.6, $RELIEF_LAMP_HEIGHT));
     float3 c = elmWood(q * elmMm, fp * elmMm) * (0.4 + max(dot(n, l), 0.0)) / (0.4 + l.z);
     float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
-    // The same lamp as the other tables' swatches (SWATCH_AGSL)
-    float lamp = 0.85 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
+    // The other tables' swatch lamp (SWATCH_AGSL), and half that: the honey wood read far the
+    // brightest card ("especially the new elm", "darker still", Gareth 2026-11-15)
+    float lamp = 0.61 * 0.5 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
     return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
 }
 """
@@ -1257,39 +1250,6 @@ float fbm(float2 p) {
         a *= 0.5;
     }
     return v;
-}
-
-// ---- Walnut: narrow boards running away from the viewer, fine grain, glossy clearcoat ----
-float3 walnut(float2 q, float fp) {
-    float pw = 0.16;
-    float plank = floor(q.x / pw + 0.5);
-    float lx = q.x - plank * pw;
-    float seed = hash11(plank + 3.0);
-    // Grain runs strictly along the board, parallel to its edges, so (like the tile columns)
-    // every line converges with the perspective. Ring spacing varies across the board, from
-    // tight to open growth, but stays constant along it; only a tiny natural waver remains
-    float density = 50.0 + 40.0 * vnoise(float2(lx * 5.0 + seed * 11.0, seed * 3.0));
-    float d = (lx + seed) * density + 0.16 * (vnoise(float2(lx * 40.0 + seed, q.y * 1.2)) - 0.5);
-    float ring = fract(d);
-    // Soft earlywood into a narrow, darker latewood line; uneven ring strength
-    float late = smoothstep(0.7, 0.92, ring) * (1.0 - smoothstep(0.92, 1.0, ring));
-    late *= 0.35 + 0.8 * vnoise(float2(floor(d) * 1.7, q.y * 0.9 + seed * 30.0));
-    float3 light = float3(0.36, 0.22, 0.135);
-    float3 dark = float3(0.13, 0.075, 0.048);
-    float3 c = mix(light, dark, 0.3 + 0.6 * late);
-    // Long heartwood streaks and broad figure, and per-board colour, so no two boards match
-    float streak = fbm(float2(lx * 38.0 + seed * 7.0, q.y * 0.35 + seed * 3.0));
-    c *= 0.66 + 0.62 * streak;
-    c *= 0.86 + 0.24 * fbm(float2(lx * 9.0 + seed * 3.0, q.y * 1.2 + seed));
-    c *= mix(float3(0.9, 0.94, 1.0), float3(1.1, 1.0, 0.9), seed);
-    // Tiny open pores along the grain, faded out where they would alias
-    float poreFade = 1.0 - smoothstep(0.0005, 0.0012, fp);
-    float pore = smoothstep(0.82, 0.95, vnoise(float2(lx * 2200.0 + seed * 40.0, q.y * 160.0)));
-    c *= 1.0 - 0.22 * pore * poreFade;
-    // Fine seam between boards
-    float seam = smoothstep(pw * 0.5 - fp * 2.5, pw * 0.5 - fp * 0.5, abs(lx));
-    c *= 1.0 - 0.7 * seam;
-    return c;
 }
 
 // ---- Green felt: a classic mahjong mat ----

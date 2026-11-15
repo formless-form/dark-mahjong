@@ -23,6 +23,7 @@ import com.vortessence.mahjong.perf.FrameVerdict
 import com.vortessence.mahjong.data.model.Progress
 import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.data.repository.PreferencesRepository
 import com.vortessence.mahjong.data.repository.levelLabel
@@ -445,13 +446,22 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
      * Test builds only (BuildConfig.PERF_HOOKS): the same deal of [layoutName] every time, with the
      * fireplace lit or not on [surface], so frame timings before and after a change compare alike.
      */
-    fun startPerfScene(layoutName: String, fireplace: Boolean, surface: TableSurface?, autoplay: Boolean = false, countsForCheck: Boolean = false) {
+    fun startPerfScene(
+        layoutName: String, fireplace: Boolean, surface: TableSurface?, autoplay: Boolean = false, countsForCheck: Boolean = false,
+        tiles: TileSet? = null, fireIntensity: Float? = null,
+    ) {
         val constellation = ConstellationRepository.constellations.firstOrNull { it.name.equals(layoutName, ignoreCase = true) } ?: return
         // From the saved settings, which may not have loaded yet (a scene opens with the app), so
         // that only the fire and the table change
         viewModelScope.launch {
             val saved = prefsRepo.settingsFlow.first()
-            prefsRepo.updateSettings(saved, saved.copy(fireplaceLit = fireplace, tableSurface = surface ?: saved.tableSurface))
+            prefsRepo.updateSettings(
+                saved,
+                saved.copy(
+                    fireplaceLit = fireplace, tableSurface = surface ?: saved.tableSurface,
+                    tileSet = tiles ?: saved.tileSet, fireIntensity = fireIntensity ?: saved.fireIntensity,
+                ),
+            )
         }
         // Kept out of the first-game check, unless the check is what's being tried
         _perfScene.value = !countsForCheck

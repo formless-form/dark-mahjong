@@ -75,16 +75,16 @@ class PerfPreview {
         compose.onRoot().captureRoboImage("build/perf-preview/$set/$name.png")
     }
 
-    @Test fun quadWalnutFire() = shoot("Quad", TableSurface.WALNUT, true, "quad-walnut-fire")
+    @Test fun quadWalnutFire() = shoot("Quad", TableSurface.ELM_WOOD, true, "quad-walnut-fire")
     @Test fun quadStrawFire() = shoot("Quad", TableSurface.THAI_STRAW, true, "quad-straw-fire")
     @Test fun quadFeltLamp() = shoot("Quad", TableSurface.GREEN_MAT, false, "quad-felt-lamp")
-    @Test fun platformWalnutFire() = shoot("Platform", TableSurface.WALNUT, true, "platform-walnut-fire")
+    @Test fun platformWalnutFire() = shoot("Platform", TableSurface.ELM_WOOD, true, "platform-walnut-fire")
     @Test fun quadSlateFire() = shoot("Quad", TableSurface.SLATE, true, "quad-slate-fire")
-    @Test fun quadWalnutHighlights() = shoot("Quad", TableSurface.WALNUT, true, "quad-walnut-highlights", highlights = true)
+    @Test fun quadWalnutHighlights() = shoot("Quad", TableSurface.ELM_WOOD, true, "quad-walnut-highlights", highlights = true)
     @Test fun quadFeltHighlightsLamp() = shoot("Quad", TableSurface.GREEN_MAT, false, "quad-felt-highlights-lamp", highlights = true)
-    @Test fun clearedWalnutFire() = shoot("Quad", TableSurface.WALNUT, true, "cleared-walnut-fire", cleared = true)
+    @Test fun clearedWalnutFire() = shoot("Quad", TableSurface.ELM_WOOD, true, "cleared-walnut-fire", cleared = true)
 
     // The same, drawn shape by shape rather than from the tile atlas, to compare the two
-    @Test fun quadWalnutFireLive() = shoot("Quad", TableSurface.WALNUT, true, "quad-walnut-fire-live", setOf("atlas"))
+    @Test fun quadWalnutFireLive() = shoot("Quad", TableSurface.ELM_WOOD, true, "quad-walnut-fire-live", setOf("atlas"))
     @Test fun quadFeltLampLive() = shoot("Quad", TableSurface.GREEN_MAT, false, "quad-felt-lamp-live", setOf("atlas"))
 }

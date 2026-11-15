@@ -1,0 +1,6 @@
+New in 1.4.18:
+• A new elm wood table replaces walnut: honey-coloured boards with a looping grain
+• Solve every daily puzzle in a month to earn a new table: midnight silk brocade, woven with a silver key fret
+• Months with every puzzle solved are sealed on the Today's Puzzle calendar
+• Settings shows every table as a picture, with the lamp and fire first
+• Fixes and improvements

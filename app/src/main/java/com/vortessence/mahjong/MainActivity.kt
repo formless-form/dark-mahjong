@@ -27,6 +27,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.vortessence.mahjong.data.model.TableSurface
+import com.vortessence.mahjong.data.model.TileSet
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 import com.vortessence.mahjong.ui.components.FireShadows
 import com.vortessence.mahjong.ui.components.PerfSwitches
@@ -114,7 +115,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Test builds only: adb shell am start -S -n com.formlessform.darkmahjong/com.vortessence.mahjong.MainActivity
-    //   --es perfLayout Quad --ez perfFire true [--es perfSurface WALNUT]
+    //   --es perfLayout Quad --ez perfFire true [--es perfSurface ELM_WOOD]
     // (-S stops the app first, so the scene opens on a fresh start)
     private fun openPerfScene(intent: Intent?) {
         if (!BuildConfig.PERF_HOOKS) return
@@ -133,8 +134,15 @@ class MainActivity : ComponentActivity() {
         PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         val layout = intent?.getStringExtra("perfLayout") ?: return
         PerfSwitches.fireFps = intent.getIntExtra("perfFireFps", 0)
-        val surface = intent.getStringExtra("perfSurface")?.let { name -> TableSurface.entries.firstOrNull { it.name == name } }
-        viewModel.startPerfScene(layout, intent.getBooleanExtra("perfFire", false), surface, intent.getBooleanExtra("perfAutoplay", false), countsForCheck = checkReset)
+        val surface = intent.getStringExtra("perfSurface")?.let(TableSurface::fromStoredName)
+        // --es perfTiles IMPERIAL (a TileSet name) and --ef perfFireIntensity 1.0: the scene's tiles
+        // and fire, kept in the test app's settings (for listing pictures, 2026-11-15)
+        val tiles = intent.getStringExtra("perfTiles")?.let { name -> TileSet.entries.firstOrNull { it.name == name } }
+        val intensity = intent.getFloatExtra("perfFireIntensity", -1f).takeIf { it >= 0f }
+        viewModel.startPerfScene(
+            layout, intent.getBooleanExtra("perfFire", false), surface, intent.getBooleanExtra("perfAutoplay", false),
+            countsForCheck = checkReset, tiles = tiles, fireIntensity = intensity,
+        )
     }
 
     override fun onResume() {
