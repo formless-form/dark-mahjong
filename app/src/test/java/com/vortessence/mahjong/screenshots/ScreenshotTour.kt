@@ -616,7 +616,7 @@ class ScreenshotTour {
                 SettingsScreen(settings = GameSettings(tableSurface = TableSurface.THAI_STRAW), onSettingsChanged = {}, onBack = {})
             }
         }
-        compose.onNodeWithText("Straw").performScrollTo()
+        compose.onNodeWithText("Thai Straw Mat").performScrollTo()
         shoot("settings")
     }
 
