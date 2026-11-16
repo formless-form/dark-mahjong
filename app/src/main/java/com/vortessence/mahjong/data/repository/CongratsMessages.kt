@@ -66,7 +66,6 @@ enum class CongratsPool(val key: String, val messages: List<String>) {
             "Not one wasted move.",
             "That one sparkled.",
             // Lighter ones, so it isn't samey
-            "The tiles have filed a complaint. Dismissed.",
             "You and the tiles: a match made in heaven.",
             "The bamboo never saw it coming.",
             "Table cleared. Now, about the dishes...",

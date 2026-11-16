@@ -1,0 +1,5 @@
+New in 1.4.19:
+• Richer fireworks: sparks trail light, some shells shed glitter, and the sky glows as the show builds
+• Each match's sparkle takes the colours of the tiles you matched
+• Livelier table pictures in Settings, and the silk brocade card in gold
+• Fixes and improvements
