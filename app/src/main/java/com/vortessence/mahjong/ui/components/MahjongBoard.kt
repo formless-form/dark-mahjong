@@ -332,6 +332,7 @@ private fun BoardContent(
                         y = (transform.tilePixelY(t1.y, t1.z) + transform.tilePixelY(t2.y, t2.z) + transform.tileHeight) / 2f - lift,
                         reach = transform.tileWidth * 1.6f,
                         canvasHeight = canvasH,
+                        tile = t1.tile,
                     )
                 }
                 smashItem.flight = animationScope.launch {
