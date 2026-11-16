@@ -625,9 +625,7 @@ private fun TableSurfaceChoice(surface: TableSurface, chosen: Boolean, modifier:
     }
 }
 
-private val BROCADE_SILVER = Color(0xFFB9C1D9)
-
-// Until earned: dimmed under a silver lock, with this month's daily puzzles so far
+// Until earned: lightly dimmed under a lock in Imperial's gold, with this month's daily puzzles so far
 @Composable
 private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: () -> Unit) {
     val earned = progress.earned
@@ -637,7 +635,7 @@ private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: 
     Surface(
         shape = MaterialTheme.shapes.large,
         color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
-        border = if (chosen && earned) BorderStroke(2.dp, BROCADE_SILVER) else null,
+        border = if (chosen && earned) BorderStroke(2.dp, IMPERIAL_GOLD) else null,
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
@@ -653,11 +651,11 @@ private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: 
             Box(contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxWidth().height(SettingsPreviews.HEIGHT).clip(MaterialTheme.shapes.medium)) {
                     drawSwatch(TableSurface.BROCADE)
-                    if (!earned) drawRect(Color.Black.copy(alpha = 0.45f))
+                    if (!earned) drawRect(Color.Black.copy(alpha = 0.15f))
                 }
                 if (!earned) {
                     Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
-                        Icon(Icons.Rounded.Lock, null, tint = BROCADE_SILVER, modifier = Modifier.padding(10.dp).size(26.dp))
+                        Icon(Icons.Rounded.Lock, null, tint = IMPERIAL_GOLD, modifier = Modifier.padding(10.dp).size(26.dp))
                     }
                 }
             }
@@ -665,7 +663,7 @@ private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: 
             Text(
                 TableSurface.BROCADE.displayName,
                 style = MaterialTheme.typography.labelLarge,
-                color = if (!earned || chosen) BROCADE_SILVER else MaterialTheme.colorScheme.onSurface,
+                color = if (!earned || chosen) IMPERIAL_GOLD else MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 if (earned) "Earned with a month of daily puzzles" else "An elegant silk tablecloth, earned by solving every daily puzzle in a month",
@@ -675,7 +673,7 @@ private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: 
                 Spacer(Modifier.height(10.dp))
                 LinearProgressIndicator(
                     progress = { if (progress.missed) 0f else progress.solved.toFloat() / progress.days.coerceAtLeast(1) },
-                    color = BROCADE_SILVER,
+                    color = IMPERIAL_GOLD,
                     trackColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(0.7f),
                 )

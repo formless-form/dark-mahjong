@@ -650,10 +650,13 @@ half4 main(float2 p) {
         float lit = SLATE_LAMP_EVEN + (1.0 - SLATE_LAMP_EVEN) * 2.0 * max(dot(n, normalize(float3(0.0, 0.6, SLATE_LAMP_HEIGHT))), 0.0);
         c = stoneColour(q * SLATE_SCALE) * SLATE_GAIN * lit;
     } else c = silkBrocade(q, fp);
-    float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
-    // 0.85^3: dimmed 15% three times (Gareth, 2026-11-15: "still quite bright", "darker still")
-    float lamp = 0.61 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
-    return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
+    float2 d = (p - 0.5 * res) / res;
+    // Oval lamp pool shaped to the card, and colour lifted 20%, so the cards pop like the tiles'
+    // (Gareth, 2026-11-16: "more vignette", "a bit more saturation"; mock-up 2)
+    float lamp = 0.61 * (0.45 + 1.9 * exp(-dot(d, d) * 4.0));
+    float3 o = c * float3(1.0, 0.83, 0.62) * lamp;
+    o = mix(float3(dot(o, float3(0.299, 0.587, 0.114))), o, 1.2);
+    return half4(half3(clamp(o, 0.0, 1.0)), 1.0);
 }
 """
 
@@ -669,11 +672,12 @@ half4 main(float2 p) {
     float3 n = elmWoodNormal(q * elmMm, fp * elmMm);
     float3 l = normalize(float3(0.0, 0.6, $RELIEF_LAMP_HEIGHT));
     float3 c = elmWood(q * elmMm, fp * elmMm) * (0.4 + max(dot(n, l), 0.0)) / (0.4 + l.z);
-    float2 d = (p - 0.5 * res) / res.y * float2(0.4, 1.0);
-    // Half SWATCH_AGSL's lamp: the honey wood read far the brightest ("especially the new elm",
-    // "darker still", Gareth 2026-11-15)
-    float lamp = 0.61 * 0.5 * (0.7 + 1.5 * exp(-dot(d, d) * 2.5));
-    return half4(half3(c * float3(1.0, 0.83, 0.62) * lamp), 1.0);
+    float2 d = (p - 0.5 * res) / res;
+    // Half SWATCH_AGSL's lamp: the honey wood read far the brightest (Gareth, 2026-11-15)
+    float lamp = 0.61 * 0.5 * (0.45 + 1.9 * exp(-dot(d, d) * 4.0));
+    float3 o = c * float3(1.0, 0.83, 0.62) * lamp;
+    o = mix(float3(dot(o, float3(0.299, 0.587, 0.114))), o, 1.2);
+    return half4(half3(clamp(o, 0.0, 1.0)), 1.0);
 }
 """
 
