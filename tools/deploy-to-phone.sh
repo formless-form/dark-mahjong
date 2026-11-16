@@ -1,27 +1,43 @@
 #!/usr/bin/env bash
-# Builds a minified Play APK, signs it with the local debug key, installs and launches it.
-# Usage: tools/deploy-to-phone.sh [--no-launch] [adb-serial]  (--no-launch: e.g. while the phone is in use)
-# The build runs in its own systemd unit, outside the calling process (no memory cap).
+# Builds the side-by-side test app ("Dark Mahjong Test", perf hooks on), signs it with the shared debug
+# key so it installs over the Pixel's copy, installs it, and opens it unless --no-launch.
+# Usage: tools/deploy-to-phone.sh [--no-launch] [--via-ssh HOST]
+#   --via-ssh HOST: the phone is plugged into HOST, a Windows PC (adb.exe at its default SDK path)
+# Runs on the Linux server and in Git Bash on Windows.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SDK="${ANDROID_HOME:-$HOME/Android/Sdk}"
-ADB="$SDK/platform-tools/adb"
-APKSIGNER="$(ls -d "$SDK"/build-tools/*/ | sort -V | tail -1)apksigner"
+. tools/dm-env.sh
 LAUNCH=1
-if [ "${1:-}" = "--no-launch" ]; then LAUNCH=0; shift; fi
-SERIAL="${1:-100.116.67.56:5555}"
-OUT=app/build/outputs/apk/play/release
-
-systemd-run --user --collect --wait --pipe \
-    --working-directory="$PWD" --unit=mahjong-build "$PWD/gradlew" assemblePlayRelease -PperfHooks=true --no-daemon --console=plain -q
-
-"$APKSIGNER" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey \
-    --ks-pass pass:android --key-pass pass:android \
-    --out "$OUT/app-release-debugsigned.apk" "$OUT/app-play-release-unsigned.apk"
-ls -l "$OUT/app-release-debugsigned.apk"
-
-"$ADB" -s "$SERIAL" install -r "$OUT/app-release-debugsigned.apk"
-if [ "$LAUNCH" = 1 ]; then
-    "$ADB" -s "$SERIAL" logcat -c
-    "$ADB" -s "$SERIAL" shell monkey -p com.formlessform.darkmahjong -c android.intent.category.LAUNCHER 1 > /dev/null
+VIA=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --no-launch) LAUNCH=0 ;;
+        --via-ssh) VIA="$2"; shift ;;
+        *) echo "Unknown option $1" >&2; exit 1 ;;
+    esac
+    shift
+done
+# The key the Pixel's test app is signed with (the server's debug key; on the desktop, its copy)
+KEYSTORE="${DM_DEBUG_KEYSTORE:-}"
+if [ -z "$KEYSTORE" ]; then
+    if [ -f "$HOME/.android/dm-server-debug.keystore" ]; then KEYSTORE="$HOME/.android/dm-server-debug.keystore"; else KEYSTORE="$HOME/.android/debug.keystore"; fi
 fi
+OUT=app/build/outputs/apk/play/release
+PKG=com.formlessform.darkmahjong.test
+
+gradle assemblePlayRelease -PperfHooks=true -PsideBySide=true --console=plain -q
+"$ZIPALIGN" -f -p 4 "$OUT/app-play-release-unsigned.apk" "$OUT/aligned.apk"
+"$APKSIGNER" sign --ks "$KEYSTORE" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android \
+    --out "$OUT/dm-test.apk" "$OUT/aligned.apk"
+ls -l "$OUT/dm-test.apk"
+
+if [ -n "$VIA" ]; then
+    REMOTE_ADB="& \"\$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\""
+    scp -q "$OUT/dm-test.apk" "$VIA:dm-test.apk"
+    ssh "$VIA" "$REMOTE_ADB install -r dm-test.apk; Remove-Item dm-test.apk"
+    [ "$LAUNCH" = 1 ] && ssh "$VIA" "$REMOTE_ADB shell monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null
+else
+    "$ADB" install -r "$OUT/dm-test.apk"
+    [ "$LAUNCH" = 1 ] && "$ADB" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 > /dev/null
+fi
+exit 0
