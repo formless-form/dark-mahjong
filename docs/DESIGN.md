@@ -1,7 +1,7 @@
 # Design — Dark Mahjong
 
 Fork of [PcmciaKai/mahjong_solitaire](https://github.com/PcmciaKai/mahjong_solitaire) (Kotlin + Jetpack Compose).
-Status: **draft v2 for Gareth's review** — nothing below is built yet. Open questions from v1 are answered and folded in; the few new decisions are marked **(proposed)**.
+Status (2026-11-16): **most of this is built and on Google Play testing** (1.4.19). The document began as the design (draft v2, 2026-10-25) and now also records decisions as they were made, with dates. Some plans below changed along the way: where a section says so, the later date wins, and the milestones table is history.
 
 ## Goals
 
@@ -13,9 +13,9 @@ Status: **draft v2 for Gareth's review** — nothing below is built yet. Open qu
 
 ## Rules scope
 
-Classic mahjong solitaire, unchanged from upstream: remove pairs of identical *free* tiles (nothing on top, and a free left or right side). Any Season matches any Season; any Flower matches any Flower. Every dealt board is guaranteed solvable (upstream's `BoardSolvabilityGenerator`). Unlimited hint, undo and shuffle.
+Classic mahjong solitaire, unchanged from upstream: remove pairs of identical *free* tiles (nothing on top, and a free left or right side). Any Season matches any Season; any Flower matches any Flower. Every dealt board is guaranteed solvable (upstream's `BoardSolvabilityGenerator`). Undo and reshuffle are unlimited; hints are earned (since 1.4.6: one for each first clean clear, up to 6 saved).
 
-**Out:** score, timer, best times, Stats screen, Ko-fi/support dialog, any online feature, a light theme.
+**Out:** score, an on-screen timer, a Stats screen, the Ko-fi/support dialog, any online feature, a light theme. (Since 1.4.16 each Journey level keeps its best clear, time included, shown only after a win.)
 
 ## Platform
 
@@ -255,7 +255,8 @@ Done 2026-10-29, in two phases, measured on the Pixel 9 Pro (Quad, fireplace lit
 
 Since 2026-10-30 there are two builds. **play** is the one on Google Play. **foss** is
 fully open source, for F-Droid and anyone building from source. They differ only in
-`AppUpdates` (`app/src/play`, `app/src/foss`).
+`AppUpdates` and `Tips` (`app/src/play`, `app/src/foss`; tips through Play Billing since 1.4.7),
+and the Play build's Imperial images (closed source, not in the repository).
 
 The Play build asks Google Play, through the Play Store app and Google's in-app update library,
 whether a newer version is out for this player. Testers hear of their own track's releases. If one
@@ -299,7 +300,7 @@ test it, upload two versions to internal testing, install the older one from Pla
 | M10 | Shader backgrounds for the journey chapters + motion polish (match dissolve) |
 | M11 | Performance pass on the Pixel (atlas tuning, Baseline Profile) |
 
-Each finished milestone is tagged in git (`milestone-01` to `milestone-05`). **Next:** M6, and 12 testers through the 14-day closed test before applying for production on Google Play.
+Each finished milestone is tagged in git (`milestone-01` to `milestone-05`). The table above is history: since M5 the work followed Gareth's priorities rather than these milestones (the Journey grew to 100 levels, Today's Puzzle shipped in 1.4.2, tile sets in 1.4.15, earned rewards in 1.4.17 and 1.4.18). The 14-day closed test with 12+ testers is done, and production access was applied for on 2026-11-16.
 
 ## Remaining decisions
 

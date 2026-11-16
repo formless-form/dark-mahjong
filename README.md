@@ -20,7 +20,7 @@ Dark Mahjong is a fork of **[Mahjong Solitaire by PcmciaKai](https://github.com/
 
 ## Ad-free, offline and open, for good
 
-Dark Mahjong has had a great deal of care put into it. It has no ads, no tracking and no accounts, there is nothing to buy, it never touches the network, and its source is open. It will stay that way.
+Dark Mahjong has had a great deal of care put into it. It has no ads, no tracking and no accounts, nothing is locked behind a payment, the game itself never goes online, and its source is open. The Google Play version only offers optional tips through Google Play, which unlock nothing; the open-source build has none. It will stay that way.
 
 If you build on it, **please keep it that way too: no ads, no in-app purchases, no tracking, and not sold for profit.** That is a request, made in the spirit the game is given, rather than a licence term: the code is GPL v3, which does allow commercial use. What the licences do require of anyone who forks it:
 
@@ -38,19 +38,21 @@ If you build on it, **please keep it that way too: no ads, no in-app purchases, 
 ### A different look
 - **Seen at an angle.** The table is viewed slightly away from overhead, in true perspective: far rows recede and each tile's front edge shows, without ever hiding a tile's face.
 - **Glossy, well-used tiles.** A thick clear glaze reflects the lamp in streaks, broken up by tiny ripples in the glaze. Every tile is a little different: hairline scratches, grime in patches, the odd ding, sitting a fraction off-square, all from one evenly aged set. The artwork is engraved into the face.
+- **Tile sets:** **Ivory** (above), **Terrazzo**, **Jade** and **Olivewood**. The Google Play version adds **Imperial**, carved granite with gold-painted engravings, earned by finishing the Journey (its images are closed source and not in this repository).
 - **Four tabletops,** all rendered live in perspective: **Felt**, **Elm Wood** (honey elm boards, drawn life-size against the tiles), **Thai Straw Mat** (a well-used woven sedge mat) and **Slate**, plus **Silk Brocade**, earned by solving every daily puzzle in a month.
 - **Portrait-first,** because most layouts are taller than they are wide.
 - **145 layouts:** the original's, 76 boards from [Mah](https://github.com/ffalt/mah) (animals, plants, symbols, shapes and buildings; the widest played with the phone on its side), and themed boards made for Dark Mahjong. Pinch to zoom in on any of them. The 100-level Journey and the Layouts list both run from easy to hard.
 
 ### More relaxed play
-- **No timer, no scores, no statistics, no best times.** Progress is simply how far you've come.
+- **No timer on screen, no scores.** Each Journey level quietly keeps your best clear (the time, and any hints, reshuffles and undos), shown only after a win.
 - **Earned hints:** clear a level without hints, reshuffles or undo for a gold ribbon and a hint (up to 6 saved). Undo and reshuffles are unlimited, and every board is guaranteed solvable (from the original engine).
+- **Today's Puzzle:** a new board every day at 4 am, the same deal for everyone, easier early in the week and harder at the weekend. A calendar ticks the days you solve; solve a whole month to earn the silk brocade table.
 - **A gentle reward.** Clearing a board brings a fireworks show seen from above, in widely varied colours, and a warm message drawn from a large pool that doesn't repeat until you've seen them all.
 - **Quiet touches.** Soft clicks and light haptics, and everything respects the sound, vibration and animation settings.
-- **No ads, no tracking, no network access.**
+- **No ads, no tracking.** The game itself never goes online.
 
-### Coming next
-Next up is a first release on Google Play. After that: a 300-level journey with gradual difficulty, a daily puzzle, quick games by difficulty, and high-contrast tile sets. See [docs/DESIGN.md](docs/DESIGN.md).
+### Status
+Dark Mahjong is in testing on Google Play, with a public release to follow. The design and its history are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Requirements
 
@@ -60,7 +62,7 @@ Next up is a first release on Google Play. After that: a 300-level journey with 
 
 Gradle with the included wrapper; JDK 17 or newer.
 
-There are two builds. **foss** is entirely open source. **play**, for Google Play, adds Google's in-app update library (closed source), so the title screen can say when a newer version is available on Play. They differ in nothing else.
+There are two builds. **foss** is entirely open source. **play**, for Google Play, adds two closed-source Google libraries: in-app updates, so the title screen can say when a newer version is available on Play, and Play Billing, for optional tips. It also carries the Imperial tile set's images, which are not in this repository. Otherwise they are the same.
 
 ```sh
 # Debug build
@@ -74,7 +76,7 @@ There are two builds. **foss** is entirely open source. **play**, for Google Pla
 ./gradlew testFossDebugUnitTest
 ```
 
-`tools/deploy-to-phone.sh [--no-launch] [adb-serial]` builds a small minified APK, signs it with the local debug key and installs it over adb.
+`tools/deploy-to-phone.sh [--no-launch] [--via-ssh HOST]` builds a side-by-side test app ("Dark Mahjong Test"), signs it with a debug key and installs it over adb (`--via-ssh`: the phone is plugged into another PC).
 
 ## AI disclosure
 
@@ -84,7 +86,7 @@ The original project's code was largely written with AI tools (see the [upstream
 
 - **Code:** [GNU GPL v3](LICENSE), with the original's [App Store Exception](NOTICE.md#app-store-exception-additional-permission-under-gplv3-section-7) and an [additional term](NOTICE.md#additional-term-names-and-logos-gplv3-section-7e) keeping the Dark Mahjong name and logos. Original code © 2026 PcmciaKai; Dark Mahjong's changes © 2026 Grevillea Labs.
 - **Tile artwork:** [samoheen/mahjong-tiles](https://github.com/samoheen/mahjong-tiles), CC0.
-- **Layouts:** 29 boards from [Mah](https://github.com/ffalt/mah) by ffalt, MIT licence.
+- **Layouts:** 76 boards from [Mah](https://github.com/ffalt/mah) by ffalt, MIT licence.
 - **Title photograph:** *Sanqing Mountain is surrounded by clouds and mists* by Huangdan2060, [CC0](https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg), Wikimedia Commons (cropped and graded).
 - **Thai straw mat:** drawn procedurally, modelled on *Cambodian mat motifs* by Willuconquer ([CC BY-SA 4.0](https://commons.wikimedia.org/wiki/File:Cambodian_mat_motifs.jpg), Wikimedia Commons). No image is included.
 - **Name seal:** 全字庫說文解字 seal-script font, CNS11643, Ministry of Digital Affairs, Taiwan ([cns11643.gov.tw](https://www.cns11643.gov.tw)), Open Government Data License 1.0 (subset to four characters).
