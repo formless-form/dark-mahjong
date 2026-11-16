@@ -49,8 +49,7 @@ val MahjongColorScheme = darkColorScheme(
 fun MahjongTheme(
     content: @Composable () -> Unit,
 ) {
-    // Android 17's Material 3 Expressive: springy motion, its larger rounded shapes and the
-    // Google Sans Flex type scale, on Dark Mahjong's own dark palette (no wallpaper colours)
+    // Material 3 Expressive on our own dark palette (no wallpaper colours)
     MaterialExpressiveTheme(
         colorScheme = MahjongColorScheme,
         motionScheme = MotionScheme.expressive(),

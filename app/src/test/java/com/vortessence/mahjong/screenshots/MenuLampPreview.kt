@@ -17,8 +17,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The menus' slate by the lamp at a few colour temperatures (6600 K is close to the white lamp
- * the menus had before), into build/menu-lamp/levels-<kelvin>.png.
+ * The menus' slate at a few lamp temperatures (6600 K is near the old white lamp):
+ * build/menu-lamp/levels-<kelvin>.png.
  * Run: ./gradlew testFossDebugUnitTest --tests '*MenuLampPreview*'
  */
 @RunWith(RobolectricTestRunner::class)

@@ -12,7 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** The performance check and Low-performance mode stay with the phone they were set on. */
+/** The check and Low-performance mode stay with the phone they were set on. */
 @RunWith(RobolectricTestRunner::class)
 class PerfPhoneTest {
     private val repo = PreferencesRepository(ApplicationProvider.getApplicationContext())
@@ -42,7 +42,7 @@ class PerfPhoneTest {
         repo.namePerfPhone()
         assertEquals(PerfCheck.PENDING, repo.perfCheckFlow.first().check)
         assertFalse(repo.settingsFlow.first().lowPerformance)
-        // This phone's own verdict replaces the other's, and the other's mode doesn't come back
+        // This phone's verdict replaces the other's, whose mode doesn't come back
         repo.setPerfCheck(PerfCheck.PASSED, 2)
         assertEquals(PerfCheck.PASSED, repo.perfCheckFlow.first().check)
         assertFalse(repo.settingsFlow.first().lowPerformance)
@@ -54,7 +54,7 @@ class PerfPhoneTest {
         repo.storedOnPhone("Elsewhere/Old phone")
         repo.updateSettings(GameSettings(), GameSettings(lowPerformance = true))
         assertTrue(repo.settingsFlow.first().lowPerformance)
-        // The player's own choice: the check is never run
+        // Player's own choice: never run
         assertEquals(PerfCheck.MANUAL, repo.perfCheckFlow.first().check)
     }
 
@@ -63,7 +63,7 @@ class PerfPhoneTest {
         repo.resetPerfCheck()
         repo.setPerfCheck(PerfCheck.PASSED, 0)
         assertEquals(PerfCheck.PASSED, repo.perfCheckFlow.first().check)
-        // As 1.4.11 and 1.4.12 stored it, before passes near the line were told apart
+        // As 1.4.11-1.4.12 stored it, before near-the-line passes were told apart
         repo.storedCheckVersion(null)
         assertEquals(PerfCheck.PENDING, repo.perfCheckFlow.first().check)
         repo.setPerfCheck(PerfCheck.PASSED_CLOSE, 0)

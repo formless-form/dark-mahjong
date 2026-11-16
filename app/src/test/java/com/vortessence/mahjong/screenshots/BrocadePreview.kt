@@ -21,9 +21,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The silk brocade table, the daily puzzles' monthly reward (Gareth's pick of 2026-11-15, mock-up
- * 10, then detailed): a board on it, and zoomed in on the cloth under the lamp, a few tiles left.
- * build/brocade/brocade.png and brocade-zoomed.png.
+ * Silk brocade table, the daily puzzles' monthly reward (Gareth's pick, 2026-11-15, mock-up 10):
+ * a board, and zoomed on the cloth under the lamp. build/brocade/brocade.png, brocade-zoomed.png.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp-port-xxhdpi")
@@ -34,7 +33,7 @@ class BrocadePreview {
     private fun shoot(zoomed: Boolean = false, surface: TableSurface = TableSurface.BROCADE, tiles: TileSet = TileSet.IVORY, name: String = "brocade") {
         TileWear.prepareNow()
         val n = ConstellationRepository.levelIndexOf("pillar_of_heaven")!!
-        // Zoomed, only a few tiles stay, so the cloth under the lamp can be seen
+        // Zoomed: only a few tiles, so the cloth shows
         val state = MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(n))
             .let { st -> if (zoomed) st.copy(tiles = st.tiles.mapIndexed { k, t -> t.copy(isRemoved = k >= 6) }) else st }
         compose.setContent {

@@ -44,10 +44,8 @@ import java.io.FileOutputStream
 import kotlin.random.Random
 
 /**
- * A more lifelike Jade (Gareth, 2026-11-14, from a photo of a polished jade stone): the face mottled
- * with soft clouds of darker and lighter green, pale wispy veins and fine flecks, still glazed, with
- * Jade's white raised pictures and colour bar. Numbered 7 to 10 as sent (another set's round had
- * 1 to 6); Gareth chose 9, now TileKits.JADE. Into build/jade/<n>-<name>-<what>.png.
+ * A more lifelike, mottled Jade (Gareth, 2026-11-14, from a photo of polished jade). Numbered 7-10
+ * as sent; Gareth chose 9, now TileKits.JADE. build/jade/<n>-<name>-<what>.png.
  * Run: ./gradlew testFossDebugUnitTest --tests '*JadePreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -83,8 +81,7 @@ class JadePreview {
         FileOutputStream("$OUT/$name-faces.png").use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    // Eight faces large: the six and nine of bamboo (told apart by the colour cue), the nine of
-    // circles, a character, a wind, a dragon, a season and the one of circles
+    // Eight large faces; the six and nine of bamboo are told apart by the colour cue
     private fun bigSheet(kit: TileKit, name: String, tileW: Float = 260f) {
         val faces = listOf(
             Tile(TileSuit.BAMBOO, 6), Tile(TileSuit.BAMBOO, 9), Tile(TileSuit.CIRCLE, 9), Tile(TileSuit.CHARACTER, 5),
@@ -142,14 +139,14 @@ class JadePreview {
         }
     }
 
-    // Jade's mottling: dark clouds, light clouds, and the pale veins and flecks
+    // Mottle tones: dark clouds, light clouds, pale veins and flecks
     private fun mottled(top: Long, bottom: Long, side: Long, backing: Long, dark: Long, light: Long, vein: Long, strength: Float = 1f) =
         TileKits.JADE.copy(
             faceTop = Color(top), faceBottom = Color(bottom), side = Color(side), backing = Color(backing),
             mottle = strength, mottleTones = listOf(Color(dark), Color(light), Color(vein)),
         )
 
-    // Jade as it shipped in 1.4.15: plain dark jade, unmottled
+    // As shipped in 1.4.15, unmottled
     @Test fun n7() = variant(
         TileKits.JADE.copy(
             faceTop = Color(0xFF2D5D47), faceBottom = Color(0xFF1F4635), side = Color(0xFF19382A), backing = Color(0xFF11281A),
@@ -161,7 +158,7 @@ class JadePreview {
         mottled(0xFF2D5D47, 0xFF1F4635, 0xFF19382A, 0xFF11281A, dark = 0xFF0E2E20, light = 0xFF4E8E68, vein = 0xFFBFE3CC),
         "8-dark-jade-mottled",
     )
-    // Gareth's pick (2026-11-14), now TileKits.JADE itself
+    // Gareth's pick (2026-11-14)
     @Test fun n9() = variant(TileKits.JADE, "9-mid-jade-mottled")
     @Test fun n10() = variant(
         mottled(0xFF3B9550, 0xFF2C7A40, 0xFF215C30, 0xFF143A1F, dark = 0xFF14552A, light = 0xFF79C98A, vein = 0xFFDDF2E0),

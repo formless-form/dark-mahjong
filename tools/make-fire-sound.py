@@ -2,14 +2,12 @@
 """
 Builds the fireplace's crackle loop: app/src/main/res/raw/fireplace.ogg (Opus, 80 kbps, mono).
 
-Source: "Crackeling Fireplace" by Christopher C. Courter (Freesound 447818, CC0), a stone
-fireplace burning wet loblolly pine for a steady popping, in sounds/freesound/.
+Source: "Crackeling Fireplace" by Christopher C. Courter (Freesound 447818, CC0), in
+sounds/freesound/.
 
-The recording is mixed to mono and its last few seconds are crossfaded into its start (with
-equal-power curves, as the two ends are unrelated noise), so the loop point has no seam: the
-end flows straight on into the beginning. FireplaceSound plays it gaplessly. It is meant as
-ambience, not a distraction: the loudest pops are compressed, the harshest highs rolled off,
-and its level set so it sits softly under the music.
+Mixed to mono, the last seconds crossfaded into the start (equal-power, as the ends are unrelated
+noise) so FireplaceSound's gapless loop has no seam. Soft ambience: loudest pops compressed,
+harshest highs rolled off, level under the music.
 
 Needs Python 3 with numpy, and ffmpeg (with libopus). Run from the repo root:
     python3 tools/make-fire-sound.py [source]
@@ -43,14 +41,14 @@ def main():
         with wave.open(wav) as w:
             x = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(float) / 32768
 
-        # Loop: the first LENGTH seconds, with the stretch after them crossfaded into the start
+        # The first LENGTH seconds, the stretch after them crossfaded into the start
         x = x[: int((LENGTH + CROSSFADE) * SR)]
         n = int(CROSSFADE * SR)
         t = np.linspace(0, np.pi / 2, n)
         loop = x[: len(x) - n].copy()
         loop[:n] = x[:n] * np.sin(t) + x[len(x) - n:] * np.cos(t)
 
-        # Level: a soft background, with no pop above the peak ceiling
+        # Soft background, no pop above the peak ceiling
         rms = np.sqrt(np.mean(loop ** 2))
         gain = 10 ** (LEVEL_DB / 20) / rms
         gain = min(gain, 10 ** (PEAK_DB / 20) / np.abs(loop).max())

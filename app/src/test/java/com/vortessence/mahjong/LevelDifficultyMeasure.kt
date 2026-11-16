@@ -11,13 +11,11 @@ import java.util.stream.IntStream
 import kotlin.random.Random
 
 /**
- * Measures how hard each level really is: deals of every layout, played to the end without hints,
- * undo or reshuffles, by two simple players. One takes any free pair at random (a beginner); the
- * other takes the highest pair, then the one holding down the most tiles (a careful player).
- * The share of deals each clears is written to build/level-difficulty.csv.
+ * Each level's real difficulty: deals played out without hints, undo or reshuffles by a beginner
+ * (any free pair at random) and a careful player (highest pair, then the one holding down most
+ * tiles). Clear rates go to build/level-difficulty.csv.
  *
- * Slow, so it only runs when asked: MEASURE_LEVELS=300 (deals per level) in the environment.
- * MEASURE_ONLY=id,id,... measures just those layouts, for new ones.
+ * Slow: runs only with MEASURE_LEVELS=<deals per level>; MEASURE_ONLY=id,id,... for just those.
  */
 class LevelDifficultyMeasure {
 
@@ -25,7 +23,7 @@ class LevelDifficultyMeasure {
     fun measure() {
         val deals = System.getenv("MEASURE_LEVELS")?.toIntOrNull()
         assumeTrue("Set MEASURE_LEVELS to run", deals != null)
-        // Every layout (the Layouts list is ordered the same way), its level number if it's a level
+        // Layouts-list order, with the level number if it is one
         val only = System.getenv("MEASURE_ONLY")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()
         val layouts = ConstellationRepository.constellations
             .filter { it.id != ConstellationRepository.TUTORIAL_ID }

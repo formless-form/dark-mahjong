@@ -48,7 +48,7 @@ fun ConstellationSelectScreen(
     onConstellationSelected: (Constellation) -> Unit,
     onBack: () -> Unit,
     fireIntensity: Float = 0.5f,
-    // The menus' fire goes out with the phone's Remove animations
+    // Off with the phone's Remove animations
     fire: Boolean = true,
 ) {
     var selectedDifficultyFilter by remember { mutableStateOf<Difficulty?>(null) }
@@ -94,7 +94,7 @@ fun ConstellationSelectScreen(
                                 label = constellation.name.first().toString(),
                             )
                         },
-                        // No line at all for a layout with nothing to say (an about-even layout of our own)
+                        // None for an about-even layout of our own
                         overlineContent = layoutLabel(constellation).takeIf { it.isNotEmpty() }?.let { label ->
                             { Text(label, color = MaterialTheme.colorScheme.primary) }
                         },
@@ -117,8 +117,7 @@ fun ConstellationSelectScreen(
     }
 }
 
-// Its shape if clearly tall or wide, and for an imported layout its group: e.g. "Tall · Animals",
-// "Wide", or just "Animals"
+// E.g. "Tall · Animals", "Wide", or just "Animals"
 private fun layoutLabel(constellation: Constellation): String = when {
     constellation.id == ConstellationRepository.TUTORIAL_ID -> "Guided lesson"
     else -> listOfNotNull((if (constellation.onSide) LayoutShape.WIDE else layoutShape(constellation.positions)).label, constellation.category).joinToString(" · ")
@@ -134,7 +133,7 @@ private fun ChipRow(content: LazyListScope.() -> Unit) {
     )
 }
 
-// A filter chip that shows a tick when selected, as Android's own filter chips do
+// Shows a tick when selected, as Android's filter chips do
 @Composable
 private fun FilterOption(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(

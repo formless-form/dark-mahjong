@@ -24,7 +24,7 @@ class FrameTallyTest {
 
     @Test
     fun overlappingFramesWithinTheirDeadlineAreFine() {
-        // As on a Pixel: 42 ms start to finish, but a 50 ms deadline, one a refresh apart
+        // Pixel: 42 ms to finish, 50 ms deadline, a refresh apart
         val v = tally(frames(600) { Triple(42L, 50L, 17L) }).verdict()!!
         assertFalse(v.struggling)
         assertTrue(v.fps >= 55)

@@ -25,8 +25,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Google Play listing screenshots: 1080 x 1920 px (Play wants phone screenshots at exactly 9:16,
- * and the Pixel's own screen is taller than that). Rendered into
+ * Play listing screenshots, 1080 x 1920 px (Play wants exactly 9:16; the Pixel is taller).
  * build/store-screenshots. Run: ./gradlew testFossDebugUnitTest --tests '*StoreScreenshots*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -35,7 +34,7 @@ class StoreScreenshots {
     @get:Rule
     val compose = createComposeRule()
 
-    // The menu firelight's clock never lets the screen settle
+    // The menu firelight never lets the screen settle
     @org.junit.Before
     fun holdMenuFireStill() {
         com.vortessence.mahjong.ui.components.MenuFire.flickers = false

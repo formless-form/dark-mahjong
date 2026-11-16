@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vortessence.mahjong.data.model.GameState
 
-/** Above the board: a round back button, then which level and layout this is. */
+/** Above the board: back button, level and layout. */
 @Composable
 fun GameHeader(
     gameState: GameState,
@@ -83,10 +83,7 @@ fun GameHeader(
     }
 }
 
-/**
- * Below the board: Material 3 Expressive's floating toolbar holding big labelled buttons, within
- * easy reach of the thumb.
- */
+/** Below the board, in thumb reach: M3 Expressive floating toolbar of labelled buttons. */
 @Composable
 fun GameToolbar(
     gameState: GameState,
@@ -95,7 +92,7 @@ fun GameToolbar(
     onRestartClick: () -> Unit,
     modifier: Modifier = Modifier,
     hintAndUndoEnabled: Boolean = true,
-    // Hints left to spend, shown on the button; null where they're free (the tutorial)
+    // Shown on the button; null where free (the tutorial)
     hints: Int? = null,
 ) {
     Box(contentAlignment = Alignment.Center, modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)) {
@@ -113,10 +110,7 @@ fun GameToolbar(
     }
 }
 
-/**
- * Beside a board played on its side, where height is short: the header and the toolbar as one
- * narrow rail down the left, the back button and the layout's name at the top, the buttons below.
- */
+/** On-side boards (height is short): header and toolbar as one narrow rail down the left. */
 @Composable
 fun GameRail(
     gameState: GameState,
@@ -138,7 +132,7 @@ fun GameRail(
     ) {
         BackButton(onClick = onBackClick)
         Spacer(Modifier.height(8.dp))
-        // A line each: "Level 12", "Hard"
+        // "Level 12", "Hard" on separate lines
         Text(
             text = listOfNotNull(
                 label?.takeIf { it != gameState.constellation.name },
@@ -147,19 +141,18 @@ fun GameRail(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
-        // A word to a line: "Nine", "Dragon", "Pagoda"
+        // A word per line
         var nameWidth by remember { mutableIntStateOf(0) }
         Text(
             text = gameState.constellation.name.split(' ').joinToString("\n"),
-            // Its lines closer than a paragraph's: one name, not three
+            // Tight, to read as one name
             style = MaterialTheme.typography.titleMedium.copy(lineHeight = 19.sp),
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.onSizeChanged { nameWidth = it.width },
         )
         Spacer(Modifier.weight(1f))
-        // The toolbar's buttons stood on end, on the rail itself (no card of their own), as wide as
-        // the bottom toolbar is tall and a little above the bottom; centred under the name, but
-        // never past the screen's edge
+        // Toolbar buttons stacked on the rail, as wide as the bottom toolbar is tall, centred under
+        // the name but never past the screen edge
         val toolbarWidth = actionHeight() + TOOLBAR_PADDING * 2
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -179,7 +172,7 @@ fun GameRail(
 private val RAIL_WIDTH = 100.dp
 private val RAIL_START = 12.dp
 
-// Around the bottom toolbar's buttons, as Material's floating toolbar sets them
+// As Material's floating toolbar pads its buttons
 private val TOOLBAR_PADDING = 8.dp
 
 @Composable
@@ -192,10 +185,10 @@ private fun ToolbarActions(
     narrow: Boolean = false,
     hints: Int? = null,
 ) {
-    // Stuck, Hint brings back the "no moves" dialog
+    // When stuck, Hint reopens the "no moves" dialog
     val canHint = hintAndUndoEnabled && (gameState.availablePairsCount > 0 || gameState.isStalemate)
     val canUndo = hintAndUndoEnabled && gameState.moveHistory.isNotEmpty()
-    // With none left it's greyed, but still answers a tap (with how to earn one)
+    // Greyed with none left, but a tap explains how to earn one
     ToolbarAction(
         Icons.Rounded.Lightbulb, "Hint", enabled = canHint, onClick = onHintClick, narrow = narrow,
         tint = MaterialTheme.colorScheme.secondary, dimmed = hints == 0, count = hints,
@@ -204,8 +197,7 @@ private fun ToolbarActions(
     ToolbarAction(Icons.Rounded.RestartAlt, "Restart", enabled = true, onClick = onRestartClick, narrow = narrow)
 }
 
-// 20 px shorter than Material's 60 dp, 10 px off the top and bottom, so the bar sits slimmer; the
-// bar's rounded ends follow its height
+// 20 px under Material's 60 dp, for a slimmer bar
 @Composable
 private fun actionHeight() = 60.dp - with(LocalDensity.current) { 20.toDp() }
 
@@ -215,12 +207,12 @@ private fun ToolbarAction(
     label: String,
     enabled: Boolean,
     onClick: () -> Unit,
-    // In the rail's narrow toolbar: as wide as the toolbar, the label close to the edges
+    // The rail's: full toolbar width, label close to the edges
     narrow: Boolean = false,
     tint: Color = Color.Unspecified,
-    // Greyed though it can still be tapped
+    // Greyed but still tappable
     dimmed: Boolean = false,
-    // A small count on the icon's corner, Android style
+    // Badge on the icon's corner, Android style
     count: Int? = null,
 ) {
     val content = MaterialTheme.colorScheme.onSurface
@@ -228,7 +220,7 @@ private fun ToolbarAction(
     Surface(
         onClick = onClick,
         enabled = enabled,
-        // Narrow, its corners tighter than the toolbar's so they don't clip a label as long as "Restart"
+        // Narrow: tighter corners, so they don't clip "Restart"
         shape = if (narrow) RoundedCornerShape(12.dp) else MaterialTheme.shapes.extraLarge,
         color = Color.Transparent,
         modifier = (if (narrow) Modifier.fillMaxWidth() else Modifier.widthIn(min = 88.dp)).height(actionHeight()),
@@ -250,7 +242,7 @@ private fun ToolbarAction(
                 }
             }
             Spacer(Modifier.height(if (narrow) 3.dp else 4.dp))
-            // Narrow, a size smaller, so "Restart" sits clear of the rounded ends
+            // Narrow: a size smaller, so "Restart" clears the rounded ends
             Text(
                 label,
                 style = if (narrow) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
@@ -262,7 +254,7 @@ private fun ToolbarAction(
     }
 }
 
-// The hints left, in a small jade disc (grey once there are none)
+// Hints left in a jade disc (grey at none)
 @Composable
 private fun CountBadge(count: Int, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme

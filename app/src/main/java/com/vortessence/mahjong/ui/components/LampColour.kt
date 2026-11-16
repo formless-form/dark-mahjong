@@ -4,19 +4,15 @@ import android.graphics.RuntimeShader
 import kotlin.math.ln
 
 /**
- * The lamp's colour, as a colour temperature: on the table and, a little paler (the ivory faces
- * read truer), on the tiles. It burns at [DEFAULT_KELVIN], 2000 K, close to candlelight (chosen by
- * Gareth on 2026-11-12, after renders at 2700, 2400, 2100 and 1800 K).
- *
- * At 2700 K it is the lamp as first tuned by eye: (1, 0.86, 0.70) on the table, (1, 0.89, 0.76) on
- * the tiles. Other temperatures move each channel along the blackbody curve by the same proportion
- * as the true colour moves from 2700 K's, so the lamp keeps its character (the eye's adaptation,
- * that leaves it far paler than a true blackbody) and only warms or cools.
+ * The lamp's colour temperature, on the table and, a little paler so ivory reads true, the tiles.
+ * [DEFAULT_KELVIN] is near candlelight (Gareth's pick, 2026-11-12, over 2700/2400/2100/1800 K).
+ * Colours were tuned by eye at 2700 K; other temperatures scale each channel by the blackbody's
+ * proportional change, so the lamp stays far paler than a true blackbody and only warms or cools.
  */
 object LampColour {
     const val DEFAULT_KELVIN = 2000f
 
-    /** The lamp's colour temperature, in kelvins (previews try others). */
+    /** Kelvins; previews try others. */
     @Volatile
     var kelvin = DEFAULT_KELVIN
 
@@ -27,7 +23,7 @@ object LampColour {
     fun table(k: Float = kelvin) = shifted(TABLE_AT_TUNED, k)
     fun tiles(k: Float = kelvin) = shifted(TILES_AT_TUNED, k)
 
-    // Worked out once per temperature, not for every shader every frame
+    // Cached per temperature, not computed per shader per frame
     private class Colours(val k: Float, val table: FloatArray, val tiles: FloatArray)
     @Volatile
     private var colours: Colours? = null
@@ -39,10 +35,7 @@ object LampColour {
         s.setFloatUniform("LAMP_ON_TILES", c.tiles)
     }
 
-    /**
-     * The menus' slate, by a lamp a little less warm than the table's: [MENU_KELVIN] (Gareth,
-     * 2026-11-13, after a render at 2000 K), or the previews' [kelvin] where they set one.
-     */
+    /** Menu slate: a slightly cooler [MENU_KELVIN] (Gareth's pick, 2026-11-13), or a preview's [kelvin]. */
     fun setMenuUniform(s: RuntimeShader) {
         val k = if (kelvin == DEFAULT_KELVIN) MENU_KELVIN else kelvin
         val c = menuColour?.takeIf { it.first == k } ?: (k to table(k)).also { menuColour = it }
@@ -53,8 +46,7 @@ object LampColour {
     @Volatile
     private var menuColour: Pair<Float, FloatArray>? = null
 
-    // Each channel's shortfall from white, scaled by how far the blackbody's own falls short at [k]
-    // against at 2700 K
+    // Each channel's shortfall from white, scaled by the blackbody's at [k] relative to 2700 K
     private fun shifted(tuned: FloatArray, k: Float): FloatArray {
         val at = blackbody(k)
         val ref = blackbody(TUNED_AT)
@@ -64,10 +56,7 @@ object LampColour {
         }
     }
 
-    /**
-     * A blackbody's colour at [k] kelvins (1000 to 6600), red held at 1: Tanner Helland's fit to
-     * Mitchell Charity's table, in sRGB.
-     */
+    /** sRGB blackbody at [k] K (1000-6600), red = 1: Tanner Helland's fit to Mitchell Charity's table. */
     internal fun blackbody(k: Float): FloatArray {
         val t = k.coerceIn(1000f, 6600f) / 100f
         val g = (99.4708025861f * ln(t) - 161.1195681661f) / 255f

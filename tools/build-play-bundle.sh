@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
-# Builds the Android App Bundle for Google Play and signs it with the upload key.
-#
-# The upload key lives outside the repo, in ~/.config/dark-mahjong/upload-keystore.p12 (alias
-# "upload"); its password is DARK_MAHJONG_UPLOAD_KEY_PASS in the server secrets store
-# (~/server_secrets.py). Google Play re-signs the app with its own app signing key, so this key
-# only proves an upload came from us; if it is ever lost, Play support can reset it.
+# Builds the Play App Bundle, signed with the upload key: ~/.config/dark-mahjong/upload-keystore.p12
+# (alias "upload"), password DARK_MAHJONG_UPLOAD_KEY_PASS in ~/server_secrets.py. Play re-signs
+# with its own key, so a lost upload key can be reset by Play support.
 #
 # Usage: tools/build-play-bundle.sh   ->   dist/DarkMahjong-<version>.aab
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# The Imperial images ship in the Play build only and are never committed (they're kept out by
-# .git/info/exclude), so a checkout can lack them: without them the game quietly leaves Imperial
-# out, so a release must not be built without the full set: 12 bodies and 42 faces, each with
-# its surface map, and the ready-made picture of its tiles for Settings (made by
-# ImperialSettingsSamples, a Play-build test, saved as lossless WebP by tools/imperial-samples-webp.sh)
+# The Imperial images are never committed (.git/info/exclude) and the game quietly drops Imperial
+# without them, so insist on the full set: 12 bodies and 42 faces, each with its surface map, and
+# settings-samples.webp (ImperialSettingsSamples, then tools/imperial-samples-webp.sh)
 IMPERIAL="app/src/play/assets/imperial"
 pictures=$(find "$IMPERIAL" -maxdepth 1 -name '*.webp' ! -name '*-surface.webp' 2>/dev/null | wc -l)
 maps=$(find "$IMPERIAL" -maxdepth 1 -name '*-surface.webp' 2>/dev/null | wc -l)
@@ -29,8 +24,7 @@ KEYSTORE="$HOME/.config/dark-mahjong/upload-keystore.p12"
 DARK_MAHJONG_UPLOAD_KEY_PASS="$(python3 "$HOME/server_secrets.py" get DARK_MAHJONG_UPLOAD_KEY_PASS)"
 export DARK_MAHJONG_UPLOAD_KEY_PASS
 
-# Memory-capped, as for every Gradle build on this server. Perf hooks are forced off, whatever
-# gradle.properties says
+# Memory-capped, as for every Gradle build on this server; perf hooks forced off
 systemd-run --user --collect --wait --pipe \
     --working-directory="$PWD" --unit=mahjong-build "$PWD/gradlew" bundlePlayRelease -PperfHooks=false --no-daemon --console=plain -q
 

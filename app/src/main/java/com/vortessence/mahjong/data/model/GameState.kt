@@ -15,29 +15,24 @@ data class GameState(
     val isStalemate: Boolean = false,
     val availablePairsCount: Int = 0,
     val blockedTileId: Int? = null,
-    // A hint was shown or the tiles reshuffled this game, so a win won't count as clean (undo is fine)
+    // Hint or reshuffle used: the win isn't clean (undo is fine)
     val usedHelp: Boolean = false,
-    // This deal so far, for its best-clear record (LevelRecord): hints shown, reshuffles and moves
-    // undone, and time spent playing it up to the last time the clock was settled (the view model
-    // keeps the clock, which stops while the board is away)
+    // For the best-clear record (LevelRecord). playMillis is up to the last clock settle (the view
+    // model keeps the clock, paused while the board is away)
     val hintsUsed: Int = 0,
     val reshufflesUsed: Int = 0,
     val undosUsed: Int = 0,
     val playMillis: Long = 0L,
-    // An order the pairs can be taken in to clear the board, which hints follow: from the deal or
-    // the reshuffle, or found by the hint solver. Not saved; a restored game finds one again
+    // A clearing order hints follow (from the deal, reshuffle or hint solver). Not saved; a restored
+    // game finds one again
     val plan: List<Move> = emptyList(),
-    // The deal as it was first laid out, for replaying it: each tile's face (by tile id) and the
-    // deal's plan. Empty for a game restored from a save made before deals were kept
+    // Original deal for replay: faces by tile id, and its plan. Empty for saves predating this
     val dealt: List<Tile> = emptyList(),
     val dealtPlan: List<Move> = emptyList(),
 ) {
     val remainingTilesCount: Int get() = tiles.count { !it.isRemoved }
 
-    /**
-     * The end of a board: two or three pairs left, all on the lowest layer, and a way to clear
-     * them. The game then offers to finish it (in [finishPlan]'s order).
-     */
+    /** Two or three clearable pairs left, all on the lowest layer: the game offers to finish. */
     val canFinish: Boolean get() = finishPlan != null
 
     val finishPlan: List<Pair<Int, Int>>? by lazy {
@@ -52,6 +47,6 @@ data class GameState(
     val totalTilesCount: Int get() = tiles.size
 }
 
-// Finish is offered from 3 pairs left down to 2 (fewer than 4, and one pair is just a tap)
+// 2-3 pairs left (one pair is just a tap)
 private const val FINISH_MIN_TILES = 4
 private const val FINISH_MAX_TILES = 6

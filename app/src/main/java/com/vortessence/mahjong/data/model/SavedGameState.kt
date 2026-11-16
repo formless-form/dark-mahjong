@@ -20,24 +20,24 @@ data class SavedGameState(
     val levelIndex: Int?,
     val tiles: List<SavedTile>,
     val moveHistory: List<Move>,
-    // The tutorial's step: an index into TutorialScript.steps, FREE_PLAY once the guided part is
-    // over, or null (any other board, or a save from before steps were kept)
+    // Index into TutorialScript.steps, FREE_PLAY after the guided part; null otherwise or in older
+    // saves
     val tutorialStep: Int? = null,
-    // The order hints follow (GameState.plan); empty in saves from before plans were kept
+    // GameState.plan; empty in older saves
     val plan: List<Move> = emptyList(),
-    // The deal as first laid out (GameState.dealt, dealtPlan); empty in older saves
+    // GameState.dealt/dealtPlan; empty in older saves
     val dealt: List<Tile> = emptyList(),
     val dealtPlan: List<Move> = emptyList(),
-    // Today's Puzzle's day (an epoch day) for that puzzle, null for any other board
+    // Epoch day; null for other boards
     val puzzleDay: Long? = null,
     val usedHelp: Boolean = false,
-    // The deal's counts and play time so far (GameState); 0 in saves from before they were kept
+    // 0 in older saves
     val hintsUsed: Int = 0,
     val reshufflesUsed: Int = 0,
     val undosUsed: Int = 0,
     val playMillis: Long = 0L,
 ) {
-    // deserialize only accepts saves on a layout that exists
+    // deserialize only accepts existing layouts
     fun toGameState(): GameState {
         val constellation = requireNotNull(ConstellationRepository.getById(constellationId))
         val boardTiles = tiles.map { st ->
@@ -122,7 +122,7 @@ data class SavedGameState(
                 if (parts.size < 6) return null
 
                 val constellationId = parts[0]
-                // A layout that no longer exists can't be played on: the save is dropped
+                // Layout gone: drop the save
                 if (ConstellationRepository.getById(constellationId) == null) return null
                 val levelIndex = parts[1].toIntOrNull()
 
@@ -180,7 +180,7 @@ data class SavedGameState(
                     },
                     dealtPlan = moves(parts.getOrNull(9)),
                     puzzleDay = parts.getOrNull(10)?.toLongOrNull(),
-                    // Saves from before this was kept count as clean so far
+                    // Older saves count as clean so far
                     usedHelp = parts.getOrNull(11) == "1",
                     hintsUsed = parts.getOrNull(12)?.toIntOrNull() ?: 0,
                     reshufflesUsed = parts.getOrNull(13)?.toIntOrNull() ?: 0,

@@ -7,7 +7,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Imperial is earned by clearing every Journey level, counted by layout. */
+/** Earned by clearing every Journey level, counted by layout. */
 class ImperialUnlockTest {
     private val levels = ConstellationRepository.levelConstellations.map { it.id }
 
@@ -23,7 +23,6 @@ class ImperialUnlockTest {
         assertFalse(p.earned)
     }
 
-    // Other layouts and Today's Puzzle don't count; only the Journey's
     @Test
     fun onlyJourneyLayoutsCount() {
         val others = ConstellationRepository.constellations.map { it.id }.filterNot { it in levels }.toSet()
@@ -35,8 +34,7 @@ class ImperialUnlockTest {
     @Test
     fun oneShortIsStillLocked() = assertFalse(imperial(Progress(completedConstellations = levels.drop(1).toSet())).earned)
 
-    // Counted by layout, so it holds however the levels are numbered, and a player who reached
-    // level 101 under an old numbering without clearing the new boards hasn't earned it yet
+    // Reaching level 101 under an old numbering without clearing the new boards doesn't earn it
     @Test
     fun everyLevelClearedEarnsIt() {
         assertTrue(imperial(Progress(completedConstellations = levels.toSet())).earned)

@@ -37,13 +37,12 @@ import androidx.compose.ui.unit.dp
 enum class BadgeState { CURRENT, CLEARED, OPEN, LOCKED }
 
 /**
- * The leading badge of a level or layout row, using Material 3 Expressive's shape set: a sunny
- * burst for the level you're up to, a soft cookie with a tick once cleared, a plain circle
- * otherwise.
+ * A level or layout row's badge (M3 Expressive shapes): sunny burst for the current level, cookie
+ * with a tick once cleared, plain circle otherwise.
  */
 @Composable
 fun LevelBadge(state: BadgeState, label: String, icon: ImageVector? = null, ribbon: Boolean = false) {
-    // A level cleared cleanly wears a small gold ribbon pinned to its badge's lower right
+    // Clean clears get a gold ribbon at the lower right
     Box {
         Badge(state, label, icon)
         if (ribbon && state != BadgeState.LOCKED) {
@@ -87,7 +86,7 @@ private fun Badge(state: BadgeState, label: String, icon: ImageVector?) {
     }
 }
 
-/** Difficulty as a short row of small amber stars. */
+/** Difficulty as small amber stars. */
 @Composable
 fun DifficultyStars(stars: Int, dimmed: Boolean = false) {
     Row(Modifier.alpha(if (dimmed) 0.4f else 1f)) {
@@ -97,8 +96,7 @@ fun DifficultyStars(stars: Int, dimmed: Boolean = false) {
     }
 }
 
-// A gold rosette on two tails, drawn to its box (about 16 x 21 dp): a domed medal lit from the
-// upper left with a stamped inner ring, on shaded silk tails
+// A gold medal on two silk tails, drawn to its box (about 16 x 21 dp), lit from the upper left
 @Composable
 internal fun GoldRibbon(modifier: Modifier = Modifier) {
     Canvas(modifier.semantics { contentDescription = "Cleared cleanly" }) {
@@ -118,7 +116,7 @@ internal fun GoldRibbon(modifier: Modifier = Modifier) {
                 close()
             }
             drawPath(path, Brush.verticalGradient(listOf(light, dark), startY = c.y, endY = h))
-            // Faint ribs fanning down the silk from under the medal
+            // Faint ribs fanning down the silk
             val top = Offset(c.x + side * w * 0.12f, c.y + r * 0.4f)
             clipPath(path) {
                 for (k in 0..3) {
@@ -130,13 +128,13 @@ internal fun GoldRibbon(modifier: Modifier = Modifier) {
         }
         tail(-1f, TailLight, TailDark)
         tail(1f, TailMid, TailDeep)
-        // A soft shadow under the medal, onto the tails
+        // Medal's shadow on the tails
         drawCircle(Color.Black.copy(alpha = 0.28f), r * 1.02f, c + Offset(0f, w * 0.05f))
         drawCircle(Brush.radialGradient(listOf(GoldHighlight, Gold, GoldDeep), center = c + Offset(-r * 0.35f, -r * 0.4f), radius = r * 1.6f), r, c)
-        // Stamped inner ring: a dark groove with a light lip below it
+        // Stamped inner ring: dark groove, light lip below
         drawCircle(GoldGroove.copy(alpha = 0.75f), r * 0.6f, c, style = Stroke(w * 0.045f))
         drawCircle(GoldHighlight.copy(alpha = 0.55f), r * 0.6f, c + Offset(0f, w * 0.03f), style = Stroke(w * 0.025f))
-        // Bright rim, and a glint on the upper left
+        // Rim and upper-left glint
         drawCircle(Brush.linearGradient(listOf(GoldHighlight, GoldDeep), start = c - Offset(r, r), end = c + Offset(r, r)), r, c, style = Stroke(w * 0.055f))
         drawArc(Color.White.copy(alpha = 0.7f), 200f, 45f, false, topLeft = c - Offset(r * 0.78f, r * 0.78f), size = Size(r * 1.56f, r * 1.56f), style = Stroke(w * 0.04f, cap = StrokeCap.Round))
     }

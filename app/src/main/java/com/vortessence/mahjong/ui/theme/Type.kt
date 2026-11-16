@@ -9,7 +9,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import com.vortessence.mahjong.R
 
-// Title and title-screen menu: Roman inscriptional capitals (lowercase renders as small capitals)
+// Title and title-screen menu (lowercase renders as small capitals)
 @OptIn(ExperimentalTextApi::class)
 val Cinzel = FontFamily(
     listOf(600, 700).map { weight ->
@@ -17,12 +17,10 @@ val Cinzel = FontFamily(
     },
 )
 
-// Seal script (篆書), subset to the four characters of the name seal 暗夜麻將
+// Subset to the name seal's four characters 暗夜麻將
 val SealScript = FontFamily(Font(R.font.seal_script_name, FontWeight.Normal))
 
-// Everything else: Google Sans Flex, Android's own typeface since Material 3 Expressive. The
-// bundled file keeps its weight and optical-size axes. Android doesn't pick an optical size by
-// itself, so there are three families, each tuned to a band of text sizes.
+// Android doesn't pick an optical size itself, so three families, each for a band of text sizes
 @OptIn(ExperimentalTextApi::class)
 private fun googleSansFlex(opticalSize: Float) = FontFamily(
     listOf(300, 400, 500, 600, 700, 800).map { weight ->
@@ -47,7 +45,7 @@ private fun TextStyle.text() = copy(fontFamily = SansText)
 private fun TextStyle.title() = copy(fontFamily = SansTitle)
 private fun TextStyle.display() = copy(fontFamily = SansDisplay)
 
-// The Material 3 Expressive type scale (sizes, weights and the emphasized set), in Google Sans Flex
+// Material 3 Expressive type scale in Google Sans Flex
 val Typography = Typography(
     displayLarge = Baseline.displayLarge.display(),
     displayMedium = Baseline.displayMedium.display(),

@@ -20,9 +20,7 @@ object ConstellationRepository {
     const val TUTORIAL_ID = "tutorial"
     const val TUTORIAL_LEVEL = 0
 
-    /**
-     * Small scripted board that teaches the rules. It is Level 0 in both phone and tablet mode.
-     */
+    /** Level 0 in both phone and tablet mode. */
     val tutorialConstellation: Constellation by lazy { createTutorial() }
 
     /** Builds and sorts the catalog in the background at launch, so the first screens don't wait. */
@@ -33,10 +31,7 @@ object ConstellationRepository {
         }, "layouts").apply { isDaemon = true }.start()
     }
 
-    /**
-     * Vertical, phone-optimized constellations designed specifically for smartphones.
-     * These use the vertical screen space efficiently and prevent excessive zooming out.
-     */
+    /** Upright phone layouts, so boards don't zoom out too far. */
     private val phoneConstellations: List<Constellation> by lazy {
         listOf(
             createJadePillar(),
@@ -54,9 +49,7 @@ object ConstellationRepository {
         ).map(::measured)
     }
 
-    /**
-     * Classic layouts preserved for tablets and manual selection in Constellation Select mode.
-     */
+    /** Kept for tablets and manual selection. */
     val classicConstellations: List<Constellation> by lazy {
         listOf(
             createMiniTurtle(),
@@ -74,55 +67,46 @@ object ConstellationRepository {
         ).map(::measured)
     }
 
-    /**
-     * Layouts ported from Mah by ffalt (MIT licence): the ones that suit a phone held upright.
-     */
+    /** From Mah by ffalt (MIT): the ones that suit a phone held upright. */
     val mahConstellations: List<Constellation> by lazy {
         MahLayouts.boards.map { measured(it.toConstellation()) }
     }
 
-    /** Wide layouts made for Layouts, to play on the phone's side. */
+    /** Layouts only, played on the phone's side. */
     val wideConstellations: List<Constellation> by lazy {
         WideLayouts.layouts.map(::measured)
     }
 
-    /** Layouts made for the Journey (levels 89 to 100 when they joined, slotted in by difficulty). */
+    /** Levels 89-100 when they joined, slotted in by difficulty. */
     val journeyConstellations: List<Constellation> by lazy {
         JourneyLayouts.layouts.map(::measured)
     }
 
-    /** Themed layouts, for Layouts. */
+    /** Layouts only. */
     val themedConstellations: List<Constellation> by lazy {
         ThemedLayouts.layouts.map(::measured)
     }
 
-    // A layout labelled by how often its deals are really cleared (LayoutDifficulty), rather than
-    // by the label it was made with
+    // Labelled by measured clear rate (LayoutDifficulty), not the label it was made with
     private fun measured(c: Constellation): Constellation =
         LayoutDifficulty.clearRate[c.id]?.let { c.copy(difficulty = LayoutDifficulty.label(it)) } ?: c
 
     /**
-     * The progressive levels in the Journey, easy to hard: the phone-shaped layouts, the ones from
-     * Mah, and those made for the Journey. Levels 1 to 8 are the same as before the Mah layouts
+     * Phone, Mah and Journey layouts, easy to hard. Levels 1-8 are unchanged since before Mah's
      * joined (they measured easiest too).
      */
     val levelConstellations: List<Constellation> by lazy {
         (phoneConstellations + mahConstellations + journeyConstellations).sortedWith(easyToHard)
     }
 
-    /**
-     * All constellations available in the app: the tutorial, then everything else easy to hard.
-     */
+    /** The tutorial, then everything else easy to hard. */
     val constellations: List<Constellation> by lazy {
         listOf(tutorialConstellation) +
             (phoneConstellations + classicConstellations + wideConstellations + themedConstellations + mahConstellations + journeyConstellations)
                 .sortedWith(easyToHard)
     }
 
-    /**
-     * Easy to hard: the layout whose deals are cleared most often first (LayoutDifficulty), then
-     * fewer tiles, then by name. A layout not yet measured goes by its label.
-     */
+    /** Highest clear rate first (LayoutDifficulty), then fewer tiles, then name; unmeasured by label. */
     private val easyToHard: Comparator<Constellation> =
         compareByDescending<Constellation> { LayoutDifficulty.clearRate[it.id] ?: unmeasured(it) }
             .thenBy { it.tileCount }
@@ -135,12 +119,12 @@ object ConstellationRepository {
         Difficulty.EXPERT -> 0.10f
     }
 
-    /** The level number a layout is in Levels mode (0 for the tutorial), or null if it isn't a level. */
+    /** Levels-mode number (0 for the tutorial), or null if not a level. */
     fun levelIndexOf(id: String): Int? =
         if (id == TUTORIAL_ID) TUTORIAL_LEVEL
         else levelConstellations.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1)
 
-    /** The layout with [id], or null if there's none (a save from a layout since removed). */
+    /** Null if none (e.g. a save from a removed layout). */
     fun getById(id: String): Constellation? = constellations.firstOrNull { it.id == id }
 
     fun getLevel(levelIndex: Int): Constellation {
@@ -153,11 +137,7 @@ object ConstellationRepository {
     val totalLevels: Int
         get() = levelConstellations.size
 
-    // =========================================================================
-    // TUTORIAL (Level 0)
-    // =========================================================================
-
-    // Level 0: Tutorial (14 tiles). The tile order defines the tile ids used by TutorialScript:
+    // 14 tiles. Tile order defines TutorialScript's tile ids:
     //   row y=0: 0..3, row y=2: 4..7, row y=4: 8..11, top layer: 12 (on 5), 13 (on 6)
     private fun createTutorial(): Constellation {
         val list = mutableListOf<TilePosition>()
@@ -172,7 +152,7 @@ object ConstellationRepository {
         val eastWind = Tile(TileSuit.WIND, Tile.WIND_EAST)
         val characters3 = Tile(TileSuit.CHARACTER, 3)
         val circles7 = Tile(TileSuit.CIRCLE, 7)
-        // The bottom two rows mirror each other, so the free-play part can never get stuck
+        // Bottom two rows mirror each other so free play can't get stuck
         val tiles = listOf(
             bamboo5, Tile(TileSuit.SEASON, Tile.SEASON_SPRING), Tile(TileSuit.SEASON, Tile.SEASON_AUTUMN), bamboo5,
             redDragon, characters3, circles7, eastWind,
@@ -190,14 +170,9 @@ object ConstellationRepository {
         )
     }
 
-    // =========================================================================
-    // PHONE-OPTIMIZED VERTICAL CONSTELLATIONS (Levels 1 - 12)
-    // =========================================================================
-
-    // Level 1: Jade Pillar (36 tiles) - Easy
+    // 36 tiles
     private fun createJadePillar(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 26 tiles
         val rowsL0 = listOf(
             0 to listOf(4, 6),
             2 to listOf(2, 4, 6, 8),
@@ -213,13 +188,13 @@ object ConstellationRepository {
             for (x in xs) list.add(pos(x, y, 0))
         }
 
-        // Layer 1: 8 tiles (Shaft center ridge)
+        // Shaft center ridge
         for (y in listOf(4, 6, 8, 10)) {
             list.add(pos(4, y, 1))
             list.add(pos(6, y, 1))
         }
 
-        // Layer 2: 2 tiles (Gem crown)
+        // Gem crown
         list.add(pos(5, 6, 2))
         list.add(pos(5, 8, 2))
 
@@ -232,10 +207,9 @@ object ConstellationRepository {
         )
     }
 
-    // Level 2: Bamboo Spire (48 tiles) - Easy
+    // 48 tiles
     private fun createBambooSpire(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 36 tiles
         val rowsL0 = listOf(
             0 to listOf(2, 4, 6),
             2 to listOf(2, 4, 6),
@@ -252,7 +226,7 @@ object ConstellationRepository {
             for (x in xs) list.add(pos(x, y, 0))
         }
 
-        // Layer 1: 10 tiles (Node ridges)
+        // Node ridges
         for (y in listOf(4, 8, 12)) {
             list.add(pos(2, y, 1))
             list.add(pos(4, y, 1))
@@ -260,7 +234,7 @@ object ConstellationRepository {
         }
         list.add(pos(4, 6, 1))
 
-        // Layer 2: 2 tiles (Heart node)
+        // Heart node
         list.add(pos(4, 6, 2))
         list.add(pos(4, 8, 2))
 
@@ -273,10 +247,9 @@ object ConstellationRepository {
         )
     }
 
-    // Level 3: Dragon Saber (56 tiles) - Easy
+    // 56 tiles
     private fun createDragonSaber(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 42 tiles
         val rowsL0 = listOf(
             0 to listOf(4),
             2 to listOf(2, 4, 6),
@@ -295,7 +268,7 @@ object ConstellationRepository {
             for (x in xs) list.add(pos(x, y, 0))
         }
 
-        // Layer 1: 12 tiles (Fuller spine, crossguard & pommel)
+        // Fuller spine, crossguard & pommel
         for (y in listOf(4, 6, 8, 10, 12)) {
             list.add(pos(4, y, 1))
         }
@@ -307,7 +280,7 @@ object ConstellationRepository {
         list.add(pos(2, 20, 1))
         list.add(pos(6, 20, 1))
 
-        // Layer 2: 2 tiles (Guard dragon eye & spine jewel)
+        // Guard dragon eye & spine jewel
         list.add(pos(4, 14, 2))
         list.add(pos(4, 8, 2))
 
@@ -320,10 +293,9 @@ object ConstellationRepository {
         )
     }
 
-    // Level 4: Celestial Lantern (64 tiles) - Easy
+    // 64 tiles
     private fun createCelestialLantern(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 48 tiles
         val rowsL0 = listOf(
             0 to listOf(4, 6),
             2 to listOf(4, 6),
@@ -341,14 +313,14 @@ object ConstellationRepository {
             for (x in xs) list.add(pos(x, y, 0))
         }
 
-        // Layer 1: 12 tiles (Luminous core window)
+        // Luminous core window
         for (y in listOf(8, 10, 12)) {
             for (x in listOf(2, 4, 6, 8)) {
                 list.add(pos(x, y, 1))
             }
         }
 
-        // Layer 2: 4 tiles (Central medallion)
+        // Central medallion
         list.add(pos(4, 9, 2))
         list.add(pos(6, 9, 2))
         list.add(pos(4, 11, 2))
@@ -363,37 +335,36 @@ object ConstellationRepository {
         )
     }
 
-    // Level 5: Torii Arch (72 tiles) - Medium
+    // 72 tiles
     private fun createToriiArch(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 54 tiles
-        // Kasagi (y=0)
+        // Kasagi
         for (x in listOf(0, 2, 4, 6, 8, 10)) list.add(pos(x, 0, 0))
-        // Shimaki (y=2)
+        // Shimaki
         for (x in listOf(2, 4, 6, 8)) list.add(pos(x, 2, 0))
-        // Nuki (y=4)
+        // Nuki
         for (x in listOf(0, 2, 4, 6, 8, 10)) list.add(pos(x, 4, 0))
-        // Center plaque (y=6, 8)
+        // Center plaque
         list.add(pos(4, 6, 0))
         list.add(pos(6, 6, 0))
         list.add(pos(4, 8, 0))
         list.add(pos(6, 8, 0))
-        // Twin pillars (y=6..16)
+        // Twin pillars
         for (y in listOf(6, 8, 10, 12, 14, 16)) {
             list.add(pos(0, y, 0))
             list.add(pos(2, y, 0))
             list.add(pos(8, y, 0))
             list.add(pos(10, y, 0))
         }
-        // Pillar plinths (y=18)
+        // Pillar plinths
         list.add(pos(0, 18, 0))
         list.add(pos(2, 18, 0))
         list.add(pos(8, 18, 0))
         list.add(pos(10, 18, 0))
-        // Courtyard foundation (y=20)
+        // Courtyard foundation
         for (x in listOf(0, 2, 4, 6, 8, 10)) list.add(pos(x, 20, 0))
 
-        // Layer 1: 14 tiles (Upper beam crest, pillar ridges & tablet)
+        // Upper beam crest, pillar ridges & tablet
         for (x in listOf(2, 4, 6, 8)) list.add(pos(x, 0, 1))
         for (y in listOf(8, 10, 12, 14)) {
             list.add(pos(1, y, 1))
@@ -402,7 +373,7 @@ object ConstellationRepository {
         list.add(pos(4, 6, 1))
         list.add(pos(6, 6, 1))
 
-        // Layer 2: 4 tiles (Roof crown & shrine mirror)
+        // Roof crown & shrine mirror
         list.add(pos(4, 0, 2))
         list.add(pos(6, 0, 2))
         list.add(pos(4, 6, 2))
@@ -417,10 +388,9 @@ object ConstellationRepository {
         )
     }
 
-    // Level 6: Celadon Hourglass (80 tiles) - Medium
+    // 80 tiles
     private fun createCeladonHourglass(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 56 tiles
         val rowsL0 = listOf(
             0 to listOf(0, 2, 4, 6, 8, 10),
             2 to listOf(2, 4, 6, 8),
@@ -439,7 +409,7 @@ object ConstellationRepository {
             for (x in xs) list.add(pos(x, y, 0))
         }
 
-        // Layer 1: 20 tiles (Upper bulb, waist collar, lower bulb)
+        // Upper bulb, waist collar, lower bulb
         for (y in listOf(4, 6)) {
             for (x in listOf(2, 4, 6, 8)) list.add(pos(x, y, 1))
         }
@@ -450,7 +420,7 @@ object ConstellationRepository {
             for (x in listOf(2, 4, 6, 8)) list.add(pos(x, y, 1))
         }
 
-        // Layer 2: 4 tiles (Chamber emblems)
+        // Chamber emblems
         list.add(pos(4, 5, 2))
         list.add(pos(6, 5, 2))
         list.add(pos(4, 17, 2))
@@ -465,17 +435,16 @@ object ConstellationRepository {
         )
     }
 
-    // Level 7: Cascading Falls (96 tiles) - Medium
+    // 96 tiles
     private fun createCascadingFalls(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 72 tiles (6 columns x 12 rows)
         for (y in (0..22) step 2) {
             for (x in listOf(0, 2, 4, 6, 8, 10)) {
                 list.add(pos(x, y, 0))
             }
         }
 
-        // Layer 1: 20 tiles (Left & right stepped canyon terraces)
+        // Left & right stepped canyon terraces
         for (y in listOf(2, 4, 8, 10)) {
             list.add(pos(0, y, 1))
             list.add(pos(2, y, 1))
@@ -490,7 +459,7 @@ object ConstellationRepository {
         list.add(pos(10, 16, 1))
         list.add(pos(10, 18, 1))
 
-        // Layer 2: 4 tiles (High canyon promontories)
+        // High canyon promontories
         list.add(pos(1, 3, 2))
         list.add(pos(1, 9, 2))
         list.add(pos(9, 5, 2))
@@ -505,10 +474,9 @@ object ConstellationRepository {
         )
     }
 
-    // Level 8: Phoenix Tower (108 tiles) - Medium
+    // 108 tiles
     private fun createPhoenixTower(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 76 tiles
         for (x in listOf(2, 4, 6, 8, 10)) {
             list.add(pos(x, 0, 0))
             list.add(pos(x, 2, 0))
@@ -522,7 +490,7 @@ object ConstellationRepository {
             list.add(pos(x, 22, 0))
         }
 
-        // Layer 1: 24 tiles (Center keep & outer wing bastions)
+        // Center keep & outer wing bastions
         for (y in (4..14) step 2) {
             for (x in listOf(4, 6, 8)) {
                 list.add(pos(x, y, 1))
@@ -533,7 +501,7 @@ object ConstellationRepository {
             list.add(pos(12, y, 1))
         }
 
-        // Layer 2: 8 tiles (High spire sanctum & wing turrets)
+        // High spire sanctum & wing turrets
         for (y in listOf(6, 8, 10, 12)) {
             list.add(pos(6, y, 2))
         }
@@ -551,24 +519,22 @@ object ConstellationRepository {
         )
     }
 
-    // Level 9: Imperial Monolith (120 tiles) - Hard
+    // 120 tiles
     private fun createImperialMonolith(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 72 tiles (6 columns x 12 rows)
         for (y in (0..22) step 2) {
             for (x in listOf(0, 2, 4, 6, 8, 10)) {
                 list.add(pos(x, y, 0))
             }
         }
 
-        // Layer 1: 36 tiles (Inner 4 columns across 9 rows)
         for (y in (2..18) step 2) {
             for (x in listOf(2, 4, 6, 8)) {
                 list.add(pos(x, y, 1))
             }
         }
 
-        // Layer 2: 10 tiles (Stele central spine & terminal caps)
+        // Stele central spine & terminal caps
         for (y in listOf(6, 8, 10, 12)) {
             list.add(pos(4, y, 2))
             list.add(pos(6, y, 2))
@@ -576,7 +542,7 @@ object ConstellationRepository {
         list.add(pos(4, 4, 2))
         list.add(pos(6, 14, 2))
 
-        // Layer 3: 2 tiles (Summit crown)
+        // Summit crown
         list.add(pos(5, 7, 3))
         list.add(pos(5, 9, 3))
 
@@ -589,17 +555,16 @@ object ConstellationRepository {
         )
     }
 
-    // Level 10: Ruyi Scepter (132 tiles) - Hard
+    // 132 tiles
     private fun createRuyiScepter(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 84 tiles (7 columns x 12 rows)
         for (y in (0..22) step 2) {
             for (x in listOf(0, 2, 4, 6, 8, 10, 12)) {
                 list.add(pos(x, y, 0))
             }
         }
 
-        // Layer 1: 36 tiles (Cloud head, handle curve & finial)
+        // Cloud head, handle curve & finial
         for (y in listOf(0, 2, 4)) {
             for (x in listOf(2, 4, 6, 8, 10)) list.add(pos(x, y, 1))
         }
@@ -614,7 +579,7 @@ object ConstellationRepository {
         }
         for (x in listOf(4, 6, 8)) list.add(pos(x, 18, 1))
 
-        // Layer 2: 10 tiles (Cloud boss & spine ridge)
+        // Cloud boss & spine ridge
         for (y in listOf(2, 4)) {
             for (x in listOf(4, 6, 8)) list.add(pos(x, y, 2))
         }
@@ -622,7 +587,7 @@ object ConstellationRepository {
             list.add(pos(5, y, 2))
         }
 
-        // Layer 3: 2 tiles (Dragon pearl gems)
+        // Dragon pearl gems
         list.add(pos(6, 3, 3))
         list.add(pos(5, 9, 3))
 
@@ -635,17 +600,16 @@ object ConstellationRepository {
         )
     }
 
-    // Level 11: Pillar of Heaven (140 tiles) - Hard
+    // 140 tiles
     private fun createPillarOfHeaven(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 84 tiles (7 columns x 12 rows)
         for (y in (0..22) step 2) {
             for (x in listOf(0, 2, 4, 6, 8, 10, 12)) {
                 list.add(pos(x, y, 0))
             }
         }
 
-        // Layer 1: 42 tiles (Inner 5 columns x 8 rows + side cloud wings)
+        // Inner block + side cloud wings
         for (y in (2..16) step 2) {
             for (x in listOf(2, 4, 6, 8, 10)) {
                 list.add(pos(x, y, 1))
@@ -654,14 +618,14 @@ object ConstellationRepository {
         list.add(pos(0, 8, 1))
         list.add(pos(12, 8, 1))
 
-        // Layer 2: 12 tiles (Central sanctum)
+        // Central sanctum
         for (y in listOf(6, 8, 10, 12)) {
             for (x in listOf(4, 6, 8)) {
                 list.add(pos(x, y, 2))
             }
         }
 
-        // Layer 3: 2 tiles (Apex celestial crown)
+        // Apex celestial crown
         list.add(pos(6, 8, 3))
         list.add(pos(6, 10, 3))
 
@@ -674,10 +638,9 @@ object ConstellationRepository {
         )
     }
 
-    // Level 12: Grand Pagoda Spire (144 tiles) - Expert
+    // 144 tiles
     private fun createGrandPagodaSpire(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 78 tiles
         for (x in listOf(2, 4, 6, 8, 10)) {
             list.add(pos(x, 0, 0))
             list.add(pos(x, 2, 0))
@@ -691,7 +654,6 @@ object ConstellationRepository {
             list.add(pos(x, 22, 0))
         }
 
-        // Layer 1: 38 tiles
         for (y in (4..16) step 2) {
             for (x in listOf(2, 4, 6, 8, 10)) {
                 list.add(pos(x, y, 1))
@@ -701,25 +663,22 @@ object ConstellationRepository {
         list.add(pos(12, 10, 1))
         list.add(pos(6, 2, 1))
 
-        // Layer 2: 18 tiles
         for (y in (6..16) step 2) {
             for (x in listOf(4, 6, 8)) {
                 list.add(pos(x, y, 2))
             }
         }
 
-        // Layer 3: 6 tiles
         for (y in listOf(7, 9, 11)) {
             list.add(pos(4, y, 3))
             list.add(pos(6, y, 3))
         }
 
-        // Layer 4: 3 tiles
         list.add(pos(5, 7, 4))
         list.add(pos(5, 9, 4))
         list.add(pos(5, 11, 4))
 
-        // Layer 5: 1 tile (Golden finial)
+        // Golden finial
         list.add(pos(5, 9, 5))
 
         return Constellation(
@@ -731,29 +690,22 @@ object ConstellationRepository {
         )
     }
 
-    // =========================================================================
-    // CLASSIC CONSTELLATIONS (Preserved for Tablets & Manual Constellation Select)
-    // =========================================================================
-
-    // 1. Mini Turtle (36 tiles) - Easy
+    // 36 tiles
     private fun createMiniTurtle(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 6x4 = 24 tiles
         for (gx in 0 until 6) {
             for (gy in 0 until 4) {
                 list.add(pos(2 + gx * 2, 2 + gy * 2, 0))
             }
         }
-        // Layer 1: 4x2 = 8 tiles
         for (gx in 0 until 4) {
             for (gy in 0 until 2) {
                 list.add(pos(4 + gx * 2, 4 + gy * 2, 1))
             }
         }
-        // Layer 2: 2 tiles
         list.add(pos(6, 5, 2))
         list.add(pos(8, 5, 2))
-        // Layer 0 outer wings: 2 tiles
+        // Outer wings
         list.add(pos(0, 5, 0))
         list.add(pos(14, 5, 0))
 
@@ -766,49 +718,47 @@ object ConstellationRepository {
         )
     }
 
-    // 2. Cross (48 tiles) - Easy
+    // 48 tiles
     private fun createCross(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0 (36 tiles):
-        // Central 4x4 block: 16 tiles
+        // Central 4x4 block
         for (x in listOf(8, 10, 12, 14)) {
             for (y in listOf(4, 6, 8, 10)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Left arm: 6 tiles
+        // Left arm
         for (x in listOf(2, 4, 6)) {
             for (y in listOf(6, 8)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Right arm: 6 tiles
+        // Right arm
         for (x in listOf(16, 18, 20)) {
             for (y in listOf(6, 8)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Top arm: 4 tiles
+        // Top arm
         for (x in listOf(10, 12)) {
             for (y in listOf(0, 2)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Bottom arm: 4 tiles
+        // Bottom arm
         for (x in listOf(10, 12)) {
             for (y in listOf(12, 14)) {
                 list.add(pos(x, y, 0))
             }
         }
 
-        // Layer 1 (12 tiles):
-        // Center 2x2: 4 tiles
+        // Center
         for (x in listOf(10, 12)) {
             for (y in listOf(6, 8)) {
                 list.add(pos(x, y, 1))
             }
         }
-        // Arms layer 1: 8 tiles
+        // Arms
         list.add(pos(6, 7, 1))
         list.add(pos(8, 7, 1))
         list.add(pos(14, 7, 1))
@@ -827,10 +777,9 @@ object ConstellationRepository {
         )
     }
 
-    // 3. Diamond (58 tiles) - Easy
+    // 58 tiles
     private fun createDiamond(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 41 tiles
         val rows = listOf(
             0 to listOf(10),
             2 to listOf(8, 10, 12),
@@ -847,7 +796,6 @@ object ConstellationRepository {
                 list.add(pos(x, y, 0))
             }
         }
-        // Layer 1: 13 tiles
         val rowsL1 = listOf(
             4 to listOf(10),
             6 to listOf(8, 10, 12),
@@ -860,7 +808,6 @@ object ConstellationRepository {
                 list.add(pos(x, y, 1))
             }
         }
-        // Layer 2: 4 tiles
         list.add(pos(9, 7, 2))
         list.add(pos(11, 7, 2))
         list.add(pos(9, 9, 2))
@@ -875,34 +822,30 @@ object ConstellationRepository {
         )
     }
 
-    // 4. Pyramid (64 tiles) - Easy
+    // 64 tiles
     private fun createPyramid(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 6x6 = 36 tiles
         for (x in 2..12 step 2) {
             for (y in 2..12 step 2) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Layer 1: 4x4 = 16 tiles
         for (x in 4..10 step 2) {
             for (y in 4..10 step 2) {
                 list.add(pos(x, y, 1))
             }
         }
-        // Layer 2: 2x2 = 4 tiles
         for (x in 6..8 step 2) {
             for (y in 6..8 step 2) {
                 list.add(pos(x, y, 2))
             }
         }
-        // Layer 2 side accents: 4 tiles
+        // Side accents
         list.add(pos(4, 7, 2))
         list.add(pos(10, 7, 2))
         list.add(pos(7, 4, 2))
         list.add(pos(7, 10, 2))
 
-        // Layer 3: 4 tiles
         list.add(pos(6, 6, 3))
         list.add(pos(8, 6, 3))
         list.add(pos(6, 8, 3))
@@ -917,10 +860,9 @@ object ConstellationRepository {
         )
     }
 
-    // 5. Heart (72 tiles) - Medium
+    // 72 tiles
     private fun createHeart(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 52 tiles
         val heartRowMap = listOf(
             0 to listOf(4, 6, 12, 14),
             2 to listOf(2, 4, 6, 8, 10, 12, 14, 16),
@@ -936,7 +878,6 @@ object ConstellationRepository {
                 list.add(pos(x, y, 0))
             }
         }
-        // Layer 1: 16 tiles
         val heartL1 = listOf(
             3 to listOf(4, 6, 12, 14),
             5 to listOf(4, 6, 8, 10, 12, 14),
@@ -948,7 +889,6 @@ object ConstellationRepository {
                 list.add(pos(x, y, 1))
             }
         }
-        // Layer 2: 4 tiles
         list.add(pos(8, 6, 2))
         list.add(pos(10, 6, 2))
         list.add(pos(8, 8, 2))
@@ -963,16 +903,16 @@ object ConstellationRepository {
         )
     }
 
-    // 6. Crab (84 tiles) - Medium
+    // 84 tiles
     private fun createCrab(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Body (central 6x4 = 24 tiles at layer 0)
+        // Body
         for (x in 6..16 step 2) {
             for (y in 4..10 step 2) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Claws: left 8, right 8 = 16 tiles
+        // Claws
         val leftClaw = listOf(
             pos(4, 2, 0), pos(2, 2, 0), pos(0, 2, 0), pos(2, 0, 0),
             pos(4, 0, 0), pos(0, 4, 0), pos(2, 4, 0), pos(4, 4, 0)
@@ -984,7 +924,7 @@ object ConstellationRepository {
         list.addAll(leftClaw)
         list.addAll(rightClaw)
 
-        // Legs: 6 left, 6 right = 12 tiles
+        // Legs
         for (y in listOf(6, 8, 10)) {
             list.add(pos(4, y, 0))
             list.add(pos(2, y, 0))
@@ -992,14 +932,12 @@ object ConstellationRepository {
             list.add(pos(20, y, 0))
         }
 
-        // Tail: 8 tiles
+        // Tail
         for (x in listOf(8, 10, 12, 14)) {
             list.add(pos(x, 12, 0))
             list.add(pos(x, 14, 0))
         }
-        // Total Layer 0: 24 + 16 + 12 + 8 = 60 tiles
 
-        // Layer 1 (20 tiles)
         for (x in listOf(8, 10, 12, 14)) {
             for (y in listOf(5, 7, 9, 11)) {
                 list.add(pos(x, y, 1))
@@ -1010,7 +948,6 @@ object ConstellationRepository {
         list.add(pos(18, 2, 1))
         list.add(pos(20, 2, 1))
 
-        // Layer 2 (4 tiles)
         list.add(pos(10, 7, 2))
         list.add(pos(12, 7, 2))
         list.add(pos(10, 9, 2))
@@ -1025,54 +962,52 @@ object ConstellationRepository {
         )
     }
 
-    // 7. Butterfly (94 tiles) - Medium
+    // 94 tiles
     private fun createButterfly(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 68 tiles
-        // Body center line: 7 tiles
+        // Body center line
         for (y in 2..14 step 2) {
             list.add(pos(11, y, 0))
         }
-        // Left upper wing: 16 tiles
+        // Left upper wing
         for (x in listOf(3, 5, 7, 9)) {
             for (y in listOf(2, 4, 6, 8)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Right upper wing: 16 tiles
+        // Right upper wing
         for (x in listOf(13, 15, 17, 19)) {
             for (y in listOf(2, 4, 6, 8)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Left lower wing: 9 tiles
+        // Left lower wing
         for (x in listOf(5, 7, 9)) {
             for (y in listOf(10, 12, 14)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Right lower wing: 9 tiles
+        // Right lower wing
         for (x in listOf(13, 15, 17)) {
             for (y in listOf(10, 12, 14)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Wing tips: 6 tiles
+        // Wing tips
         list.add(pos(1, 4, 0))
         list.add(pos(1, 6, 0))
         list.add(pos(21, 4, 0))
         list.add(pos(21, 6, 0))
         list.add(pos(3, 12, 0))
         list.add(pos(19, 12, 0))
-        // Antennae: 4 tiles
+        // Antennae
         list.add(pos(9, 0, 0))
         list.add(pos(13, 0, 0))
         list.add(pos(7, 0, 0))
         list.add(pos(15, 0, 0))
-        // Tail: 1 tile
+        // Tail
         list.add(pos(11, 16, 0))
 
-        // Layer 1: 22 tiles
         for (y in listOf(4, 6, 8, 10, 12)) {
             list.add(pos(11, y, 1))
         }
@@ -1097,7 +1032,6 @@ object ConstellationRepository {
         list.add(pos(9, 6, 1))
         list.add(pos(13, 6, 1))
 
-        // Layer 2: 4 tiles
         list.add(pos(6, 5, 2))
         list.add(pos(16, 5, 2))
         list.add(pos(11, 6, 2))
@@ -1112,27 +1046,18 @@ object ConstellationRepository {
         )
     }
 
-    // 8. Classic Turtle (144 tiles) - Standard Shanghai Layout
+    // 144 tiles: the standard Shanghai Turtle
     private fun createClassicTurtle(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Layer 0: 86 tiles
-        // Row 0 (12)
         for (x in 6..28 step 2) list.add(pos(x, 0, 0))
-        // Row 1 (8)
         for (x in 10..24 step 2) list.add(pos(x, 2, 0))
-        // Row 2 (10)
         for (x in 8..26 step 2) list.add(pos(x, 4, 0))
-        // Row 3 (12)
         for (x in 6..28 step 2) list.add(pos(x, 6, 0))
-        // Row 4 (12)
         for (x in 6..28 step 2) list.add(pos(x, 8, 0))
-        // Row 5 (10)
         for (x in 8..26 step 2) list.add(pos(x, 10, 0))
-        // Row 6 (8)
         for (x in 10..24 step 2) list.add(pos(x, 12, 0))
-        // Row 7 (12)
         for (x in 6..28 step 2) list.add(pos(x, 14, 0))
-        // Outer wings (4 tiles)
+        // Outer wings
         list.add(pos(2, 7, 0))
         list.add(pos(4, 7, 0))
         list.add(pos(30, 7, 0))
@@ -1140,28 +1065,24 @@ object ConstellationRepository {
         list.remove(pos(6, 0, 0))
         list.remove(pos(28, 0, 0))
 
-        // Layer 1: 36 tiles (6x6 centered at x=12..22, y=3..13)
         for (gx in 0 until 6) {
             for (gy in 0 until 6) {
                 list.add(pos(12 + gx * 2, 3 + gy * 2, 1))
             }
         }
 
-        // Layer 2: 16 tiles (4x4 centered at x=14..20, y=5..11)
         for (gx in 0 until 4) {
             for (gy in 0 until 4) {
                 list.add(pos(14 + gx * 2, 5 + gy * 2, 2))
             }
         }
 
-        // Layer 3: 4 tiles (2x2 centered at x=16..18, y=7..9)
         for (gx in 0 until 2) {
             for (gy in 0 until 2) {
                 list.add(pos(16 + gx * 2, 7 + gy * 2, 3))
             }
         }
 
-        // Layer 4: 2 apex tiles
         list.add(pos(17, 8, 4))
         list.add(pos(0, 7, 0)) // Far outer wing
 
@@ -1174,10 +1095,10 @@ object ConstellationRepository {
         )
     }
 
-    // 9. Fortress (108 tiles) - Hard
+    // 108 tiles
     private fun createFortress(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // 4 Bastions: each has 3x3 at layer 0 (9) + 2x2 at layer 1 (4) + 1 at layer 2 (1) = 14 tiles
+        // Bastions
         val bastionOrigins = listOf(
             2 to 2,
             18 to 2,
@@ -1198,7 +1119,7 @@ object ConstellationRepository {
             list.add(pos(bx + 2, by + 2, 2))
         }
 
-        // Connecting walls (North, South, East, West) at layer 0: 16 tiles
+        // Connecting walls
         for (x in listOf(8, 10, 12, 14, 16)) {
             list.add(pos(x, 4, 0))
             list.add(pos(x, 16, 0))
@@ -1207,32 +1128,28 @@ object ConstellationRepository {
             list.add(pos(4, y, 0))
             list.add(pos(20, y, 0))
         }
-        // Additional wall thickness: 4 tiles
+        // Extra wall thickness
         list.add(pos(6, 8, 0))
         list.add(pos(18, 8, 0))
         list.add(pos(6, 12, 0))
         list.add(pos(18, 12, 0))
 
-        // Central Keep:
-        // Layer 0: 4x4 = 16 tiles
+        // Central keep
         for (x in listOf(9, 11, 13, 15)) {
             for (y in listOf(7, 9, 11, 13)) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Layer 1: 3x3 = 9 tiles + 1 = 10 tiles
         for (x in listOf(10, 12, 14)) {
             for (y in listOf(8, 10, 12)) {
                 list.add(pos(x, y, 1))
             }
         }
         list.add(pos(12, 4, 1))
-        // Layer 2: 2x2 = 4 tiles
         list.add(pos(11, 9, 2))
         list.add(pos(13, 9, 2))
         list.add(pos(11, 11, 2))
         list.add(pos(13, 11, 2))
-        // Layer 3: 2 tiles
         list.add(pos(12, 9, 3))
         list.add(pos(12, 11, 3))
 
@@ -1245,16 +1162,16 @@ object ConstellationRepository {
         )
     }
 
-    // 10. Castle (128 tiles) - Hard
+    // 128 tiles
     private fun createCastle(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Base: 10x8 = 80 tiles
+        // Base
         for (x in 2..20 step 2) {
             for (y in 2..16 step 2) {
                 list.add(pos(x, y, 0))
             }
         }
-        // 4 corner towers (Layer 1: 4 tiles each = 16 tiles)
+        // Corner towers
         val towers = listOf(
             listOf(pos(2, 2, 1), pos(4, 2, 1), pos(2, 4, 1), pos(4, 4, 1)),
             listOf(pos(18, 2, 1), pos(20, 2, 1), pos(18, 4, 1), pos(20, 4, 1)),
@@ -1263,14 +1180,14 @@ object ConstellationRepository {
         )
         for (t in towers) list.addAll(t)
 
-        // Central Great Hall (Layer 1: 4x4 = 16 tiles)
+        // Central great hall
         for (x in listOf(8, 10, 12, 14)) {
             for (y in listOf(6, 8, 10, 12)) {
                 list.add(pos(x, y, 1))
             }
         }
 
-        // Inner Keep (Layer 2: 3x3 = 9 + 2 = 11 tiles)
+        // Inner keep
         for (x in listOf(9, 11, 13)) {
             for (y in listOf(7, 9, 11)) {
                 list.add(pos(x, y, 2))
@@ -1279,13 +1196,13 @@ object ConstellationRepository {
         list.add(pos(3, 3, 2))
         list.add(pos(19, 3, 2))
 
-        // Battlements High Crown (Layer 3: 4 tiles)
+        // Battlements high crown
         list.add(pos(10, 8, 3))
         list.add(pos(12, 8, 3))
         list.add(pos(10, 10, 3))
         list.add(pos(12, 10, 3))
 
-        // Keep finial (Layer 4: 1 tile)
+        // Keep finial
         list.add(pos(11, 9, 4))
 
         return Constellation(
@@ -1297,10 +1214,10 @@ object ConstellationRepository {
         )
     }
 
-    // 11. Dragon (144 tiles) - Hard
+    // 144 tiles
     private fun createDragon(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Head at right: 24 tiles
+        // Head
         for (x in listOf(24, 26, 28)) {
             for (y in listOf(2, 4, 6)) {
                 list.add(pos(x, y, 0))
@@ -1317,11 +1234,11 @@ object ConstellationRepository {
         list.add(pos(27, 5, 2))
         list.add(pos(25, 4, 3))
         list.add(pos(27, 4, 3))
-        // Whiskers: 2 tiles
+        // Whiskers
         list.add(pos(30, 3, 0))
         list.add(pos(30, 5, 0))
 
-        // Serpentine Body: 18 undulating columns (x to top y), each 2 base tiles + ridge + spine = 72 tiles
+        // Body: (x, top y) columns, each a base pair + ridge + spine
         val upperBody = listOf(
             22 to 6, 20 to 7, 18 to 8, 16 to 8, 14 to 8,
             12 to 7, 10 to 6, 8 to 5, 6 to 5, 4 to 6
@@ -1336,12 +1253,12 @@ object ConstellationRepository {
             list.add(pos(x, y + 1, 1))
             list.add(pos(x, y + 1, 2))
         }
-        // Dorsal plates along the upper body: 4 tiles
+        // Dorsal plates
         for ((x, y) in upperBody.filter { it.first in listOf(6, 10, 14, 18) }) {
             list.add(pos(x, y + 1, 3))
         }
 
-        // Coil joining upper and lower body: 9 tiles
+        // Coil joining upper and lower body
         for (x in listOf(0, 2)) {
             for (y in listOf(8, 10, 12)) {
                 list.add(pos(x, y, 0))
@@ -1351,7 +1268,7 @@ object ConstellationRepository {
         list.add(pos(1, 11, 1))
         list.add(pos(1, 10, 2))
 
-        // Claws (4 claws x 6 tiles each = 24 tiles):
+        // Claws
         val clawBases = listOf(
             4 to 0,
             14 to 2,
@@ -1367,7 +1284,7 @@ object ConstellationRepository {
             list.add(pos(cx + 1, cy + 1, 2))
         }
 
-        // Tail: 9 tiles
+        // Tail
         list.add(pos(20, 13, 0))
         list.add(pos(20, 15, 0))
         list.add(pos(22, 12, 0))
@@ -1387,46 +1304,46 @@ object ConstellationRepository {
         )
     }
 
-    // 12. Pagoda (144 tiles) - Expert
+    // 144 tiles
     private fun createPagoda(): Constellation {
         val list = mutableListOf<TilePosition>()
-        // Tier 0 (Base Foundation): 12x4 = 48 tiles
+        // Base
         for (x in 2..24 step 2) {
             for (y in 6..12 step 2) {
                 list.add(pos(x, y, 0))
             }
         }
-        // Tier 1 (First Eaves): 10x3 = 30 tiles
+        // First eaves
         for (x in 4..22 step 2) {
             for (y in 7..11 step 2) {
                 list.add(pos(x, y, 1))
             }
         }
-        // Tier 2 (Second Eaves): 8x3 = 24 tiles
+        // Second eaves
         for (x in 6..20 step 2) {
             for (y in 7..11 step 2) {
                 list.add(pos(x, y, 2))
             }
         }
-        // Tier 3 (Third Eaves): 6x2 = 12 tiles
+        // Third eaves
         for (x in 8..18 step 2) {
             for (y in 8..10 step 2) {
                 list.add(pos(x, y, 3))
             }
         }
-        // Tier 4 (Spire Roof): 4x2 = 8 tiles
+        // Spire roof
         for (x in 10..16 step 2) {
             for (y in 8..10 step 2) {
                 list.add(pos(x, y, 4))
             }
         }
-        // Tier 5 (Spire Finial): 4 tiles
+        // Spire finial
         list.add(pos(12, 8, 5))
         list.add(pos(14, 8, 5))
         list.add(pos(12, 10, 5))
         list.add(pos(14, 10, 5))
 
-        // Side prayer bells / pedestals: 18 tiles
+        // Side prayer bells
         for (y in listOf(6, 8, 10)) {
             list.add(pos(0, y, 0))
             list.add(pos(-2, y, 0))

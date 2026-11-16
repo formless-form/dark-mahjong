@@ -9,12 +9,9 @@ import com.vortessence.mahjong.ui.theme.TileSideIvoryBottom
 import com.vortessence.mahjong.ui.theme.TileSideWoodBacking
 
 /**
- * A set of tiles: the colours of their faces, sides and backing, and how the faces' pictures and
- * text are cut. [IVORY] is the game's own set; the others are themes over the same drawings.
- *
- * [art] null keeps each picture's own colours; otherwise every picture is in that one colour.
- * The pictures are [raised] (embossed: lit along their upper edges, shadowed below) or carved into
- * the face (engraved: shadowed along their upper walls, a light lip below).
+ * A tile set's colours and how its pictures are cut. [IVORY] is the game's own; the others theme
+ * the same drawings. [art] null keeps each picture's colours, else all are that colour. Pictures
+ * are [raised] (lit above, shadowed below) or engraved (shadowed upper walls, light lip below).
  */
 data class TileKit(
     val name: String,
@@ -24,91 +21,74 @@ data class TileKit(
     val bevelAlpha: Float,
     val side: Color,
     val backing: Color,
-    // The face's age, a faint tint over every tile
+    // A faint age tint over every tile
     val ageing: Color,
     val art: Color?,
     val raised: Boolean,
     val cutShadow: Color,
     val cutLight: Color,
-    // How strongly years of play show (scratches, grime, dings): 1 on ivory; far fainter on a dark
-    // face, where every pale hairline stands out
+    // Scratches, grime, dings: 1 on ivory; far fainter on dark faces, where pale hairlines stand out
     val wear: Float = 1f,
-    // Raised pictures only: a dark edge all round each shape, as strong as cutShadow times this,
-    // so a pale picture stands clear of the face (0: none)
+    // Raised pictures only: a dark outline at cutShadow x this, so pale pictures stand clear (0: none)
     val edge: Float = 0f,
-    // Terrazzo: stone chips of many sizes and tones set in the face, as strong as this (0: none),
-    // with a few flecks of mica that glint as the lamp and the fire catch them
+    // Stone chips in the face, with mica flecks that glint in the lamp and fire (0: none)
     val terrazzo: Float = 0f,
-    // How far the lamp and firelight on these tiles lose their warmth (0 to 1), so pale pictures
-    // stay white by the fire. The table keeps its own warm light
+    // How far the tiles' lamp and firelight lose their warmth (0 to 1), so pale pictures stay white
+    // by the fire; the table keeps its warm light
     val neutralLight: Float = 0f,
-    // With [art] null: each of the pictures' own colours (blue, green, red) shown as another, a
-    // brighter or paler one for a dark face (missing ones kept)
+    // With [art] null: picture colours (blue, green, red) swapped, e.g. brighter for a dark face
+    // (missing ones kept)
     val recolour: Map<Color, Color> = emptyMap(),
-    // The edge round raised pictures in a colour of its own (gold, say), rather than [cutShadow]'s
+    // Raised pictures' edge colour (gold, say) instead of [cutShadow]'s
     val edgeColour: Color? = null,
-    // How far the edge reaches beyond the picture, in the cut's depths (0.7 its own)
+    // Reach beyond the picture, in cut depths (0.7 its own)
     val edgeReach: Float = 0.7f,
-    // Colour-code dots: one small disc for each of the picture's colours, at the face's lower left,
-    // so faces told apart by colour stay apart when the pictures are one colour
+    // A disc per picture colour, so faces told apart by colour stay apart in one-colour sets
     val colourDots: Boolean = false,
-    // Where and how the dots go, how big (a fraction of the tile's width across), and the ring
-    // round each (null: a fine dark one)
+    // Size as a fraction of tile width; ring null: a fine dark one
     val dotPlace: DotPlace = DotPlace.LOWER_LEFT,
     val dotSize: Float = 0.072f,
     val dotRing: Color? = null,
-    // The bar's length (a fraction of the tile's width), and how strongly it glows in its own
-    // colours (0: none)
+    // Bar length as a fraction of tile width; glow in its own colours (0: none)
     val barLength: Float = 0.46f,
     val glow: Float = 0f,
-    // The bar lit like a coloured LED: a near-white core down each colour, its halo adding light
-    // to the face around it
+    // LED-like bar: a near-white core per colour, its halo lighting the face
     val led: Boolean = false,
-    // How far the glow spreads (1: as designed; small, a hairline at the bar's edge), and how
-    // near white an LED's core burns
+    // Glow spread (1: as designed; small: a hairline), and how near white an LED core burns
     val glowSpread: Float = 1f,
     val ledCore: Float = 0.65f,
-    // The bar's colours lightened towards white by this much, and a fine light rim round it
+    // Bar colours lightened towards white, and a fine light rim
     val barLighten: Float = 0f,
     val barRim: Boolean = false,
-    // The bar's outline: how dark (0 to 1) and how wide (in the bar's heights); and the colours kept
-    // apart by a dark line ([BarSplit.LINE]) or a gap ([BarSplit.GAP]) as wide as [barGap] heights
+    // Outline darkness (0 to 1) and width (bar heights); colours split by a dark line or a gap of
+    // [barGap] heights
     val barOutline: Float = 0.5f,
     val barOutlineWidth: Float = 0.18f,
     val barSplit: BarSplit = BarSplit.NONE,
     val barGap: Float = 0.2f,
-    // The bar cut into the face rather than set on it: shadowed along its upper inside edge, a light
-    // lip below, its colours a little deeper
+    // Cut into the face: shadowed upper inside edge, light lip below, colours a little deeper
     val barEngraved: Boolean = false,
-    // How strongly a raised bar is embossed (0: the soft sheen alone): a crisp shadow cast below it,
-    // a hard highlight along its top edge and shade along its underside, all sharp-edged
+    // Raised bar's sharp emboss: cast shadow, top highlight, underside shade (0: soft sheen only)
     val barEmboss: Float = 0f,
-    // A wider, softer bevel round the face (0: the fine one alone), lit along its top edge and
-    // shaded along its foot, as a carved tile's
+    // A wider, softer carved bevel, lit on top, shaded at the foot (0: the fine one alone)
     val bevel: Float = 0f,
-    // How much each tile's tone differs from the next (0: all alike): a little warmer or cooler,
-    // lighter or darker, as the pieces of a real set
+    // Per-tile warmth and lightness variation, as in a real set (0: all alike)
     val toneVariation: Float = 0f,
-    // How strongly lower layers are shaded against the top one (1: the game's own)
+    // Shading of lower layers against the top one (1: the game's own)
     val layerCue: Float = 1f,
-    // Wood grain in the face, as strong as this (0: none): each tile's own, flowing lines and pores,
-    // now and then a knot with the grain sweeping round it
+    // Per-tile flowing grain and pores, with occasional knots (0: none)
     val woodGrain: Float = 0f,
-    // Figured wood: dark heartwood streaks wandering through the grain, as olive wood's, as
-    // strong as this (0: none)
+    // Dark heartwood streaks, as olive wood's (0: none)
     val woodFigure: Float = 0f,
-    // Mottled stone, as real jade: soft clouds of a darker and a lighter green drifting through the
-    // face, pale wispy veins and fine flecks, each tile its own, as strong as this (0: none), in
-    // [mottleTones] (the dark clouds', the light clouds', the veins'). Jade, 2026-11-14
+    // Jade-like mottle: dark and light clouds, pale veins and flecks, per tile (0: none), in
+    // [mottleTones] (dark clouds, light clouds, veins). Jade, 2026-11-14
     val mottle: Float = 0f,
     val mottleTones: List<Color> = emptyList(),
-    // The picture's size within the face (0.85 its own), and how far it moves up (a fraction of the
-    // tile's height), to leave the dots room
+    // Picture scale within the face, and lift (fraction of tile height) to leave the dots room
     val artScale: Float = 0.85f,
     val artLift: Float = 0f,
-    // Drawn from images that come with the app (ImperialImages), not from shapes: a body
-    // for each look, its own outline, sides and all, and each face's engraving laid over it. No
-    // wear, glaze or glare. The kit's colours are only for the moments before the images load
+    // Drawn from shipped images (ImperialImages): a body per look, each engraving over it; no wear,
+    // glaze or glare. The colours only show before the images load
     val stone: Boolean = false,
 )
 
@@ -117,19 +97,17 @@ enum class BarSplit { NONE, LINE, GAP }
 
 /** Where a tile's colour-code dots go. */
 enum class DotPlace {
-    // A row at the lower left
     LOWER_LEFT,
-    // A row centred along the bottom
+    // Centred
     BOTTOM,
-    // A column up the left edge, from the bottom
+    // From the bottom
     LEFT_COLUMN,
-    // A row at the upper left
     UPPER_LEFT,
-    // Not dots: one short bar along the bottom, split between the colours
+    // Not dots: one short bar, split between the colours
     BOTTOM_BAR,
 }
 
-/** The pictures' own colours, as the tile drawings use them. */
+/** As the tile drawings use them. */
 object FaceColours {
     val BLUE = Color(0xFF1E39CD)
     val GREEN = Color(0xFF006F00)
@@ -154,10 +132,9 @@ object TileKits {
     )
 
     /**
-     * Charcoal terrazzo, its pictures raised in white with a dark edge all round (the warm light
-     * makes the white a soft gold), each face's colours in a bar along its bottom. Chosen by Gareth on 2026-11-13 from renders of the
-     * alternatives (TileKitPreview): a cream or wood backing, carved pictures, cream, cooler
-     * white, gold, and light drained of its warmth.
+     * Charcoal terrazzo, raised dark-edged white pictures (soft gold in the warm light) and a colour
+     * bar. Gareth's pick, 2026-11-13 (TileKitPreview), over cream or wood backings, carved
+     * pictures, cream, cooler white, gold and neutral light.
      */
     val CHARCOAL = TileKit(
         name = "Terrazzo",
@@ -175,9 +152,8 @@ object TileKits {
         wear = 0.35f,
         edge = 1.1f,
         terrazzo = 1f,
-        // One-colour pictures lose what told some faces apart (the six and nine of bamboo), so a
-        // colour bar along the bottom carries each face's colours, split evenly, a fine dark line
-        // between them (Gareth's pick, 2026-11-13, over dots, glows and coloured pictures)
+        // One-colour pictures lose colour cues (bamboo six vs nine), so a bar carries them, split by
+        // a fine dark line (Gareth's pick, 2026-11-13, over dots, glows and coloured pictures)
         colourDots = true,
         dotPlace = DotPlace.BOTTOM_BAR,
         dotSize = 0.09f,
@@ -190,10 +166,8 @@ object TileKits {
     )
 
     /**
-     * Whether Settings offers a choice of sets: since 1.4.15, Ivory, Terrazzo, Jade and
-     * Olivewood. (1.4.14 withdrew the first Charcoal, whose one-colour pictures made faces told
-     * apart only by colour look alike; the colour bar answers that.) Kept as a switch, should a
-     * set ever need withdrawing again.
+     * Settings offers a choice of sets (since 1.4.15). A switch in case a set must be withdrawn
+     * again, as 1.4.14 withdrew the first Charcoal (colour-only faces looked alike; fixed by the bar).
      */
     const val OFFERED = true
 
@@ -202,19 +176,14 @@ object TileKits {
         TileSet.CHARCOAL -> CHARCOAL
         TileSet.JADE -> JADE
         TileSet.WOOD -> WOOD
-        // Where the build has no Imperial images (the open-source build), a stored choice of it
-        // falls back to Ivory
+        // Builds without the images (open-source) fall back to Ivory
         TileSet.IMPERIAL -> if (ImperialImages.available) IMPERIAL else IVORY
     }
 
     /**
-     * Polished jade, mottled as the real stone is: soft clouds of deeper and paler green through a
-     * mid-green face, a few pale wispy veins and fine flecks, every tile its own, with Charcoal's
-     * white raised pictures and colour bar, a soft bevel and a little tone from tile to tile.
-     * First chosen by Gareth on 2026-11-13 as plain dark jade (the darkest of three shades); made
-     * lifelike from his photo of a polished jade stone, and his pick of four (mock-up 9, the
-     * mid-green, over the shipped dark jade mottled and two lighter greens) on 2026-11-14
-     * (JadePreview).
+     * Polished mid-green jade, mottled like the real stone, with Charcoal's pictures and bar, a
+     * soft bevel and tile-to-tile tone. Modelled on Gareth's photo of polished jade; his pick,
+     * 2026-11-14 (JadePreview mock-up 9, over darker and lighter greens).
      */
     val JADE = CHARCOAL.copy(
         name = "Jade",
@@ -229,14 +198,13 @@ object TileKits {
         bevel = 0.8f,
         toneVariation = 1.2f,
         mottle = 1f,
-        // Deep clouds, pale clouds, and the veins and flecks
+        // Deep clouds, pale clouds, veins and flecks
         mottleTones = listOf(Color(0xFF103D22), Color(0xFF5DAE72), Color(0xFFCDEBD3)),
     )
 
     /**
-     * Figured olive wood, a little darker than olive is when new (Gareth asked for mock-up 4's
-     * olive three shades darker, 2026-11-13): wild grain of its own on every tile, dark heartwood
-     * streaks, now and then a knot, with Charcoal's white raised pictures and colour bar.
+     * Figured olive wood, mock-up 4 three shades darker (Gareth, 2026-11-13), with Charcoal's
+     * pictures and bar.
      */
     val WOOD = CHARCOAL.copy(
         name = "Olivewood",
@@ -247,24 +215,16 @@ object TileKits {
         bevelHighlight = Color(0xFFC8A880),
         terrazzo = 0f,
         woodGrain = 1.6f,
-        // Light figure: Gareth's pick of three strengths (2026-11-13)
+        // Gareth's pick of three strengths (2026-11-13)
         woodFigure = 0.6f,
         toneVariation = 0.8f,
         wear = 0.5f,
     )
 
     /**
-     * Imperial, the reward set: blocks roughly carved from grey granite, matte, the engraving
-     * painted gold, each face's colours in a bar carved in pieces and painted. Gareth's design
-     * ("carved from granite, with the engraving painted gold", "no shininess", "even the sides are
-     * rough and the curves and edges are rough") and his picks of 2026-11-14 from numbered
-     * previews: a grey granite, "a slightly darker shade"; lightly rough, one finish over the
-     * whole block ("i like 12"); "the original carved and painted colour bar"; "that looks
-     * perfect"; of every face, "Faces are right"; and the gold a little paler and less green
-     * ("number 27 please"). Drawn from the Imperial images
-     * (ImperialImages), which come with the Play build only: where they are absent the set is not
-     * offered. These colours stand in only for the moments before the images are loaded. Not yet
-     * a TileSet: how it is unlocked and offered is still to be designed with him.
+     * The reward set: matte, roughly carved grey granite, engraving painted gold, carved and
+     * painted colour bar (Gareth's design and picks from numbered previews, 2026-11-14). Drawn from
+     * ImperialImages (Play build only, else not offered); these colours show only until they load.
      */
     val IMPERIAL = CHARCOAL.copy(
         name = "Imperial",
@@ -284,14 +244,14 @@ object TileKits {
         stone = true,
     )
 
-    /** The set chosen in Settings (MahjongBoard keeps it up to date). */
+    /** Settings' choice, kept up to date by MahjongBoard. */
     @Volatile
     var chosen: TileKit = IVORY
 
-    /** Previews only: a set to try, over the chosen one. */
+    /** Previews only: overrides [chosen]. */
     @Volatile
     var preview: TileKit? = null
 
-    /** The set the tiles are drawn in. A change makes the tile atlas draw its images again. */
+    /** A change redraws the tile atlas. */
     val current: TileKit get() = preview ?: chosen
 }

@@ -58,10 +58,7 @@ import com.vortessence.mahjong.ui.theme.TutorialHighlight
 object TileRenderer {
 
 
-    /**
-     * Draws a single Mahjong tile on Canvas with physical 3D depth, authentic enamel coloring,
-     * and engraved intaglio details, faithful to classic vintage Mahjong sets.
-     */
+    /** Draws a tile: its body, face and artwork, then its sides' shading. */
     fun drawTile(
         scope: DrawScope,
         boardTile: BoardTile,
@@ -76,26 +73,23 @@ object TileRenderer {
         highlightFreeTiles: Boolean = false,
         glare: Float = 0f,
         shadows: TileShadows = TileShadows.NONE,
-        // How strongly a hinted tile shows its gold this frame, 0..1: the hint pulses
+        // Hint gold strength this frame, 0..1 (the hint pulses)
         hintStrength: Float = 1f,
-        // Drawn shape by shape, never stamped from the atlas: for tiles shown much larger than
-        // the board's (the matched pair in flight), which the atlas's images would soften
+        // Drawn shape by shape, not from the atlas: for tiles shown much larger than the board's
+        // (the pair in flight), which atlas images would soften
         live: Boolean = false,
-        // How much darker this tile is drawn for lying below the top layer (0 on top): layers
-        // read apart by their tone
+        // Darkening below the top layer (0 on top), so layers read apart
         layerShade: Float = 0f,
-        // The stretches of this tile's right and lower sides that stand against a neighbour on its
-        // layer, as (side, from, to) triples, from and to along the side from 0 to 1
-        // (MahjongBoard.seams)
+        // Stretches of the right and lower sides against a same-layer neighbour, as (side, from,
+        // to) triples, 0 to 1 along the side (MahjongBoard.seams)
         seams: FloatArray? = null,
-        // How much darker the right and lower sides are for facing away from the light reaching
-        // this tile (MahjongBoard.sidesAway), 0 when they face it
+        // Darkening of the right and lower sides for facing away from the light
+        // (MahjongBoard.sidesAway)
         rightAway: Float = 0f,
         belowAway: Float = 0f,
     ) {
         if (boardTile.isRemoved) return
-        // Square on the grid, a hair inside its place, so neighbours show a fine line between
-        // them (about a pixel) rather than running together
+        // Inset a hair, so neighbours show a fine line (about a pixel) between them
         val inset = max(TILE_GAP_MIN, width * TILE_GAP) / 2f
         val ix = x + inset
         val iy = y + inset
@@ -105,9 +99,9 @@ object TileRenderer {
             scope, boardTile, ix, iy, iw, ih, isSelected, isHinted, isBlockedHighlight,
             isTutorialHighlight, highlightFreeTiles, glare, shadows, hintStrength, live,
         )
-        // The sides' shading is stamped from the atlas's wall masks: clipping each tile to its
-        // curved sides, under the camera's perspective, cost most of a frame (2026-11-12). Drawn
-        // clipped only until the atlas is ready (or when told to, to compare)
+        // Side shading is stamped from the atlas's wall masks: clipping each tile's curved sides
+        // through the perspective cost most of a frame (2026-11-12). Clipped only until the atlas
+        // is ready (or to compare)
         val walls = if (live || PerfSwitches.isOff("atlas") || PerfSwitches.isOff("wallstamps")) null else TileAtlas.ready(iw)
         if ((rightAway > 0f || belowAway > 0f) && !PerfSwitches.isOff("sides")) {
             if (walls != null) walls.stampSidesAway(scope, boardTile.id, ix, iy, iw, rightAway, belowAway)
@@ -134,10 +128,8 @@ object TileRenderer {
     private const val TILE_GAP_MIN = 1f
 
     /*
-     * A tile's sides (its right and lower walls, the ones the camera sees) are in shadow where a
-     * neighbour stands against them: light can't reach down the crack, and only a sliver of the
-     * wall shows between the two. Only along the stretch the neighbour shares; a side open to
-     * the table stays lit. The face is untouched.
+     * Shades a tile's visible sides (right, lower) along the stretch a neighbour stands against:
+     * light can't reach down the crack. The face is untouched.
      */
     private fun drawSeams(
         scope: DrawScope, seams: FloatArray,
@@ -146,12 +138,9 @@ object TileRenderer {
         val shade = Color.Black.copy(alpha = SIDE_SHADOW)
         val depthX = iw * BoardTransform.LAYER_SHIFT_FACTOR_X
         val depthY = ih * BoardTransform.LAYER_SHIFT_FACTOR_Y
-        // Shaded within the sides' own outline only (their rounded corners included), never on
-        // the face. Each side's stretch and the corner below and to the right are separate pieces
-        // that never overlap, so nowhere is shaded twice; where a neighbour's stretch ends partway
-        // along a side, the shade fades out over a corner's length rather than stopping dead. The
-        // rounded corner turns from facing right to facing down, and its shade turns with it: the
-        // right side's where it faces right, the lower side's where it faces down
+        // Within the sides' outline only. Each side's stretch and the lower-right corner are
+        // separate, non-overlapping pieces, so nothing is shaded twice; a stretch ending partway
+        // fades over a corner's length. The corner's shade turns from the right side's to the lower's
         val r = iw * 0.085f
         scope.withTransform({ translate(ix, iy) }) {
             clipPath(sidesOutline(iw, ih, depthX, depthY)) {
@@ -203,9 +192,8 @@ object TileRenderer {
     }
 
     /*
-     * The sides facing away from the light are darker: the right side by [right], the lower by
-     * [below], and the rounded corner between turning from one to the other as it turns from
-     * facing right to facing down. In the sides' own outline only, as the seams' shadow.
+     * Darkens sides facing away from the light: right by [right], lower by [below], the corner
+     * turning from one to the other. Within the sides' outline, as the seams.
      */
     private fun drawSidesAway(scope: DrawScope, right: Float, below: Float, ix: Float, iy: Float, iw: Float, ih: Float) {
         val depthX = iw * BoardTransform.LAYER_SHIFT_FACTOR_X
@@ -225,8 +213,7 @@ object TileRenderer {
         }
     }
 
-    // The shade along a stretch from start to end, fading in over [fade] at a start that falls
-    // partway along a side, and out at such an end
+    // Shade from start to end, fading over [fade] at an end that falls partway along a side
     private fun fadedEnds(shade: Color, start: Float, end: Float, fade: Float, fadeIn: Boolean, fadeOut: Boolean, vertical: Boolean): Brush {
         val length = end - start
         val f = (fade / length).coerceAtMost(0.5f)
@@ -241,8 +228,8 @@ object TileRenderer {
         else Brush.horizontalGradient(*stops, startX = start, endX = end)
     }
 
-    // The sides' outline for a tile iw x ih, at the origin: the tile and its sides swept down
-    // and to the right, less its face. Made once for each tile size (main thread)
+    // The sides' outline for an iw x ih tile at the origin: the tile swept down-right, less its
+    // face. Cached per tile size (main thread)
     private fun sidesOutline(iw: Float, ih: Float, depthX: Float, depthY: Float): Path {
         val made = sidesPath
         if (made != null && sidesW == iw && sidesH == ih) return made
@@ -261,11 +248,10 @@ object TileRenderer {
     }
 
     /**
-     * One of the two walls the camera sees, as an alpha mask over the body's image (tile at
-     * [pad], [w] x [h]): the right wall if [right], else the lower. Each holds its share of the
-     * rounded corner between them, by angle, as drawSidesAway's sweep turns from one to the other;
-     * the two together cover the sides once. Stamped at a side's darkness, or through a seam's
-     * gradient, they shade the walls with no clipping at all.
+     * A visible wall as an alpha mask over the body's image (tile at [pad], [w] x [h]): right if
+     * [right], else lower. Each holds its angular share of the corner, as drawSidesAway's sweep,
+     * so together they cover the sides once. Stamped at a side's darkness or through a seam's
+     * gradient, they shade the walls without clipping.
      */
     private fun wallMask(right: Boolean, bodyW: Int, bodyH: Int, pad: Float, w: Float, h: Float): Bitmap {
         val depthX = w * BoardTransform.LAYER_SHIFT_FACTOR_X
@@ -275,11 +261,10 @@ object TileRenderer {
         val canvas = android.graphics.Canvas(bitmap)
         canvas.translate(pad, pad)
         canvas.clipPath(newSidesOutline(w, h, depthX, depthY).asAndroidPath())
-        // One rectangle each, its weight a single sweep about the corner's centre (angles clockwise
-        // from facing right): the right wall whole above the corner (facing up, 0.75 to 1), fading
-        // to nothing as the corner turns to face down (0 to 0.25); the lower wall the other way,
-        // whole to the left of the corner (0.25 to 0.5). Drawn as one shape, so no join shows
-        // where a straight wall meets its corner
+        // One rectangle each, weighted by one sweep about the corner's centre (clockwise from
+        // facing right): the right wall whole above the corner (0.75 to 1), fading out as it turns
+        // down (0 to 0.25); the lower wall the reverse, whole left of it (0.25 to 0.5). One shape,
+        // so no join shows where wall meets corner
         val solid = android.graphics.Color.BLACK
         val clear = android.graphics.Color.TRANSPARENT
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -295,11 +280,9 @@ object TileRenderer {
     }
 
     /**
-     * A seam's shade along one side ([SEAM_RIGHT] or [SEAM_BOTTOM]) of the tile at ([ix], [iy]),
-     * [iw] x [ih], from [from] to [to] along it, as drawSeams draws it: fading in over a corner's
-     * length where it starts partway along, out where it ends partway, and on through the corner
-     * where it reaches the end (the wall mask gives the corner its share). Clear beyond, so it can
-     * be stamped through the whole wall's mask.
+     * A seam's shade along [side] of the tile at ([ix], [iy]), [iw] x [ih], from [from] to [to], as
+     * drawSeams draws it: fading where it starts or ends partway, running on through the corner
+     * where it reaches the end. Clear beyond, so it can be stamped through the whole wall's mask.
      */
     private fun seamGradient(side: Int, from: Float, to: Float, ix: Float, iy: Float, iw: Float, ih: Float): android.graphics.Shader? {
         val vertical = side == SEAM_RIGHT
@@ -307,13 +290,13 @@ object TileRenderer {
         val length = if (vertical) ih else iw
         val depth = if (vertical) ih * BoardTransform.LAYER_SHIFT_FACTOR_Y else iw * BoardTransform.LAYER_SHIFT_FACTOR_X
         val toCorner = to >= 1f
-        // The straight stretch as drawSeams has it (to the corner's start where it runs on into it)
+        // The straight stretch as in drawSeams (to the corner's start if it runs into it)
         val start = from * length
         val stretchEnd = if (toCorner) length - r else to * length
         if (!toCorner && stretchEnd <= start) return null
         val fade = (stretchEnd - start).coerceAtLeast(0f).let { min(r, it / 2f) }
         val first = if (toCorner) min(start, length - r) else start
-        // Running into the corner, the shade carries on to the wall's far edge
+        // Into the corner, the shade runs on to the wall's far edge
         val last = if (toCorner) length + depth else stretchEnd
         val shade = android.graphics.Color.argb((SIDE_SHADOW * 255f).roundToInt(), 0, 0, 0)
         val clear = android.graphics.Color.TRANSPARENT
@@ -329,11 +312,11 @@ object TileRenderer {
         }
     }
 
-    // A tile's seam gradients, kept while its seams and its place on the table hold (they change
-    // only when tiles are matched and the board re-fits): main thread
+    // A tile's seam gradients, kept while its seams and position hold (they change only on a
+    // match and re-fit): main thread
     private class SeamShaders(
         val seams: FloatArray, val ix: Float, val iy: Float, val iw: Float, val ih: Float,
-        // Per seam: whether it runs along the right side, and its gradient
+        // Per seam: on the right side or not, and its gradient
         val right: BooleanArray, val shaders: Array<android.graphics.Shader>,
     )
 
@@ -366,31 +349,28 @@ object TileRenderer {
     const val SEAM_RIGHT = 1
     const val SEAM_BOTTOM = 3
 
-    // How dark a side is in the crack against a neighbour
+    // Side darkness in the crack against a neighbour
     private const val SIDE_SHADOW = 0.2f
 
     /**
-     * The soft contact shadow a raised tile casts onto the tiles it rests on, deepest at its foot,
-     * where little light reaches (a cheap ambient occlusion). Soft-edged and a little larger than
-     * the tile, so it shows on every side. The board draws a whole layer's contact shadows before
-     * that layer's tiles, so they fall only on the layer below, never on a neighbour of the same
-     * height.
+     * A raised tile's soft contact shadow on the tiles beneath (cheap ambient occlusion), a little
+     * larger than the tile so it shows all round. The board draws a layer's contact shadows before
+     * its tiles, so they fall only on the layer below.
      */
     fun drawContactShadow(scope: DrawScope, x: Float, y: Float, width: Float, height: Float) {
         if (PerfSwitches.isOff("contact")) return
         val stamp = contactStamp(width)
         val left = x + width * BoardTransform.LAYER_SHIFT_FACTOR_X * 1.4f
         val top = y + height * BoardTransform.LAYER_SHIFT_FACTOR_Y * 1.4f
-        // The stamp is the blurred shape with its blur's reach all round, scaled to this tile
+        // The stamp is the blurred shape plus its blur's reach, scaled to this tile
         val pad = width * CONTACT_BLUR * CONTACT_PAD
         contactRect.set(left - pad, top - pad, left + width + pad, top + height + pad)
         scope.drawContext.canvas.nativeCanvas.drawBitmap(stamp, null, contactRect, contactPaint)
     }
 
     /**
-     * The contact shadow's soft rounded shape, blurred once into an alpha image for tiles about
-     * [width] wide (made again only when tiles are shown a good deal larger or smaller), so
-     * drawing one is a single stamp rather than a blur every frame.
+     * The contact shadow's shape blurred once into an alpha image for tiles about [width] wide
+     * (remade on a large size change): a stamp, not a blur per frame.
      */
     private fun contactStamp(width: Float): Bitmap {
         val made = contactBitmap
@@ -429,10 +409,9 @@ object TileRenderer {
     ) {
         if (boardTile.isRemoved) return
 
-        // 0. Highlight / Tint Color Logic
         val isImportantHighlight = isSelected || isHinted || isBlockedHighlight || isTutorialHighlight
         val freeTint = highlightFreeTiles && boardTile.isFree
-        // The selected tile is drawn plain, then marked in polished gold (drawGoldSelection)
+        // The selected tile is drawn plain, then marked in gold
         val highlight = when {
             isSelected -> Highlight.NONE
             isHinted -> Highlight.HINT
@@ -445,11 +424,10 @@ object TileRenderer {
         val strength = if (highlight == Highlight.HINT) hintStrength.coerceIn(0f, 1f) else 1f
         val tintAlpha = if (isImportantHighlight) 0.5f * strength else 0.15f
 
-        // A stone set is drawn only from its images: while they load the tile waits, unseen, rather
-        // than showing in the set's plain stand-in colours (those are only for a build without them)
+        // A stone set is drawn only from its images: hidden until they load, not shown in its
+        // stand-in colours (only for builds without the images)
         if (TileKits.current.stone && ImperialImages.available && !PerfSwitches.isOff("atlas") && TileAtlas.ready(width) == null) return
 
-        // 1. Physically Grounded 3D Shadows
         if (!PerfSwitches.isOff("rest")) drawRestingShadows(scope, boardTile.z, x, y, width, height, shadows)
         if (isSelected) drawGoldGlow(scope, x, y, width, height)
 
@@ -464,39 +442,36 @@ object TileRenderer {
             }
         }
 
-        // 2. Solid 3D Body Extrusion (Backing -> Sides -> Face)
         drawWalls(scope, x, y, width, height, highlightColor, tintAlpha)
         drawFace(scope, x, y, width, height, highlightColor, tintAlpha, freeTint && !isSelected)
         if (isSelected) drawGoldFace(scope, x, y, width, height)
 
         val tile = boardTile.tile
-        // 5. Terrazzo in the face, under the paint
+        // Terrazzo, under the paint
         drawTerrazzo(scope, TileWear.look(boardTile.id), faceRect(x, y, width, height).topLeft, faceRect(x, y, width, height).size, glints = glare)
-        // 6. Detailed Classic Mahjong Artwork
         if (!PerfSwitches.isOff("art")) getTileVector(tile)?.let { vector ->
             drawArtwork(scope, vector, x, y, width, height, colourDots = faceColours(tile))
         }
 
-        // 7. Wear from years of play: grime, hairline scratches, dings, fingerprint haze
+        // Wear: grime, hairline scratches, dings, fingerprint haze
         val look = TileWear.look(boardTile.id)
         val face = faceRect(x, y, width, height)
         if (!PerfSwitches.isOff("wear")) drawWear(scope, look, face.topLeft, face.size)
         drawTone(scope, look, face.topLeft, face.size)
 
-        // 8. The clear glaze, over everything painted on the face. The face is flat; its gloss
-        // shows in sharp reflections of the lamp (streaked by tiny ripples in the glaze, strongest
-        // near the lamp's mirror point, with a hotspot there), scratch flares and edge glints
+        // Clear glaze over the flat face: sharp lamp reflections (rippled, with a hotspot at the
+        // lamp's mirror point), scratch flares and edge glints
         if (!PerfSwitches.isOff("glaze") && !TileKits.current.stone) drawGlaze(scope, look, face.topLeft, face.size, width, glare, GlazePart.ALL)
         if (isSelected) drawGoldRim(scope, x, y, width, height)
     }
 
     /**
-     * One tile, [tile], in [kit], standing alone at ([x], [y]) [width] x [height]: for showing a set
-     * (Settings), drawn whole each time rather than from the atlas, which holds the board's set.
+     * [tile] in [kit], alone, for showing a set (Settings): drawn whole, as the atlas holds only
+     * the board's set.
      */
     fun drawSample(scope: DrawScope, tile: Tile, x: Float, y: Float, width: Float, height: Float, kit: TileKit, look: Int = 0) {
         if (kit.stone) {
-            // From the set's own images, once they are loaded (asked for here if they are not)
+            // From the set's images once loaded (requested here if not)
             val images = ImperialImages.ready
             val engraving = images?.engravings?.get(tile)
             if (images != null && engraving != null) {
@@ -524,12 +499,11 @@ object TileRenderer {
     private val samplePaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
     /*
-     * The selected tile, in polished gold (chosen 2026-10-29 over a flat amber tint): a warm
-     * golden glow behind it, its face washed with gold, and a gold rim with a fine glint.
+     * The selected tile in polished gold (chosen 2026-10-29 over a flat amber tint): a glow
+     * behind, a gold-washed face, a gold rim with a glint.
      */
 
-    // Polished gold: bright highlights and deep shadows in turn across the tile, as a curved
-    // metal edge catches the lamp
+    // Alternating highlights and shadows, as a curved metal edge catches the lamp
     private fun goldMetal(x: Float, y: Float, w: Float, h: Float) = Brush.linearGradient(
         0f to Color(0xFFFFF3C4),
         0.2f to Color(0xFFF2C14E),
@@ -563,18 +537,14 @@ object TileRenderer {
 
     private fun drawGoldGlow(scope: DrawScope, x: Float, y: Float, w: Float, h: Float) {
         val stamp = glowStamp(w, h)
-        // The stamp holds the glow's shape and its blur's reach all round, for tiles glowWidth wide
+        // The stamp holds the glow plus its blur's reach, for tiles glowWidth wide
         val k = w / glowWidth
         val reach = glowWidth * (GLOW_GROW + GLOW_BLUR * GLOW_PAD) * k
         glowRect.set(x - reach, y - reach, x - reach + stamp.width * k, y - reach + stamp.height * k)
         scope.drawContext.canvas.nativeCanvas.drawBitmap(stamp, null, glowRect, goldGlowPaint)
     }
 
-    /**
-     * The gold glow's soft rounded shape, blurred once into an alpha image for tiles about [w]
-     * wide (made again only when tiles are shown a good deal larger or smaller), as the contact
-     * shadow is: a stamp rather than a blur every frame.
-     */
+    /** The gold glow's shape blurred once into an alpha image for tiles about [w] wide, as [contactStamp]. */
     private fun glowStamp(w: Float, h: Float): Bitmap {
         val made = glowBitmap
         if (made != null && w < glowWidth * 1.15f && w > glowWidth * 0.85f) return made
@@ -609,16 +579,15 @@ object TileRenderer {
     private var glowBitmap: Bitmap? = null
     private var glowWidth = 0f
 
-    // The glow reaches this far beyond the tile, and is blurred by this much, in tile widths; the
-    // blur fades out within GLOW_PAD of its radius
+    // Glow reach beyond the tile and blur radius, in tile widths; the blur fades out within
+    // GLOW_PAD radii
     private const val GLOW_GROW = 0.07f
     private const val GLOW_BLUR = 0.12f
     private const val GLOW_PAD = 2.2f
 
     /**
-     * A highlight's tint over a tile's walls and face: the hinted pair's gold, a blocked tile's
-     * red flash, the tutorial's blue. The atlas holds a body for each, with and without free
-     * tiles' green.
+     * A highlight's tint over walls and face: hint gold, blocked red flash, tutorial blue. The
+     * atlas holds a body for each, with and without free tiles' green.
      */
     internal enum class Highlight(val colour: Color?) {
         NONE(null),
@@ -632,7 +601,7 @@ object TileRenderer {
         val depthX = width * BoardTransform.LAYER_SHIFT_FACTOR_X
         val depthY = height * BoardTransform.LAYER_SHIFT_FACTOR_Y
         val cornerR = width * 0.085f
-        // The resting shadow under the lamp, filled in a little where firelight reaches
+        // Resting shadow under the lamp, lighter where firelight reaches
         val shadowAlpha = (0.28f + (layerZ * 0.05f)).coerceAtMost(0.65f) * shadows.lampDarkness
         if (layerZ == 0) {
             scope.drawRoundRect(
@@ -656,7 +625,6 @@ object TileRenderer {
         val depthY = height * BoardTransform.LAYER_SHIFT_FACTOR_Y
         val cornerR = width * 0.085f
         val corner = CornerRadius(cornerR, cornerR)
-        // A) Bamboo / Wood Backing Layer
         val woodDepthStart = 0.7f
         val woodSteps = if (PerfSwitches.isOff("walls")) 1 else 8
         for (i in woodSteps downTo 0) {
@@ -677,7 +645,6 @@ object TileRenderer {
             )
         }
 
-        // B) Ivory Side Extrusion
         val ivorySteps = if (PerfSwitches.isOff("walls")) 1 else 16
         for (i in ivorySteps downTo 0) {
             val progress = (i / ivorySteps.toFloat()) * woodDepthStart
@@ -701,9 +668,8 @@ object TileRenderer {
                 )
             }
         }
-        // C) Contact shade: the side walls darken towards their foot, where little light reaches
-        // into the narrow gap against the table or the next tile (ambient occlusion). One
-        // gradient under the face, so only the walls show it.
+        // Walls darken towards their foot, where little light reaches (ambient occlusion). One
+        // gradient under the face, so only the walls show it
         scope.drawRoundRect(
             brush = Brush.verticalGradient(
                 0f to Color.Transparent,
@@ -731,7 +697,7 @@ object TileRenderer {
         return androidx.compose.ui.geometry.Rect(x + bevelInset, y + bevelInset, x + width - bevelInset, y + height - bevelInset)
     }
 
-    /** 3. The ivory face with its bevelled edge, any highlight over it, and the ivory's age. */
+    /** The face with its bevel, any highlight, and the ivory's age. */
     private fun drawFace(
         scope: DrawScope, x: Float, y: Float, width: Float, height: Float,
         highlightColor: Color?, tintAlpha: Float, freeTint: Boolean,
@@ -756,7 +722,6 @@ object TileRenderer {
             cornerRadius = faceCorner,
         )
 
-        // 4. Face Highlights & Selection Overlay
         if (highlightColor != null) {
             scope.drawRoundRect(
                 color = highlightColor.copy(alpha = tintAlpha),
@@ -774,7 +739,6 @@ object TileRenderer {
             )
         }
 
-        // Free tile subtle tint
         if (freeTint) {
             scope.drawRoundRect(
                 color = Color(0x0C0F6B38),
@@ -813,9 +777,8 @@ object TileRenderer {
     }
 
     /**
-     * The face's artwork over the tile at ([x], [y]). It is engraved: paint sits in carved grooves.
-     * Lit from above, each groove's upper wall falls into a fine shadow and its lower lip catches a
-     * fine light edge.
+     * The face's engraved artwork: paint in carved grooves, each groove's upper wall in fine
+     * shadow, its lower lip catching the light.
      */
     private fun drawArtwork(
         scope: DrawScope, vector: ImageVector, x: Float, y: Float, width: Float, height: Float,
@@ -827,8 +790,8 @@ object TileRenderer {
         val innerH = height * kit.artScale
         val e = width * 0.009f
         if (kit.raised) {
-            // Embossed: standing proud of the face, its upper edges catch the light and it casts
-            // a shadow down and to the right; a faint dark edge all round keeps it clear of the face
+            // Embossed: upper edges lit, a shadow cast down-right, and a faint dark edge all round
+            // to keep it clear of the face
             if (kit.edge > 0f) {
                 val edgeBase = kit.edgeColour ?: kit.cutShadow
                 val edgeTint = edgeBase.copy(alpha = (edgeBase.alpha * kit.edge).coerceAtMost(1f))
@@ -848,10 +811,7 @@ object TileRenderer {
         if (kit.colourDots) colourDots?.let { drawColourDots(scope, it, x, y, width, height, kit) }
     }
 
-    /**
-     * Colour-code dots ([TileKit.colourDots]): a small disc of each of the face's [colours] in a
-     * row at its lower left, each in a fine dark ring so it reads on any face.
-     */
+    /** Colour-code marks ([TileKit.colourDots]) for the face's [colours], placed by [TileKit.dotPlace]. */
     private fun drawColourDots(scope: DrawScope, colours: List<Color>, x: Float, y: Float, width: Float, height: Float, kit: TileKit) {
         if (colours.isEmpty()) return
         val r = width * kit.dotSize / 2f
@@ -946,8 +906,8 @@ object TileRenderer {
                         )
                     }
                 } else if (kit.barEngraved) {
-                    // Deeper paint in a groove: the upper wall's shadow falls across it, and its
-                    // floor catches a little light along the bottom
+                    // Paint deep in a groove: the upper wall's shadow across it, a little light
+                    // along its floor
                     drawRect(Color.Black.copy(alpha = 0.18f), Offset(left, top), Size(barW, barH))
                     drawRect(
                         Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.6f), 0.5f to Color.Transparent, startY = top, endY = top + barH),
@@ -1003,20 +963,19 @@ object TileRenderer {
     )
 
     /**
-     * Each tile drawn from a few images made once, rather than from some fifty shapes, gradients
-     * and paths a frame (most of a frame's work, through the tilted camera). Tiles share them:
+     * Tiles stamped from a few images made once, instead of some fifty shapes, gradients and paths
+     * each per frame (most of a frame's work through the tilted camera). Shared by all tiles:
      *
-     * - **body:** walls, outline, face and the ivory's age, the same for every tile, and again
-     *   tinted for each highlight, each with and without free tiles' green;
-     * - **artwork:** each face's, engraving and all;
+     * - **body:** walls, outline, face and ageing, plus tinted for each highlight, each with and
+     *   without free tiles' green;
+     * - **artwork:** each face's, engraving included;
      * - **surface:** each of the [TileWear.LOOKS] looks' wear and the glaze's fixed parts;
-     * - **glare:** each look's reflections of the lamp and the fire, stamped as strongly as the
-     *   tile catches them that frame.
+     * - **glare:** each look's lamp and fire reflections, stamped as strongly as the tile catches
+     *   them.
      *
-     * The images are made at the size the tiles are shown, off the main thread: again only when
-     * they are shown much larger (zoomed in, or the board grown as it empties) or much smaller,
-     * the current ones being stamped scaled meanwhile. Until the first are ready, tiles are drawn
-     * shape by shape, as are the matched pair in flight, shown larger than the images.
+     * Made off the main thread at the displayed size; remade only when tiles are shown much larger
+     * or smaller (stamped scaled meanwhile). Until ready, and for the pair in flight, tiles are
+     * drawn shape by shape.
      */
     object TileAtlas {
         /** On-screen pixels per flat table pixel: the zoom times the camera's nearest magnification. */
@@ -1042,10 +1001,9 @@ object TileRenderer {
             // The right and lower walls' masks (wallMask), over the body's image
             private val wallRight: Bitmap,
             private val wallBelow: Bitmap,
-            // A set drawn from images made once (TileKit.stone): a body for each of its looks, and
-            // for each body its own shape (a highlight's tint is stamped through it, the outline
-            // being the stone's own) and its own walls' masks. Its artwork is each face's
-            // engraving, the size of a body, and it has no terrazzo, surface or glare
+            // A set drawn from images (TileKit.stone): a body per look, each with its shape (a
+            // highlight's tint is stamped through it) and wall masks. Its artwork is each face's
+            // engraving, body-sized; no terrazzo, surface or glare
             private val stoneBodies: Array<Bitmap>? = null,
             private val stoneShapes: Array<Bitmap>? = null,
             private val stoneWallRight: Array<Bitmap>? = null,
@@ -1114,8 +1072,7 @@ object TileRenderer {
                 val k = width / this.width
                 val stone = stoneBodies
                 if (stone != null) {
-                    // A body of the tile's own look, any tint stamped through its shape, then the
-                    // face's engraving over it
+                    // The tile's look's body, any tint through its shape, then the engraving
                     val index = stoneIndex(tile.id)
                     val body = stone[index]
                     stampRect.set(x, y, x + body.width * k, y + body.height * k)
@@ -1182,7 +1139,7 @@ object TileRenderer {
             val kit = TileKits.current
             // Images of another set (just changed in Settings) are not shown while new ones are made
             if (now != null && now.kit !== kit) baked = null
-            // (A stone set's images are made once, at their largest: they suit any size)
+            // A stone set's images are made once, at their largest: they suit any size
             val suits = now != null && now.kit === kit && (kit.stone || (want <= now.width && want >= now.width * 0.6f))
             if (!suits && (wanted != want || wantedKit !== kit)) {
                 wanted = want
@@ -1192,8 +1149,8 @@ object TileRenderer {
             return baked
         }
 
-        // A stone set's atlas: its images loaded (not made), and from each body its shape and its
-        // walls' masks. The usual walls' masks, kept to where this body's stone is
+        // A stone set's atlas: its images loaded, not made, plus each body's shape and wall masks
+        // (the usual masks, cut to the body's stone)
         private fun bakeStone(kit: TileKit) {
             val images = ImperialImages.load() ?: return
             val w = images.width.toFloat()
@@ -1228,8 +1185,8 @@ object TileRenderer {
             fun image(iw: Int, ih: Int, draw: DrawScope.() -> Unit): Bitmap {
                 val bitmap = Bitmap.createBitmap(iw, ih, Bitmap.Config.ARGB_8888)
                 CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap.asImageBitmap()), Size(iw.toFloat(), ih.toFloat()), draw)
-                // Stamped smaller than made, it stays smooth rather than shimmering. Set on the
-                // shared copy, as asShared() doesn't carry it over
+                // Mipmapped so it doesn't shimmer stamped smaller; set on the shared copy, as
+                // asShared() drops it
                 val shared = bitmap.asShared()
                 if (shared !== bitmap) bitmap.recycle()
                 shared.setHasMipMap(true)
@@ -1291,8 +1248,8 @@ object TileRenderer {
         private val seamPaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
         private const val STEP = 16
-        // Enough for tiles a little magnified; zoomed right in they soften slightly, which keeps the
-        // images to some 30 MB at most
+        // Enough for slightly magnified tiles; fully zoomed they soften a little, keeping the images
+        // to about 30 MB
         private const val MAX_WIDTH = 256
     }
 
@@ -1300,11 +1257,10 @@ object TileRenderer {
     private enum class GlazePart { ALL, FIXED, GLARE }
 
     /**
-     * A terrazzo face (the tile set's [TileKit.terrazzo], its strength): stone chips of many sizes and
-     * tones set in a finely speckled ground, [look]'s own scatter. With [glints] a few flecks of
-     * mica among them catch the light as strongly as that (the atlas keeps those in the glare's
-     * image, stamped as each tile catches the lamp and the fire, so they twinkle with the
-     * flames); [flakes] false draws only those.
+     * A terrazzo face ([TileKit.terrazzo] strength): stone chips of many sizes and tones in a
+     * speckled ground, [look]'s own scatter. With [glints], mica flecks catch the light that
+     * strongly (the atlas keeps them in the glare image, so they twinkle with the flames);
+     * [flakes] false draws only those.
      */
     private fun drawTerrazzo(scope: DrawScope, look: Int, topLeft: Offset, size: Size, glints: Float, flakes: Boolean = true, kit: TileKit = TileKits.current) {
         if (kit.woodGrain > 0f && flakes && !PerfSwitches.isOff("terrazzo")) drawWoodGrain(scope, look, topLeft, size, kit.woodGrain, kit.woodFigure)
@@ -1316,9 +1272,8 @@ object TileRenderer {
         fun alpha(a: Float) = (a * strength).coerceIn(0f, 1f)
         val path = Path()
         scope.clipRect(topLeft.x, topLeft.y, topLeft.x + size.width, topLeft.y + size.height) {
-            // Chips: angular broken stones, a few large and many small, covering about two fifths
-            // of the face. Most are paler than the ground, some darker, a few warm; each has its own
-            // mottling, and some a vein
+            // Angular chips, a few large, many small, covering about two fifths of the face; each
+            // mottled, some veined
             fun chip(cx: Float, cy: Float, r: Float) {
                 val tone = TERRAZZO_TONES[random.nextInt(TERRAZZO_TONES.size)]
                 val a = alpha(0.30f + random.nextFloat() * 0.25f)
@@ -1393,9 +1348,8 @@ object TileRenderer {
     }
 
     /**
-     * Mottled jade ([TileKit.mottle], its strength), [look]'s own: broad soft clouds of a darker and
-     * a lighter green ([TileKit.mottleTones]) over the face's colour, smaller mottles among them,
-     * a few pale wispy veins wandering across, and fine pale flecks.
+     * Mottled jade ([TileKit.mottle] strength), [look]'s own: soft clouds of darker and lighter
+     * green ([TileKit.mottleTones]), smaller mottles, a few pale wispy veins and fine pale flecks.
      */
     private fun drawMottle(scope: DrawScope, look: Int, topLeft: Offset, size: Size, kit: TileKit) {
         val tones = kit.mottleTones
@@ -1462,9 +1416,8 @@ object TileRenderer {
     }
 
     /**
-     * Wood grain across a face ([TileKit.woodGrain], its strength), [look]'s own: the grain runs
-     * lengthwise, a little aslant, in lines that wave and crowd and thin out; dark and pale bands;
-     * fine pores along it; and on some faces a knot, the grain sweeping round it in rings.
+     * Wood grain ([TileKit.woodGrain] strength), [look]'s own: slightly aslant lengthwise lines
+     * that wave, crowd and thin; dark and pale bands; pores; on some faces a ringed knot.
      */
     private fun drawWoodGrain(scope: DrawScope, look: Int, topLeft: Offset, size: Size, strength: Float, figure: Float = 0f) {
         val random = kotlin.random.Random(WOOD_SEED + look * 15485863)
@@ -1498,8 +1451,7 @@ object TileRenderer {
         // Where a line of the grain starting at [base] runs, at height y
         fun flow(base: Float, y: Float) = base + (y - topLeft.y) * tilt + sin(y / h * f1 + p1) * a1 + sin(y / h * f2 + p2) * a2 + push(base, y)
         val path = Path()
-        // A ribbon of the grain between [from] and [from] + [width] (its width tapering as [taper]
-        // says, 0 to 1 along it)
+        // A grain ribbon from [from], [width] wide, tapered by [taper] (0 to 1 along it)
         fun ribbon(from: Float, width: Float, taper: (Float) -> Float, steps: Int = 28) {
             path.reset()
             for (i in 0..steps) {
@@ -1575,8 +1527,8 @@ object TileRenderer {
     }
 
     /**
-     * Each tile's own tone ([TileKit.toneVariation]): by [look], a little warmer or cooler, lighter
-     * or darker, so a board reads as pieces of a real set rather than prints of one
+     * Each tile's own tone ([TileKit.toneVariation]) by [look]: slightly warmer or cooler, lighter
+     * or darker, so the board reads as a real set
      */
     private fun drawTone(scope: DrawScope, look: Int, topLeft: Offset, size: Size, kit: TileKit = TileKits.current) {
         val v = kit.toneVariation
@@ -1619,9 +1571,8 @@ object TileRenderer {
     }
 
     /**
-     * The glaze over a face. Its fixed parts and its glare (the lamp's and the fire's reflections,
-     * as strong as [glare]) can be drawn apart for the atlas ([part]): the glare drawn at full
-     * strength there, to be stamped as strongly as each tile catches it.
+     * The glaze over a face. Its fixed parts and its glare (lamp and fire reflections, [glare]
+     * strong) can be drawn apart for the atlas ([part]), the glare there at full strength.
      */
     private fun drawGlaze(
         scope: DrawScope,
@@ -1686,9 +1637,8 @@ object TileRenderer {
             topLeft = bandTopLeft,
             size = bandSize,
         )
-        // A crisp, mirror-like reflection of the lamp's opening: hard-edged like real glaze
-        // Because the surface undulates, the lamp's reflection wavers along its lower edge and
-        // sits at a slight angle, differently on every tile
+        // Hard-edged reflection of the lamp's opening; the glaze undulates, so its lower edge
+        // wavers and it tilts slightly, differently per tile
         val mirror = reflect(0.17f, 0.3f)
         val mLeft = topLeft.x + size.width * 0.12f
         val mTop = topLeft.y + size.height * 0.045f
@@ -1856,9 +1806,6 @@ object TileRenderer {
         }
     }
 
-    // ==========================================
-    // VECTOR DRAWING RENDERER & CACHE
-    // ==========================================
     private sealed interface CachedVectorNode
 
     private class CachedGroupNode(
@@ -1990,8 +1937,7 @@ object TileRenderer {
     private val FreeTint = Color(0xFF0F6B38)
 
     private const val WALL_SHADE_ALPHA = 0.6f
-    // Terrazzo on a face: its chips, its ground's specks, the chips' tones (charcoal's own
-    // range, with a little warm taupe and pale stone), and the seed each look's scatter is drawn from
+    // Terrazzo: chip and speck counts, chip tones, and the seed for each look's scatter
     private const val TERRAZZO_CHIPS = 150
     private const val TERRAZZO_SPECKS = 900
     // Mostly paler than the ground, some darker, a little warm taupe and brown
@@ -2000,7 +1946,7 @@ object TileRenderer {
         Color(0xFF6A6863), Color(0xFF34332F), Color(0xFF7C6D60), Color(0xFF5E4E44),
     )
     private const val TERRAZZO_SEED = 4057
-    // Mottled jade: its broad clouds, its smaller mottles, its flecks, and its seed
+    // Mottled jade: cloud, mottle and fleck counts, and seed
     private const val MOTTLE_CLOUDS = 10
     private const val MOTTLE_SPOTS = 110
     private const val MOTTLE_FLECKS = 420
@@ -2069,9 +2015,9 @@ object TileRenderer {
 }
 
 /**
- * Where a tile's resting shadow falls under the lamp ([lamp], in flat table pixels), and how dark
- * it is beside the fire ([lampDarkness] of its darkness under the lamp alone). The fire's own long
- * shadows are traced by the shaders (BoardShadowMap).
+ * A tile's resting-shadow offset under the lamp ([lamp], flat table pixels) and its darkness by
+ * the fire ([lampDarkness], a share of lamp-only). The fire's long shadows are traced by the
+ * shaders (BoardShadowMap).
  */
 data class TileShadows(val lamp: Offset, val lampDarkness: Float = 1f) {
     companion object {

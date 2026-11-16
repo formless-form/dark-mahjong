@@ -10,32 +10,26 @@ import java.io.IOException
 import java.util.concurrent.Executors
 
 /**
- * The Imperial images. Imperial is not drawn from shapes as the other sets are, but from images
- * that come with the app (Gareth, 2026-11-14: "ship in the app", and "in the play build only"),
- * which the game only loads and scales:
+ * Imperial is drawn from shipped images, only loaded and scaled (Gareth, 2026-11-14: "ship in the
+ * app", "in the play build only"):
  *
- *  - a stone body for each of [BODIES] looks, its own outline, sides and all, with no engraving;
- *  - each face's engraving alone (its paint, and the cut's shade), to lay over any body;
- *  - and for each of those a surface map, smaller: which way the stone faces at each point (its
- *    direction, x to the right, y down the picture, z out of the face, in red, green and blue),
- *    a body's opaque over the whole block with its sides held level, an engraving's only where
- *    the face is cut. By these the fire's light falls on the tiles afresh each frame
- *    (BoardShadowMap, the tiles' light). They are optional: without them the set keeps the light
- *    its pictures were made in.
+ *  - [BODIES] stone bodies, outline and sides included, unengraved;
+ *  - each face's engraving alone (paint and cut shade), to lay over any body;
+ *  - optional smaller surface maps of each: normals (x right, y down, z out of the face, as RGB),
+ *    a body's opaque with level sides, an engraving's only where cut. They let the fire relight
+ *    the tiles each frame (BoardShadowMap); without them the set keeps its baked light.
  *
- * All [WIDTH] pixels wide, the widest the board's atlas ever shows a tile, already lit by the
- * lamp as the other sets' tiles are when their images are made. They are in the Play build's
- * assets, in [FOLDER]. Where they are absent (the open-source build, or a build from the public
- * sources) [load] finds nothing, and the set is not offered.
+ * [WIDTH] px wide (the atlas's largest tile), pre-lit by the lamp like the other sets. Play-build
+ * assets only, in [FOLDER]; elsewhere [load] finds nothing and the set is not offered.
  */
 internal object ImperialImages {
     const val FOLDER = "imperial"
     const val WIDTH = 256
     const val BODIES = 12
-    // The width of a tile in the surface maps
+    // Tile width in the surface maps
     const val SURFACE_WIDTH = 128
 
-    /** The app's assets, to load from: given once at start-up (and by tests). */
+    /** Set once at start-up (and by tests). */
     @Volatile
     var assets: AssetManager? = null
         set(value) {
@@ -45,32 +39,26 @@ internal object ImperialImages {
 
     private var availableCache: Boolean? = null
 
-    /** [present], looked up once the assets are known. */
+    /** [present], cached once the assets are known. */
     val available: Boolean
         get() = availableCache ?: present().also { if (assets != null) availableCache = it }
 
-    /**
-     * The set: every body is the same size, and every engraving the size of a body, to lie over
-     * it. The surface maps likewise, [surfaceWidth] to a tile's width; null where the build has none.
-     */
+    /** Bodies all one size, engravings body-sized; surface maps likewise at [surfaceWidth], or null. */
     class Images(
         val width: Int, val bodies: Array<Bitmap>, val engravings: Map<Tile, Bitmap>,
         val surfaceWidth: Int, val bodySurfaces: Array<Bitmap>?, val engravingSurfaces: Map<Tile, Bitmap>?,
     )
 
-    /** Whether the images are loaded, as state: what is built from them is built again when they are. */
+    /** State, so what is built from the images is rebuilt once they load. */
     val loaded = mutableStateOf(false)
 
     @Volatile
     private var images: Images? = null
 
-    /** The images if they are loaded; null until then. */
+    /** Null until loaded. */
     val ready: Images? get() = images
 
-    /**
-     * Whether this build has the images at all (the Play build does; the open-source build does
-     * not): a quick look, without loading them. Where it is false the set is not to be offered.
-     */
+    /** Whether this build has the images (Play does, open-source not), without loading them. */
     fun present(): Boolean = try {
         assets?.list(FOLDER)?.contains(bodyName(0)) == true
     } catch (e: IOException) {
@@ -85,12 +73,12 @@ internal object ImperialImages {
 
     fun engravingSurfaceName(tile: Tile) = "${tile.suit.name.lowercase()}-${tile.value}-surface.webp"
 
-    /** Every face once, as the atlas has them. */
+    /** Every face once, as in the atlas. */
     val faces: List<Tile> by lazy {
         TileSuit.entries.flatMap { suit -> (1..9).map { Tile(suit, it) } }.filter { TileRenderer.getTileVector(it) != null }
     }
 
-    /** Loads the images on the calling thread (not the main one), once; null if any is missing. */
+    /** Loads once, on the calling (non-main) thread; null if any is missing. */
     @Synchronized
     fun load(): Images? {
         images?.let { return it }
@@ -102,7 +90,7 @@ internal object ImperialImages {
         }
         fun image(name: String): Bitmap? {
             val decoded = decode(name) ?: return null
-            // Stamped smaller than made, it stays smooth rather than shimmering (as the atlas's own)
+            // Mipmapped so it doesn't shimmer when stamped smaller (as the atlas)
             val shared = decoded.asShared()
             if (shared !== decoded) decoded.recycle()
             shared.setHasMipMap(true)
@@ -111,7 +99,7 @@ internal object ImperialImages {
         val bodies = Array(BODIES) { image(bodyName(it)) ?: return null }
         val engravings = HashMap<Tile, Bitmap>()
         for (tile in faces) engravings[tile] = image(engravingName(tile)) ?: return null
-        // The surface maps: all of them, or none (they are only ever drawn into the board's own map)
+        // Surface maps: all or none (only ever drawn into the board's own map)
         val bodySurfaces = arrayOfNulls<Bitmap>(BODIES)
         val engravingSurfaces = HashMap<Tile, Bitmap>()
         var whole = true
@@ -138,7 +126,7 @@ internal object ImperialImages {
 
     private val worker = Executors.newSingleThreadExecutor { Thread(it, "imperial-images").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } }
 
-    /** Loads the images off the main thread, if they are not loaded yet. */
+    /** Loads off the main thread if not loaded yet. */
     fun loadSoon() {
         if (images == null) worker.execute { load() }
     }

@@ -5,10 +5,9 @@ Source: "Sanqing Mountain is surrounded by clouds and mists" by Huangdan2060 (CC
 https://commons.wikimedia.org/wiki/File:Sanqing_Mountain_is_surrounded_by_clouds_and_mists1.jpg
 kept at full resolution in tools/sources/title-sanqing-mountain-commons.jpg (4032 x 3024).
 
-The photo is cropped without distortion and darkened with the game's grade: a per-channel tone curve
-(tools/sources/title-grade-curve.json) that sinks the forest almost to black and keeps the mist soft.
-Film grain, the drifting fog and the shade behind the menu are drawn by the app at run time, so a new
-crop gets those for free.
+Cropped undistorted and graded by a per-channel tone curve (tools/sources/title-grade-curve.json)
+that sinks the forest near black and keeps the mist soft. Grain, fog and the menu shade are drawn at
+run time, so a new crop gets them free.
 
 Usage:
   tools/make-title-photo.py                       the portrait title image, as shipped

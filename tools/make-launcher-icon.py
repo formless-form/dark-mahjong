@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Renders Dark Mahjong's launcher icon from the title screen's name seal: 暗夜麻將 in seal script,
-cut white out of deep vermilion, with the same roughened carved edges as NameSeal.kt's AGSL
-shader but none of its worn-out flecks (a clean field reads better at icon size).
+Renders the launcher icon from the title's name seal: 暗夜麻將 in seal script, cut white out of
+vermilion, with NameSeal.kt's AGSL carved edges but not its worn flecks (cleaner at icon size).
 
-Writes Android adaptive-icon layers (background, foreground, monochrome for themed icons) to
-app/src/main/res/mipmap-*/ and a 512 px store icon to fastlane/metadata/android/en-US/images/.
+Writes adaptive-icon layers (background, foreground, monochrome) to app/src/main/res/mipmap-*/ and
+a 512 px store icon to fastlane/metadata/android/en-US/images/.
 
 Needs Python 3 with numpy and Pillow. Run from the repo root:
     python3 tools/make-launcher-icon.py [--preview out.png]
@@ -35,7 +34,7 @@ BORDER_DP = 2  # a carved paper rim just inside the launcher's circle mask (Pixe
 CELLS = [("暗", 0.71, 0.31), ("夜", 0.71, 0.70), ("麻", 0.29, 0.31), ("將", 0.29, 0.70)]
 
 
-# --- The carved edges: a numpy port of SEAL_WEAR_AGSL in NameSeal.kt, less its flecks ---
+# Carved edges: a numpy port of SEAL_WEAR_AGSL in NameSeal.kt, less its flecks
 def fract(x):
     return x - np.floor(x)
 
@@ -77,7 +76,6 @@ def sample(img, sx, sy):
     return top * (1 - fy) + bottom * fy
 
 
-# --- Drawing ----------------------------------------------------------------------------------
 def glyph_mask(size_px, px_per_dp):
     """The four characters, white on black, positioned as NameSeal draws them."""
     seal = SEAL_DP * px_per_dp
@@ -95,8 +93,8 @@ def glyph_mask(size_px, px_per_dp):
 
 
 def border_mask(size_px, px_per_dp):
-    """Paper everywhere outside a circle just inside the 72 dp one the launcher shows: a rim on a round
-    mask, and paper corners on a squarer one, so the red never shows outside the circle."""
+    """Paper outside a circle just inside the launcher's 72 dp one: a rim on a round mask, paper
+    corners on a squarer one, so red never shows outside the circle."""
     ys, xs = np.mgrid[0:size_px, 0:size_px].astype(np.float64)
     r = np.hypot(xs - size_px / 2, ys - size_px / 2) / px_per_dp
     return np.clip((r - (36 - BORDER_DP)) * px_per_dp + 0.5, 0, 1)
@@ -111,12 +109,11 @@ def render_layers(final_px, border=True):
         mask = np.maximum(mask, border_mask(size, px_per_dp))
     alpha = sample(mask, sx, sy)
 
-    # Background: the vermilion field, faintly mottled like ink on stone
+    # Faintly mottled like ink on stone
     ys, xs = np.mgrid[0:size, 0:size] / px_per_dp
     mottle = 1 + 0.05 * (vnoise(xs * 0.35 + 3, ys * 0.35 + 9) - 0.5) + 0.03 * (vnoise(xs * 1.7, ys * 1.7) - 0.5)
     background = np.array(SEAL_INK, dtype=np.float64)[None, None, :] * mottle[..., None]
 
-    # Foreground: the carved characters
     paper = np.broadcast_to(np.array(SEAL_PAPER, dtype=np.float64), (size, size, 3))
 
     def to_image(rgb, a=None):
@@ -187,8 +184,7 @@ def main():
         os.makedirs(folder, exist_ok=True)
         for layer, img in layers.items():
             img.save(os.path.join(folder, f"ic_launcher_{layer}.webp"), lossless=True, quality=100)
-    # The store icon: a full square (the store applies its own rounding), scaled from the middle 72 dp
-    # (no rim: the store crops it to its own rounded square, where a circle wouldn't sit right)
+    # Store icon: a full square from the middle 72 dp, no rim (the store rounds it itself)
     layers = render_layers(768, border=False)
     full = layers["background"].convert("RGBA")
     full.alpha_composite(layers["foreground"])

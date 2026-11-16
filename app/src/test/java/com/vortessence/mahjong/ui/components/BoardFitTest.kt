@@ -11,21 +11,16 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/**
- * Every layout, fitted to the board area and projected through the tilted camera, must keep
- * every corner of every tile (thickness included) on screen.
- */
+/** Every layout, fitted and projected through the tilted camera, keeps every tile corner on screen. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class BoardFitTest {
-    // The Pixel 9 Pro's board area (between the header and the toolbar), and a squatter and a
-    // taller screen for good measure
+    // Pixel 9 Pro's board area, plus a squatter and a taller screen
     private val canvases = listOf(1280f to 2240f, 1080f to 1500f, 1080f to 2400f)
     private val padding = 48f
 
-    // Every level suits a phone: on a Pixel 9 Pro's board area (in dp), held upright no level's tiles
-    // are smaller than 30 dp, so none needs constant zooming and panning; a level played on its side
-    // (Mah's boards since 1.4.16) has tiles at least 27.5 dp there, as tools/import-mah-layouts.py kept
+    // On a Pixel 9 Pro's board area, tiles are at least 30 dp upright (no constant zooming), and
+    // 27.5 dp on its side (Mah's boards since 1.4.16, as tools/import-mah-layouts.py kept)
     @Test
     fun everyLevelHasPhoneSizedTiles() {
         for (level in ConstellationRepository.levelConstellations) {

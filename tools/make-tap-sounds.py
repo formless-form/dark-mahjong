@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """
-Builds Dark Mahjong's tile tap (also the title-screen menu click, played softer and faster):
-two light wood impacts from Kenney's Impact Sounds pack (CC0, sounds/kenney/), each at two
-slightly different pitches, levelled to sit as quietly as the taps they replaced.
+Builds the tile tap (also the menu click, softer and faster): two light wood impacts from
+Kenney's Impact Sounds (CC0, sounds/kenney/), each at two pitches, as quiet as the taps they
+replaced. Writes app/src/main/res/raw/tile_tap_1.ogg to tile_tap_4.ogg.
 
-Writes app/src/main/res/raw/tile_tap_1.ogg to tile_tap_4.ogg.
-
-The Imperial set's tap is made the same way from one short stone knock (--stone,
-sounds/stone_knock.wav), at the same two pitches, and writes stone_tap_1.ogg and stone_tap_2.ogg.
+--stone: Imperial's tap from one stone knock (sounds/stone_knock.wav), same two pitches:
+stone_tap_1.ogg and stone_tap_2.ogg.
 
 Needs Python 3 with numpy, and ffmpeg (with libvorbis). Run from the repo root:
     python3 tools/make-tap-sounds.py [--stone] [--source WAV] [--out DIR]
@@ -31,9 +29,8 @@ TAKES = [  # (source, pitch)
 ]
 STONE_SOURCE = os.path.join(ROOT, "sounds/stone_knock.wav")
 STONE_PITCHES = [0.98, 1.03]
-# Loudness of the knock itself. A phone's speaker plays little below 500 Hz, which is most of the
-# wood knock's body but none of the stone's crack: at the same level the wood was 8 dB quieter
-# on the phone, so the wood is levelled 6 dB up and the stone 3 dB down (2026-11-14)
+# Knock loudness. A phone plays little below 500 Hz, most of the wood's body but none of the
+# stone's crack: wood was 8 dB quieter there, so it's 6 dB up and stone 3 dB down (2026-11-14)
 TARGET_RMS_DB = -20.0
 STONE_TARGET_RMS_DB = -29.0
 
@@ -72,8 +69,7 @@ def main():
         quiet = np.where(np.convolve(a, np.ones(220) / 220, "same") > a.max() * 0.003)[0]
         end = quiet[-1] / SR
         gain = target - knock_rms_db(x)
-        # Levelled on the source, then checked on the result: a knock that is mostly tail can land
-        # off target, so it's put right once (the ivory taps already land within half a dB)
+        # Checked on the result: a mostly-tail knock can land off target, so it's corrected once
         for _ in range(2):
             chain = (f",atrim=start={start / SR:.4f}:end={end:.4f},asetpts=PTS-STARTPTS,afade=t=in:d=0.0008,"
                      f"afade=t=out:st={max(0, end - start / SR - 0.02):.4f}:d=0.02,volume={gain:.2f}dB,"

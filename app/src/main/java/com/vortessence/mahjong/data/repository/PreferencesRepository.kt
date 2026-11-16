@@ -35,23 +35,22 @@ import java.io.IOException
 import java.time.LocalDateTime
 import kotlin.random.Random
 
-// A corrupted file starts afresh rather than crashing every launch
+// Corrupt file starts afresh rather than crashing every launch
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "mahjong_preferences",
     corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
 )
 
-// Which level numbering the stored highest level is in: 2 after levels were ordered by measured
-// difficulty (1.3.7), 3 after Mah's wide boards joined them (1.4.16)
+// Stored highest level's numbering: 2 = measured order (1.3.7), 3 = Mah's wide boards (1.4.16)
 private const val MEASURED_LEVEL_ORDER = 2
 private const val WIDE_MAH_LEVEL_ORDER = 3
-// Since the twelve layouts made for the Journey took it to 100 levels
+// Journey at 100 levels
 private const val JOURNEY_100_LEVEL_ORDER = 4
 
-// The first-game check's version (Keys.PERF_CHECK_VERSION)
+// See Keys.PERF_CHECK_VERSION
 private const val PERF_CHECK_VERSION = 2
 
-// This phone, as the performance check knows it: a new phone of the same model would measure alike
+// Maker/model: a new phone of the same model would measure alike
 private val thisPhone = "${Build.MANUFACTURER}/${Build.MODEL}"
 
 class PreferencesRepository(private val context: Context) {
@@ -67,7 +66,7 @@ class PreferencesRepository(private val context: Context) {
 
         val HIGHEST_LEVEL = intPreferencesKey("highest_level")
         val COMPLETED_CONSTELLATIONS = stringSetPreferencesKey("completed_constellations")
-        // The epoch days whose Today's Puzzle was solved
+        // Epoch days
         val PUZZLE_DAYS_SOLVED = stringSetPreferencesKey("puzzle_days_solved")
         val SAVED_GAME = stringPreferencesKey("saved_game")
         val TABLE_SURFACE = stringPreferencesKey("table_surface")
@@ -76,31 +75,26 @@ class PreferencesRepository(private val context: Context) {
         val FIREPLACE = booleanPreferencesKey("fireplace")
         val LOW_PERFORMANCE = booleanPreferencesKey("low_performance")
         val CLEAN_CONSTELLATIONS = stringSetPreferencesKey("clean_constellations")
-        // Each layout's best clear (LevelRecord), as "id=millis,hints,reshuffles,undos" entries
+        // "id=millis,hints,reshuffles,undos" entries
         val LEVEL_RECORDS = stringSetPreferencesKey("level_records")
         val HINTS = intPreferencesKey("hints")
         val FIRE_VOLUME = floatPreferencesKey("fire_volume")
         val FIRE_INTENSITY = floatPreferencesKey("fire_intensity")
         val WIDE_BOARDS = stringPreferencesKey("wide_boards")
         val LAST_WIN_DAY = longPreferencesKey("last_win_epoch_day")
-        // Which level numbering the stored highest level is in: 2 since levels were ordered by
-        // measured difficulty (absent means the order before)
+        // *_LEVEL_ORDER above; absent = the original order
         val LEVEL_ORDER = intPreferencesKey("level_order")
-        // The first-game performance check (PerfCheck's names) and the share of frames (percent)
-        // that stuttered
+        // PerfCheck's name, and the stutter percent
         val PERF_CHECK = stringPreferencesKey("perf_check")
         val PERF_CHECK_STUTTERS = intPreferencesKey("perf_check_stutters")
-        // The phone the check and Low-performance mode belong to (its maker and model). Backups
-        // carry everything to a new phone, where neither applies: the check runs again there
+        // Phone the check and mode belong to: backups carry them to a new phone, where the check reruns
         val PERF_DEVICE = stringPreferencesKey("perf_device")
-        // Which check gave the stored verdict: 2 since it tells a phone near the line from one
-        // with a margin (1.4.13). A pass from before is checked again, once
+        // 2 since it tells near-the-line from a margin (1.4.13); older passes are rechecked once
         val PERF_CHECK_VERSION = intPreferencesKey("perf_check_version")
         fun congratsBag(pool: CongratsPool) = stringPreferencesKey("congrats_bag_${pool.key}")
     }
 
-    // Storage that can't be read plays on with the defaults, and a write that fails (a full phone)
-    // is lost rather than crashing the game
+    // Unreadable storage plays on with defaults; a failed write (full phone) is lost, not a crash
     private val data: Flow<Preferences> = context.dataStore.data.catch {
         if (it is IOException) emit(emptyPreferences()) else throw it
     }
@@ -112,7 +106,7 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    // A setting never changed reads as GameSettings' own default, so a new default reaches it
+    // Unchanged settings read GameSettings' defaults, so new defaults reach them
     val settingsFlow: Flow<GameSettings> = data.map { prefs ->
         val d = GameSettings()
         GameSettings(
@@ -151,10 +145,7 @@ class PreferencesRepository(private val context: Context) {
         )
     }.distinctUntilChanged()
 
-    /**
-     * Where the first-game performance check stands. Not yet run, it counts as the player's own
-     * choice ([PerfCheck.MANUAL], never run) once they have set Low-performance mode themselves.
-     */
+    /** Not yet run, it counts as [PerfCheck.MANUAL] once the player has set Low-performance mode. */
     val perfCheckFlow: Flow<PerfCheckState> = data.map { prefs ->
         if (!onThisPhone(prefs)) return@map PerfCheckState(PerfCheck.PENDING, 0)
         val stored = prefs[Keys.PERF_CHECK]?.let { name -> PerfCheck.entries.firstOrNull { it.name == name } }
@@ -163,10 +154,10 @@ class PreferencesRepository(private val context: Context) {
         PerfCheckState(state, prefs[Keys.PERF_CHECK_STUTTERS] ?: 0)
     }.distinctUntilChanged()
 
-    // Stored with no phone named (before 1.4.12), they're this phone's
+    // No phone named (before 1.4.12): this phone's
     private fun onThisPhone(prefs: Preferences) = prefs[Keys.PERF_DEVICE].let { it == null || it == thisPhone }
 
-    // About to write the check or the mode: what another phone left is dropped first
+    // Drop what another phone left before writing
     private fun claimForThisPhone(prefs: MutablePreferences) {
         if (!onThisPhone(prefs)) {
             prefs.remove(Keys.PERF_CHECK)
@@ -176,22 +167,22 @@ class PreferencesRepository(private val context: Context) {
         prefs[Keys.PERF_DEVICE] = thisPhone
     }
 
-    /** Tests: the check and the mode as a backup from [phone] brings them (null: unnamed, as before 1.4.12). */
+    /** Tests: as a backup from [phone] brings them (null: unnamed, pre-1.4.12). */
     internal suspend fun storedOnPhone(phone: String?) {
         write { prefs -> if (phone != null) prefs[Keys.PERF_DEVICE] = phone else prefs.remove(Keys.PERF_DEVICE) }
     }
 
-    /** Tests: the check's version as stored (null: none, as before 1.4.13). */
+    /** Tests: stored check version (null: pre-1.4.13). */
     internal suspend fun storedCheckVersion(version: Int?) {
         write { prefs -> if (version != null) prefs[Keys.PERF_CHECK_VERSION] = version else prefs.remove(Keys.PERF_CHECK_VERSION) }
     }
 
-    /** Once per launch: what's stored from before phones were named is this phone's. */
+    /** Once per launch: unnamed (older) stored data is this phone's. */
     suspend fun namePerfPhone() {
         write { prefs -> if (prefs[Keys.PERF_DEVICE] == null) prefs[Keys.PERF_DEVICE] = thisPhone }
     }
 
-    /** The check's outcome, and the share of frames (percent) that stuttered. */
+    /** [stutterPercent]: share of frames that stuttered. */
     suspend fun setPerfCheck(state: PerfCheck, stutterPercent: Int? = null) {
         write { prefs ->
             claimForThisPhone(prefs)
@@ -201,7 +192,7 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    /** Test builds: the check as on a first install, to run again. */
+    /** Test builds: back to first-install state. */
     suspend fun resetPerfCheck() {
         write { prefs ->
             prefs.remove(Keys.PERF_CHECK)
@@ -212,8 +203,8 @@ class PreferencesRepository(private val context: Context) {
     }
 
     /**
-     * Writes the settings that differ between [from] and [to], and only those: the others keep
-     * following their defaults, and a write can't put back a value changed in the meantime.
+     * Writes only the settings that differ, so the rest keep following their defaults and a change
+     * made meanwhile isn't overwritten.
      */
     suspend fun updateSettings(from: GameSettings, to: GameSettings) {
         if (from == to) return
@@ -240,10 +231,7 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    /**
-     * Hints became earned in 1.4.6: a player who had already played starts with 2, a new one
-     * with none. Settled once, on the first launch that has hints.
-     */
+    /** Hints earned since 1.4.6: existing players start with 2, new ones none. Settled once. */
     suspend fun migrateHints() {
         write { prefs ->
             if (prefs[Keys.HINTS] != null) return@write
@@ -254,7 +242,7 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    /** One hint spent; false if there were none. */
+    /** False if there were none. */
     suspend fun spendHint(): Boolean {
         var spent = false
         write { prefs ->
@@ -267,17 +255,14 @@ class PreferencesRepository(private val context: Context) {
         return spent
     }
 
-    /**
-     * Once, after levels were ordered by measured difficulty: the stored highest level is carried
-     * over to the new numbering, so no layout a player could play becomes locked.
-     */
+    /** Once: carries the stored highest level to the new numbering so nothing playable gets locked. */
     suspend fun migrateLevelOrder() {
         write { prefs ->
             val order = prefs[Keys.LEVEL_ORDER] ?: 1
             if (order >= JOURNEY_100_LEVEL_ORDER) return@write
             prefs[Keys.LEVEL_ORDER] = JOURNEY_100_LEVEL_ORDER
             val highest = prefs[Keys.HIGHEST_LEVEL] ?: return@write
-            // Straight from whichever numbering it was stored in to today's
+            // Straight from the stored numbering to today's
             val before = when {
                 order >= WIDE_MAH_LEVEL_ORDER -> LayoutDifficulty.levelsBeforeJourney100
                 order >= MEASURED_LEVEL_ORDER -> LayoutDifficulty.levelsBeforeWideMah
@@ -287,14 +272,14 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    /** Today's Puzzle for [day] (an epoch day) solved: ticked on the calendar. */
+    /** [day] is an epoch day; ticked on the calendar. */
     suspend fun recordPuzzleSolved(day: Long) {
         write { prefs ->
             prefs[Keys.PUZZLE_DAYS_SOLVED] = (prefs[Keys.PUZZLE_DAYS_SOLVED] ?: emptySet()) + day.toString()
         }
     }
 
-    /** Records a win; true if it was the player's first clean clear (their first gold ribbon). */
+    /** Records a win; true on the first gold ribbon. */
     private fun records(prefs: Preferences): Map<String, LevelRecord> =
         prefs[Keys.LEVEL_RECORDS].orEmpty().mapNotNull { entry ->
             val at = entry.lastIndexOf('=')
@@ -307,7 +292,7 @@ class PreferencesRepository(private val context: Context) {
     ): Boolean {
         var firstRibbon = false
         write { prefs ->
-            // The layout's best clear, if this one beats it
+            // Keep the best clear
             if (record != null) {
                 val best = records(prefs)[constellationId]
                 if (best == null || record.beats(best)) {
@@ -317,8 +302,8 @@ class PreferencesRepository(private val context: Context) {
             }
             if (clean) {
                 val cleaned = prefs[Keys.CLEAN_CONSTELLATIONS] ?: emptySet()
-                // Today's Puzzle is cleaned per day (no ribbon on the layout itself); anything else
-                // per layout. The first clean clear of each earns a hint
+                // Today's Puzzle is cleaned per day (no layout ribbon), else per layout; each first clean clear
+                // earns a hint
                 val key = puzzleDay?.let { "$PUZZLE_DAY_PREFIX$it" } ?: constellationId
                 firstRibbon = cleaned.none { !it.startsWith(PUZZLE_DAY_PREFIX) } && puzzleDay == null
                 if (key !in cleaned) {
@@ -326,7 +311,6 @@ class PreferencesRepository(private val context: Context) {
                     prefs[Keys.HINTS] = ((prefs[Keys.HINTS] ?: 0) + 1).coerceAtMost(MAX_HINTS)
                 }
             }
-            // Level progression
             if (levelIndex != null) {
                 val currentHighest = prefs[Keys.HIGHEST_LEVEL] ?: 1
                 if (levelIndex >= currentHighest) {
@@ -334,7 +318,6 @@ class PreferencesRepository(private val context: Context) {
                 }
             }
 
-            // Completed set
             val completedSet = (prefs[Keys.COMPLETED_CONSTELLATIONS] ?: emptySet()).toMutableSet()
             completedSet.add(constellationId)
             prefs[Keys.COMPLETED_CONSTELLATIONS] = completedSet
@@ -343,14 +326,13 @@ class PreferencesRepository(private val context: Context) {
     }
 
     /**
-     * Picks the congratulations for a cleared board. Context pools (tutorial, first win of the day,
-     * late night, morning) are used some of the time; every pool is dealt as a shuffled deck that
-     * persists across launches, so no message repeats until its whole pool has been seen.
+     * Context pools are used some of the time; each pool is a shuffled deck persisted across launches,
+     * so nothing repeats until the whole pool has been seen.
      */
     suspend fun nextCongratsMessage(isTutorial: Boolean, now: LocalDateTime = LocalDateTime.now()): String {
         var message = CongratsPool.GENERAL.messages.first()
         write { prefs ->
-            // A day runs from 4 am, so a win just after midnight belongs to the night before
+            // Day starts at 4 am, so just after midnight counts as the night before
             val today = now.minusHours(4).toLocalDate().toEpochDay()
             val firstToday = (prefs[Keys.LAST_WIN_DAY] ?: Long.MIN_VALUE) != today
             prefs[Keys.LAST_WIN_DAY] = today
@@ -367,8 +349,8 @@ class PreferencesRepository(private val context: Context) {
         return message
     }
 
-    // Bag state "seed,position,lastOfPreviousBag": the order is rebuilt from the seed, and a new
-    // bag never starts with the message the previous bag ended on
+    // "seed,position,lastOfPreviousBag": order rebuilt from the seed; a new bag never starts with the
+    // previous bag's last
     private fun dealFromBag(prefs: MutablePreferences, pool: CongratsPool): Int {
         val size = pool.messages.size
         val parts = prefs[Keys.congratsBag(pool)]?.split(",")?.mapNotNull { it.toLongOrNull() }
@@ -390,11 +372,11 @@ class PreferencesRepository(private val context: Context) {
         return index
     }
 
-    // Parsed again only when the save itself changed, not on every other write
+    // Re-parsed only when the save changed
     val savedGameFlow: Flow<SavedGameState?> = data.map { prefs -> prefs[Keys.SAVED_GAME] ?: "" }
         .distinctUntilChanged()
         .map { raw -> if (raw.isNotEmpty()) SavedGameState.deserialize(raw) else null }
-        // Read back after every match: parsed off the main thread
+        // Read back after every match, so parsed off the main thread
         .flowOn(Dispatchers.Default)
 
     suspend fun saveGame(savedState: SavedGameState) {
@@ -410,8 +392,7 @@ class PreferencesRepository(private val context: Context) {
     }
 }
 
-// Players from before hints were earned start with these
 private const val EXISTING_PLAYER_HINTS = 2
 
-// Clean-clear keys for Today's Puzzle days, beside the layout ids
+// Today's Puzzle clean-clear keys, in the same set as layout ids
 private const val PUZZLE_DAY_PREFIX = "day:"

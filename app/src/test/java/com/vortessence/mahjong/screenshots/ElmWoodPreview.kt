@@ -37,9 +37,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The elm wood table (Gareth's pick of 2026-11-15, mock-up 24): the bare table as he chose it,
- * seen whole and zoomed right in, by the lamp and by the fire, and a board on it.
- * build/elm-wood/table-*.png and board-*.png.
+ * Elm wood table (Gareth's pick, 2026-11-15, mock-up 24): bare, whole and zoomed in, by lamp and
+ * fire, and with a board. build/elm-wood/table-*.png, board-*.png.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp-port-xxhdpi")
@@ -47,7 +46,7 @@ class ElmWoodPreview {
     @get:Rule
     val compose = createComposeRule()
 
-    // The JVM can't read the surface map back from the GPU: drawn on the CPU, so the relief shows
+    // The JVM can't read the surface map back from the GPU: drawn on the CPU so the relief shows
     @Before
     fun reliefOn() {
         TableSurfaceRenderer.softwareRelief = true
@@ -64,8 +63,7 @@ class ElmWoodPreview {
         compose.onRoot().captureRoboImage("build/elm-wood/table-${if (zoomed) "zoom" else "whole"}-${if (fire) "fire" else "lamp"}.png")
     }
 
-    // The table as the board draws it, with no board on it: its colour, its surface map, then the
-    // lamp's and the fire's light over them
+    // The table as the board draws it, bare: colour, surface map, then lamp and fire light
     @Composable
     private fun Table(zoomed: Boolean, fire: Boolean) {
         val density = LocalDensity.current
@@ -74,12 +72,12 @@ class ElmWoodPreview {
         val mapLayer = rememberGraphicsLayer()
         var area by remember { mutableStateOf(IntSize.Zero) }
         var relief by remember { mutableStateOf<TableSurfaceRenderer.Relief?>(null) }
-        // Zoomed as far as a pinch goes, about the middle of the table
+        // As far as a pinch zooms, about the middle
         val zoom = if (zoomed) TableCamera.MAX_ZOOM else 1f
         val pan = Offset(area.width * 0.5f * (1f - zoom), area.height * 0.5f * (1f - zoom))
         val w = area.width.toFloat()
         val h = area.height.toFloat()
-        // The tiles' width on a usual board, which sets the wood's size: life-size against them
+        // Usual tile width: the wood is life-size against it
         val tile = h * TILE_SHARE
         LaunchedEffect(area) {
             if (area != IntSize.Zero) {
@@ -89,7 +87,7 @@ class ElmWoodPreview {
         Canvas(Modifier.fillMaxSize().onSizeChanged { area = it }) {
             if (area == IntSize.Zero) return@Canvas
             TableSurfaceRenderer.drawTableAlbedo(this, cache, SURFACE, w, h, null, zoom, pan, tile = tile)
-            // The fire a moment into its burning, at the settings' defaults
+            // A moment into the fire, at the settings' defaults
             val flame = FlameLight.at(1.5f, 0.5f, fire, 0.6f)
             drawContext.canvas.save()
             drawContext.canvas.translate(pan.x, pan.y)
@@ -102,7 +100,7 @@ class ElmWoodPreview {
     private fun board(fire: Boolean) {
         TileWear.prepareNow()
         val n = ConstellationRepository.levelIndexOf("pillar_of_heaven")!!
-        // Firelight animates for ever, so by the fire the clock is stepped by hand
+        // Firelight never settles: the clock is stepped by hand
         if (fire) compose.mainClock.autoAdvance = false
         compose.setContent {
             MahjongTheme {
@@ -134,7 +132,7 @@ class ElmWoodPreview {
     private companion object {
         val SURFACE = TableSurface.ELM_WOOD
 
-        // A tile's width as a share of the table's height on a usual board
+        // Tile width as a share of table height on a usual board
         const val TILE_SHARE = 0.04f
     }
 }

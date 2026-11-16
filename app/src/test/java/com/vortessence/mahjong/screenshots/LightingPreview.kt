@@ -17,8 +17,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The lamp alone, and with the fireplace, side by side on each table surface, at the Pixel 9 Pro's size.
- * Rendered into build/lighting-preview. Run: ./gradlew testFossDebugUnitTest --tests '*LightingPreview*'
+ * Lamp alone and with the fireplace on each table surface, at Pixel 9 Pro size.
+ * build/lighting-preview. Run: ./gradlew testFossDebugUnitTest --tests '*LightingPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")
@@ -28,7 +28,7 @@ class LightingPreview {
 
     private fun shoot(surface: TableSurface, fireplace: Boolean, lamp: Float = 0.5f, fire: Float = 0.5f, name: String? = null) {
         TileWear.prepareNow()
-        // Firelight animates for ever, so the clock is stepped by hand rather than run to idle
+        // Firelight never settles: the clock is stepped by hand
         compose.mainClock.autoAdvance = false
         compose.setContent {
             MahjongTheme {

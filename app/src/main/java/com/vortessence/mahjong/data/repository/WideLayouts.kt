@@ -5,10 +5,8 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.TilePosition
 
 /**
- * Wide layouts, for Layouts (not the levels): boards two and a half to six times wider than tall,
- * which play best with the phone on its side. Designed 2026-10-31; each row is a layer ([z]), a
- * row of the board ([y]) and the tiles along it ([x]), in the half-tile units of every layout.
- * Their difficulty labels come from measuring them (LayoutDifficulty), like every layout's.
+ * Layouts only (not levels): 2.5-6x wider than tall, best on the phone's side (2026-10-31). Rows
+ * are [z], [y], [x...] in half-tile units; difficulty is measured (LayoutDifficulty).
  */
 internal object WideLayouts {
     val layouts: List<Constellation> by lazy {
@@ -129,7 +127,7 @@ internal object WideLayouts {
         Constellation(
             id = id,
             name = name,
-            // Provisional: replaced by the measured label
+            // Replaced by the measured label
             difficulty = Difficulty.HARD,
             description = description,
             positions = mutableListOf<TilePosition>().apply(rows),

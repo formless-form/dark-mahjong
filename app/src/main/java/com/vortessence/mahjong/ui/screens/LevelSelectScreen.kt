@@ -51,19 +51,18 @@ fun LevelSelectScreen(
     onLevelSelected: (Int) -> Unit,
     onBack: () -> Unit,
     fireIntensity: Float = 0.5f,
-    // The menus' fire goes out with the phone's Remove animations
+    // Off with the phone's Remove animations
     fire: Boolean = true,
-    // Previews: the row the list opens at (by default, near the level reached)
+    // For previews; defaults to near the level reached
     openAt: Int? = null,
 ) {
     val highestUnlocked = progress.highestLevelReached.coerceAtLeast(1)
-    // The tutorial first (always open), then the levels in order
+    // Tutorial first (always open)
     val rows = listOf(ConstellationRepository.TUTORIAL_LEVEL to tutorial) + levels.mapIndexed { i, c -> (i + 1) to c }
-    // Open near the level you're up to rather than at level 1
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (openAt ?: (highestUnlocked - 1)).coerceIn(0, rows.lastIndex))
 
     ExpressiveScreen(title = "Journey", onBack = onBack, backdrop = { MenuBackdrop(fireIntensity, fire) }) { padding ->
-        // Below the title bar, as on Layouts, so the list never shows through it
+        // So the list never shows through the title bar
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -81,8 +80,7 @@ fun LevelSelectScreen(
                 val isTutorial = levelIndex == ConstellationRepository.TUTORIAL_LEVEL
                 val unlocked = isTutorial || levelIndex <= highestUnlocked
                 val cleared = progress.completedConstellations.contains(constellation.id)
-                // Locked and current come first: a layout cleared under Layouts may be a level
-                // not reached yet, or the one being played now
+                // Locked and current first: a layout cleared under Layouts may be an unreached or current level
                 val state = when {
                     !unlocked -> BadgeState.LOCKED
                     levelIndex == highestUnlocked -> BadgeState.CURRENT
@@ -108,8 +106,7 @@ fun LevelSelectScreen(
                             color = if (unlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
-                    // A cleared level's best clear beneath (Gareth's pick of four designs, 2026-11-13):
-                    // its time, then the hints, reshuffles and undos it took
+                    // Best clear beneath (Gareth's pick of four designs, 2026-11-13)
                     supportingContent = {
                         val line = "${constellation.difficulty.displayName} · ${constellation.tileCount} tiles"
                         val record = progress.records[constellation.id]
@@ -132,7 +129,7 @@ fun LevelSelectScreen(
     }
 }
 
-// The best clear as small chips: time, then hints, reshuffles and undos (none used, dimmed)
+// Time, then hints, reshuffles and undos (dimmed when none)
 @Composable
 private fun RecordChips(record: LevelRecord) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

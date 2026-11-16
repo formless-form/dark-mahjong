@@ -107,29 +107,27 @@ fun SettingsScreen(
     settings: GameSettings,
     onSettingsChanged: (GameSettings) -> Unit,
     onBack: () -> Unit,
-    // A slider moving shows its value without saving it; it's saved when let go
+    // While a slider moves: shown, saved only when let go
     onSettingsPreview: (GameSettings) -> Unit = onSettingsChanged,
     onSettingsCommit: () -> Unit = {},
     onFireAudition: (Boolean) -> Unit = {},
-    // The Play build: rate the game and share it, by its Google Play listing
+    // Play build: rate and share via the Play listing
     onGooglePlay: Boolean = false,
-    // Imperial, in a build that has its images: how far through the Journey the player is (it's
-    // earned by finishing it). Null where the build has no Imperial images: it isn't offered
+    // Journey progress, which earns Imperial; null where the build has no Imperial images
     imperial: ImperialProgress? = null,
-    // The silk brocade table: earned by solving every daily puzzle of a month, and this month's
-    // progress towards it. Null: not shown (previews of other things)
+    // Earned by a full month of daily puzzles; null: not shown (previews)
     brocade: BrocadeProgress? = null,
-    // Tips through Google Play (the Play build only, where the row always shows)
+    // Play build only, where the row always shows
     tipsAvailable: Boolean = false,
     tipOffers: List<TipOffer> = emptyList(),
     tipThanked: Boolean = false,
     onTip: (TipOffer) -> Unit = {},
     onTipOpened: () -> Unit = {},
     onTipClosed: () -> Unit = {},
-    // The tile sets shown as sample tiles to pick from; false, a plain switch of their names
+    // False: a plain switch of names
     tileSamples: Boolean = true,
 ) {
-    // Kept if the payment sheet makes Android rebuild the screen, so the thank-you still has a card
+    // Saved: the payment sheet can make Android rebuild the screen, and the thank-you needs the card
     var tipping by rememberSaveable { mutableStateOf(false) }
     if (tipping) {
         TipCard(
@@ -214,7 +212,6 @@ fun SettingsScreen(
             )
 
             SectionHeader("Appearance")
-            // The choice of tile sets, while it's offered (TileKits.OFFERED)
             val tileSetRow: (@Composable (ListItemShapes) -> Unit)? = if (TileKits.OFFERED) {
                 { shapes ->
                     if (tileSamples) {
@@ -260,13 +257,11 @@ fun SettingsScreen(
                 } else {
                     emptyList()
                 } + listOfNotNull<@Composable (ListItemShapes) -> Unit>(
-                    // Always shown: the menus crackle softly whether or not the fireplace is lit.
-                    // While it's dragged the fire is heard as loud as at the table
+                    // Always shown: menus crackle whether or not the fireplace is lit
                     { shapes ->
                         SliderRow(
                             shapes, "Fire sound", settings.fireVolume,
                             onValueChangeFinished = { onSettingsCommit(); onFireAudition(false) },
-                            // Silent everywhere in low-performance mode
                             enabled = !settings.lowPerformance,
                         ) {
                             onFireAudition(true)
@@ -286,9 +281,7 @@ fun SettingsScreen(
                 ),
             )
 
-            // In the Play build: rating and sharing the game by its Google Play listing (asked for
-            // by testers, 2026-11-14; a row, never a prompt), and a tip jar (the card explains if
-            // Google Play can't price tips yet)
+            // Rate and share: asked for by testers 2026-11-14 (a row, never a prompt)
             if (onGooglePlay || tipsAvailable) {
                 val context = LocalContext.current
                 SectionHeader("Support")
@@ -348,7 +341,6 @@ fun SettingsScreen(
                     },
                 ),
             )
-            // The game's own source: a tile of its own, just below About's
             Spacer(Modifier.height(12.dp))
             SegmentedGroup(
                 listOf(
@@ -366,9 +358,7 @@ fun SettingsScreen(
                 ),
             )
 
-            // Everyone whose work the game is made from (as NOTICE.md), starting with the game it
-            // grew from: quiet, small rows in one panel, no icons. Each opens its source in the
-            // browser
+            // As NOTICE.md; each row opens its source in the browser
             SectionHeader("Credits")
             Surface(
                 shape = MaterialTheme.shapes.large,
@@ -403,7 +393,6 @@ fun SettingsScreen(
 
 private class Credit(val title: String, val by: String, val url: String)
 
-// The credits in groups, each under a small label, the game it grew from first
 private val CREDITS = listOf(
     "Code" to listOf(
         Credit("Mahjong Solitaire", "The game Dark Mahjong grew from, by PcmciaKai · GPL v3", "https://github.com/PcmciaKai/mahjong_solitaire"),
@@ -433,17 +422,17 @@ private val CREDITS = listOf(
     ),
 )
 
-// The full notices and licences, for credits with no page of their own (or several)
+// For credits with no page of their own (or several)
 private const val NOTICE_URL = "https://github.com/formless-form/dark-mahjong/blob/dark-mahjong/NOTICE.md"
 
 private const val SOURCE_CODE_URL = "https://github.com/formless-form/dark-mahjong"
 
 // Opened in the browser; the app itself has no internet access
-// The game's Google Play listing: the real app's, even from a test build (which has an ID of its own)
+// The real app's, even from a test build (which has its own ID)
 private const val PLAY_APP_ID = "com.formlessform.darkmahjong"
 private const val PLAY_LISTING_URL = "https://play.google.com/store/apps/details?id=$PLAY_APP_ID"
 
-/** The listing in the Play Store app, where the player can rate it; the web page if there's no store app. */
+/** Play Store app, or the web page if there's no store app. */
 private fun rateOnGooglePlay(context: android.content.Context) {
     val market = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$PLAY_APP_ID"))
         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -457,7 +446,6 @@ private fun rateOnGooglePlay(context: android.content.Context) {
     }
 }
 
-/** The phone's own share sheet, with a line about the game and its listing. */
 private fun shareGame(context: android.content.Context) {
     val send = android.content.Intent(android.content.Intent.ACTION_SEND)
         .setType("text/plain")
@@ -468,7 +456,7 @@ private fun shareGame(context: android.content.Context) {
 
 private const val PRIVACY_POLICY_URL = "https://github.com/formless-form/dark-mahjong/blob/dark-mahjong/docs/PRIVACY.md"
 
-// A run of list items drawn as one rounded block: big outer corners, small inner ones, hairline gaps
+// One rounded block: big outer corners, small inner ones, hairline gaps
 @Composable
 private fun SegmentedGroup(segments: List<Segment>) {
     Column(verticalArrangement = Arrangement.spacedBy(SegmentGap)) {
@@ -485,7 +473,7 @@ private fun ToggleRow(
     title: String,
     summary: String?,
     checked: Boolean,
-    // Greyed out, and can't be changed (a setting another one overrides)
+    // False when another setting overrides it
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -493,7 +481,6 @@ private fun ToggleRow(
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,
-        // Keep the segment's corners when switched on
         shapes = shapes.copy(selectedShape = shapes.shape),
         colors = segmentColors(),
         leadingContent = { LeadingIcon(icon, enabled) },
@@ -510,16 +497,16 @@ private fun SliderRow(
     title: String,
     value: Float,
     onValueChangeFinished: () -> Unit,
-    // Greyed out, and can't be moved (a setting another one overrides)
+    // False when another setting overrides it
     enabled: Boolean = true,
     onValueChange: (Float) -> Unit,
 ) {
-    // Greyed as Material greys a disabled row: its words at 38%
+    // Material's disabled alpha
     val fade = if (enabled) Modifier else Modifier.alpha(0.38f)
     SegmentedListItem(
         shapes = shapes,
         colors = segmentColors(),
-        // Lines the slider up with the titles above, past the leading icons
+        // Lines up with the titles above, past the leading icons
         leadingContent = { Spacer(Modifier.width(40.dp)) },
         trailingContent = {
             Text(
@@ -546,8 +533,7 @@ private fun SliderRow(
     }
 }
 
-// The tile sets, each shown by a few of its tiles under the table's warm lamp, two to a row (so
-// each set's tiles show at a size that reads), the chosen one ringed
+// Two to a row, so the sample tiles show at a size that reads
 @Composable
 private fun TileSetRow(shapes: ListItemShapes, selected: TileSet, imperial: ImperialProgress?, onSelect: (TileSet) -> Unit) {
     Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
@@ -593,8 +579,7 @@ private fun TileSetChoice(set: TileSet, chosen: Boolean, modifier: Modifier, onS
     }
 }
 
-// The tables as cards, two by two as the tile sets are, each a lamp-lit swatch of its surface, and
-// the silk brocade under them, the full width
+// Two by two, with the brocade full width beneath
 @Composable
 private fun TableSurfaceRow(shapes: ListItemShapes, selected: TableSurface, brocade: BrocadeProgress?, onSelect: (TableSurface) -> Unit) {
     Surface(shape = shapes.shape, color = panel(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
@@ -642,8 +627,7 @@ private fun TableSurfaceChoice(surface: TableSurface, chosen: Boolean, modifier:
 
 private val BROCADE_SILVER = Color(0xFFB9C1D9)
 
-// The silk brocade table: the full width, under the other tables, a swatch of the cloth. Until
-// it's earned it's dimmed under a silver lock, with this month's daily puzzles so far
+// Until earned: dimmed under a silver lock, with this month's daily puzzles so far
 @Composable
 private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: () -> Unit) {
     val earned = progress.earned
@@ -706,16 +690,15 @@ private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: 
     }
 }
 
-/** How far through the Journey the player is, which earns Imperial: [cleared] of [levels]. */
+/** Journey progress, which earns Imperial. */
 data class ImperialProgress(val cleared: Int, val levels: Int) {
     val earned: Boolean get() = cleared >= levels
 }
 
-// Imperial's gold, as painted into its engravings
+// As painted into its engravings
 private val IMPERIAL_GOLD = Color(0xFFE2BA71)
 
-// Imperial: the full width, under the other sets, five of its tiles. Until it's earned they're shown
-// dimmed under a gold lock, with how far the Journey has got, and it can't be chosen
+// Until earned: dimmed under a gold lock with Journey progress, and not choosable
 @Composable
 private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect: () -> Unit) {
     val earned = progress.earned
@@ -737,7 +720,7 @@ private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                // Its ready-made picture: the set itself isn't loaded to show it
+                // A ready-made picture: the set itself isn't loaded to show it
                 TileSamples(TileKits.of(TileSet.IMPERIAL), Modifier.fillMaxWidth().height(76.dp), SampleStrip.IMPERIAL_TILES, dim = !earned)
                 if (!earned) {
                     Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
@@ -770,8 +753,7 @@ private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect
     }
 }
 
-// A few tiles of [kit] side by side, lit as by the lamp over the table (drawn once and kept, or
-// for Imperial, its ready-made picture); [dim] for a set not yet earned
+// Drawn once and kept (Imperial: its ready-made picture); [dim] for a set not yet earned
 @Composable
 private fun TileSamples(kit: TileKit, modifier: Modifier, tiles: List<Tile> = SAMPLE_TILES, dim: Boolean = false) {
     val picture = remember(kit, tiles) { SampleStrip.of(kit, tiles) }
@@ -784,8 +766,7 @@ private fun TileSamples(kit: TileKit, modifier: Modifier, tiles: List<Tile> = SA
 
 private val SAMPLE_TILES = SampleStrip.SETTINGS_TILES
 
-// A table's swatch: its picture made ahead (SettingsPreviews), the middle of it as wide as the
-// card, or until that's made, drawn here by its shader
+// The picture made ahead (SettingsPreviews), or until it's made, drawn by its shader
 private fun DrawScope.drawSwatch(surface: TableSurface) {
     val image = TableSurfaceRenderer.swatchImage(surface)
     if (image == null) {
@@ -803,7 +784,6 @@ private fun DrawScope.drawSwatch(surface: TableSurface) {
     )
 }
 
-// A choice of a few: a connected button group, the chosen one filled in and fully rounded
 @Composable
 private fun <T> ChoiceRow(
     shapes: ListItemShapes,

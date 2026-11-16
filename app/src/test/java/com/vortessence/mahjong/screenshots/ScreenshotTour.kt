@@ -59,12 +59,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Renders the app's screens on the JVM through Robolectric's real Android graphics stack (AGSL
- * shaders and render effects included), at the Pixel 9 Pro's portrait size and density, into
- * build/screenshots. Run: ./gradlew testFossDebugUnitTest --tests '*ScreenshotTour*'
+ * The app's screens via Robolectric's real graphics stack (AGSL and render effects included), at
+ * Pixel 9 Pro portrait size, into build/screenshots. Run: ./gradlew testFossDebugUnitTest --tests '*ScreenshotTour*'
  *
- * API 36 rather than 37: Espresso, used by the Compose test rule, still calls an InputManager
- * method that API 37 removed.
+ * API 36, not 37: Espresso (in the Compose test rule) still calls an InputManager method 37 removed.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")
@@ -72,7 +70,7 @@ class ScreenshotTour {
     @get:Rule
     val compose = createComposeRule()
 
-    // The menu firelight's clock never lets the screen settle
+    // The menu firelight never lets the screen settle
     @org.junit.Before
     fun holdMenuFireStill() {
         com.vortessence.mahjong.ui.components.MenuFire.flickers = false
@@ -228,7 +226,7 @@ class ScreenshotTour {
         compose.setContent {
             MahjongTheme {
                 GameScreen(
-                    // Unlit, so the screen settles for its picture (the fire flickers for ever)
+                    // Unlit, so the screen settles (the fire flickers for ever)
                     settings = GameSettings(fireplaceLit = false),
                     gameState = state,
                     levelIndex = 12,
@@ -260,7 +258,7 @@ class ScreenshotTour {
         compose.setContent {
             MahjongTheme {
                 GameScreen(
-                    // Unlit, so the screen settles for its picture (the fire flickers for ever)
+                    // Unlit, so the screen settles (the fire flickers for ever)
                     settings = GameSettings(fireplaceLit = false),
                     gameState = MahjongGameEngine.startNewGame(tutorial),
                     levelIndex = ConstellationRepository.TUTORIAL_LEVEL,
@@ -280,7 +278,7 @@ class ScreenshotTour {
         compose.setContent {
             MahjongTheme {
                 GameScreen(
-                    // Unlit, so the screen settles for its picture (the fire flickers for ever)
+                    // Unlit, so the screen settles (the fire flickers for ever)
                     settings = GameSettings(fireplaceLit = false),
                     gameState = MahjongGameEngine.startNewGame(tutorial),
                     levelIndex = ConstellationRepository.TUTORIAL_LEVEL,
@@ -350,7 +348,7 @@ class ScreenshotTour {
         shoot("predictive_back")
     }
 
-    // A wide layout (Nine Dragon Pagoda) on the walnut table, with the given wide-board setting
+    // Nine Dragon Pagoda on walnut, with the given wide-board setting
     private fun wideGame(wideBoards: WideBoards, animations: Boolean = true, won: Boolean = false, fireplace: Boolean = false) {
         TileWear.prepareNow()
         val dealt = MahjongGameEngine.startNewGame(ConstellationRepository.getById("pagoda")!!)
@@ -632,7 +630,6 @@ class ScreenshotTour {
         shoot("settings_no_animations")
     }
 
-    // The whole settings list on one tall page, down to the credits at its foot
     // The tip jar: Settings' Support row, the tip card, and its thank-you
     private val tipOffers = listOf(TipOffer("tip_small", "$0.50"), TipOffer("tip_medium", "$1.00"), TipOffer("tip_large", "$2.00"))
 

@@ -7,9 +7,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Culling leaves out only tiles nothing of which can show, and keeps everything else. */
+/** Culling drops only tiles that cannot show at all. */
 class TileCullingTest {
-    // Pixels of each tile left showing, painting whole rectangles (face and walls) in draw order
+    // Pixels showing per tile, painting whole rectangles (face and walls) in draw order
     private fun showing(tiles: List<BoardTile>): Map<Int, Int> {
         val unit = 24f
         val t = BoardTransform(unit, 2f * unit, 2f * unit * BoardTransform.ASPECT_RATIO, 300f, 300f,
@@ -37,7 +37,7 @@ class TileCullingTest {
             val kept = TileCulling.visibleInDrawOrder(tiles).map { it.id }.toSet()
             val seen = showing(tiles)
             for (tile in tiles) {
-                // Anything showing even as rectangles is kept
+                // Showing even as rectangles: kept
                 if ((seen[tile.id] ?: 0) > 0) assertTrue("${layout.name}: tile ${tile.id} shows but was culled", tile.id in kept)
             }
         }
@@ -48,8 +48,7 @@ class TileCullingTest {
         val quad = ConstellationRepository.constellations.first { it.name == "Quad" }
         val tiles = MahjongGameEngine.startNewGame(quad).tiles
         val kept = TileCulling.visibleInDrawOrder(tiles).size
-        // 44 of Quad's 144 are hidden as plain rectangles; rounded corners and the slight
-        // off-square placement let a few peek out
+        // 44 of 144 hidden as rectangles; rounded corners and off-square placement let a few peek out
         assertTrue("Quad keeps $kept", kept in 100..115)
     }
 

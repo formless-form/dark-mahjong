@@ -63,11 +63,11 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     val levelIndex by viewModel.currentLevelIndex.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
-    // Imperial chosen: its images start loading as the game opens, so its tiles are ready to draw
+    // Load Imperial's images early so its tiles are ready to draw
     LaunchedEffect(settings.tileSet) {
         if (settings.tileSet == TileSet.IMPERIAL && ImperialImages.available) ImperialImages.loadSoon()
     }
-    // Settings' tile samples and table swatches, made ahead a little after the app opens
+    // Settings' tile samples and swatches, made ahead shortly after launch
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     LaunchedEffect(Unit) {
@@ -90,13 +90,11 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     val perfQuestion by viewModel.perfQuestion.collectAsStateWithLifecycle()
     val boardFresh by viewModel.boardFresh.collectAsStateWithLifecycle()
     val deal by viewModel.deal.collectAsStateWithLifecycle()
-    // Today's Puzzle's day, moving on at 4 am even with the app left open
     val today by viewModel.today.collectAsStateWithLifecycle()
 
     val back = remember { PredictiveBackState() }
     val toMenu = { viewModel.navigateTo(Screen.MainMenu) }
-    // Back steps out of a game to where it was started from (Levels, Layouts, or the title), and
-    // from every other screen to the title, with the predictive back animation
+    // From a game, back to where it was started; from anything else, the title
     val backTarget = if (currentScreen is Screen.Game) gameOrigin else Screen.MainMenu
     val stepBack = {
         viewModel.navigateTo(if (viewModel.currentScreen.value is Screen.Game) viewModel.gameOrigin.value else Screen.MainMenu)
@@ -124,10 +122,9 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
         )
     }
 
-    // One screen's content, as shown and as revealed behind a back swipe
+    // Also revealed behind a back swipe
     val screenContent: @Composable (Screen) -> Unit = { screen ->
-        // Every screen but the title (whose scenery runs full-bleed) keeps its content clear
-        // of the camera cutout
+        // All but the full-bleed title keep clear of the camera cutout
         val contentModifier = if (screen is Screen.MainMenu) {
             Modifier.fillMaxSize()
         } else {
@@ -182,7 +179,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         tutorialStep = tutorialStep,
                         winMessage = winMessage,
                         firstRibbon = firstRibbon,
-                        // Free in the tutorial (its free play too); earned everywhere else
+                        // Free in the tutorial (and its free play)
                         hints = if (tutorialStep != null || gameState?.let { TutorialScript.isTutorial(it) } == true) null else progress.hints,
                         deal = deal,
                         quickGame = quickGame,
@@ -197,7 +194,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                         onReshuffle = { viewModel.reshuffle() },
                         onReplay = { viewModel.replayDeal() },
                         onNextLevel = { viewModel.playNextLevel() },
-                        // From Today's Puzzle, its Calendar button
+                        // From Today's Puzzle: its Calendar
                         onMainMenu = { viewModel.navigateTo(if (puzzleDay != null) Screen.TodaysPuzzle else Screen.MainMenu) },
                         onTutorialContinue = { step -> viewModel.continueTutorial(step) },
                         onBoardZoom = { viewModel.onBoardZoom(it) },
@@ -242,7 +239,6 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     MahjongTheme {
         val motion = MaterialTheme.motionScheme
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            // The screen Back leads to, revealed behind a screen that's being swiped back
             if (back.revealing) {
                 Box(Modifier.fillMaxSize()) { screenContent(backTarget) }
             }
@@ -251,9 +247,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                 targetState = currentScreen,
                 transitionSpec = {
                     when {
-                        // The back gesture has already shown this change
                         back.committed -> EnterTransition.None togetherWith ExitTransition.None
-                        // Material's shared-axis depth motion: forward comes up from below, back recedes
+                        // Material shared-axis depth motion
                         targetState is Screen.MainMenu || initialState is Screen.Game ->
                             (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 1.06f)) togetherWith
                                 (fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), targetScale = 0.94f))
@@ -266,9 +261,8 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
                 label = "ScreenTransition",
             ) { screen -> screenContent(screen) }
 
-            // The first-game check found this phone struggling: asked between games, never over a
-            // board in play (only as a board dealt since comes up, before it's touched), the
-            // tutorial, Settings or the wide-board question
+            // Only between games: never over a touched board, the tutorial, Settings or the
+            // wide-board question
             if (perfQuestion) {
                 val game = gameState
                 val between = when (currentScreen) {
@@ -288,7 +282,7 @@ fun MahjongApp(viewModel: MahjongViewModel, updates: AppUpdates, tips: Tips? = n
     }
 }
 
-// Today's Puzzle's line on the title screen: "Saturday · Expert"
+// "Saturday · Expert"
 private fun todaysPuzzleLine(today: Long): String {
     val weekday = LocalDate.ofEpochDay(today).dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
     return "$weekday · ${TodaysPuzzle.layoutOn(today).difficulty.displayName}"

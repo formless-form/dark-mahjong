@@ -18,14 +18,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Asks Google Play whether a newer version is out for this player (testers hear of their test
- * track's releases), for the title screen to mention, and when they tap it, fetches the update in
- * the background and then installs it with a restart.
- *
- * The asking is done by the Play Store app on the phone, through Google's in-app update library:
- * Dark Mahjong itself still has no internet access. A copy not installed from Google Play (a
- * sideloaded test build) never hears of an update. Made in the activity's onCreate, as it
- * registers for Play's confirmation screen.
+ * Asks Google Play for a newer version for the title screen to mention; on tap, downloads it in the
+ * background and installs with a restart. The Play Store app does the asking (the game has no
+ * internet access); sideloaded copies never hear of one. Made in onCreate, as it registers for
+ * Play's confirmation screen.
  */
 class AppUpdates(activity: ComponentActivity) : DefaultLifecycleObserver {
     private val manager = AppUpdateManagerFactory.create(activity)
@@ -33,8 +29,7 @@ class AppUpdates(activity: ComponentActivity) : DefaultLifecycleObserver {
     private val state = MutableStateFlow<UpdateNotice?>(null)
     val notice: StateFlow<UpdateNotice?> = state.asStateFlow()
 
-    // Google Play's own confirmation before it fetches: if the player declines, or it fails, the
-    // update is offered again
+    // Play's confirmation before downloading; offered again if declined or failed
     private val confirmation = activity.registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) check()
     }
@@ -55,12 +50,12 @@ class AppUpdates(activity: ComponentActivity) : DefaultLifecycleObserver {
         activity.lifecycle.addObserver(this)
     }
 
-    // Asked afresh whenever the app comes to the front: a release may have come out meanwhile
+    // A release may have come out meanwhile
     override fun onResume(owner: LifecycleOwner) = check()
 
     override fun onDestroy(owner: LifecycleOwner) = manager.unregisterListener(progress)
 
-    /** The player tapped the title screen's mention: fetch the update, or install the one fetched. */
+    /** Title-screen tap: fetch the update, or install the fetched one. */
     fun act() {
         when (state.value) {
             UpdateNotice.Available -> manager.appUpdateInfo.addOnSuccessListener { info ->
@@ -84,7 +79,7 @@ class AppUpdates(activity: ComponentActivity) : DefaultLifecycleObserver {
                     else -> null
                 }
             }
-            // No Play Store, not installed from Google Play, or offline: nothing to mention
+            // No Play Store, not from Google Play, or offline
             .addOnFailureListener { state.value = null }
     }
 

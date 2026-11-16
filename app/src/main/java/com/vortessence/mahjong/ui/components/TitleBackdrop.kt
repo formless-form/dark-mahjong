@@ -14,22 +14,18 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * The title screen's photograph with subtle film grain, drawn by one shader: scaled to fill (as
- * ContentScale.Crop), never stretched. Still, like a print, so a still screen costs nothing to keep
- * showing.
+ * The title photo with film grain, in one shader: scaled to fill (as ContentScale.Crop). Static, so
+ * a still screen costs nothing.
  *
- * The grain is monochrome, soft-edged (clumps about 1.5 px across) and strongest in the midtones,
- * fading out in deep shadow and bright highlights as real film grain does. Its random numbers come
- * from a hash that shows no pattern on whole pixel coordinates; the simpler one used before
- * repeated along rows and columns, which showed as faint banding. The photo is shown a little
- * smaller than it is, so it is sampled with four taps rather than one, which would soften
- * alternate columns and rows.
+ * Grain is monochrome, ~1.5 px clumps, strongest in the midtones as real film's. The hash shows no
+ * pattern on whole pixel coordinates (the previous one banded). The photo is drawn slightly
+ * downscaled, so four taps, as one would soften alternate rows and columns.
  */
 @Composable
 fun TitleBackdrop(@DrawableRes photo: Int, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val image = remember(photo) {
-        // Decoded once for the app's life, not on every return to the title screen
+        // Once per app run, not per return to the title
         val bitmap = decoded.getOrPut(photo) {
             BitmapFactory.decodeResource(context.resources, photo, BitmapFactory.Options().apply { inScaled = false })
         }
@@ -48,10 +44,10 @@ fun TitleBackdrop(@DrawableRes photo: Int, modifier: Modifier = Modifier) {
     }
 }
 
-// The photos, once decoded (only ever touched on the main thread)
+// Main thread only
 private val decoded = HashMap<Int, Bitmap>()
 
-// The grain's amplitude in the midtones, as a fraction of full scale
+// Midtone amplitude, fraction of full scale
 private const val GRAIN = 0.035f
 
 private const val BACKDROP_AGSL = """
@@ -68,14 +64,14 @@ float hash21(float2 p) {
 }
 
 half4 main(float2 p) {
-    // Scaled to fill, centred: screen pixel to photo pixel
+    // Scale to fill, centred
     float scale = max(res.x / photoSize.x, res.y / photoSize.y);
     float2 u = (p - 0.5 * (res - photoSize * scale)) / scale;
     float t = 0.35;
     float3 rgb = 0.25 * float3(photo.eval(u + float2(-t, -t)).rgb + photo.eval(u + float2(t, -t)).rgb
         + photo.eval(u + float2(-t, t)).rgb + photo.eval(u + float2(t, t)).rgb);
 
-    // Grain: white noise averaged over a small neighbourhood, shaped by luminance
+    // Grain: neighbourhood-averaged white noise, shaped by luminance
     float2 cell = floor(p);
     float n = hash21(cell) * 0.4
             + (hash21(cell + float2(1.0, 0.0)) + hash21(cell + float2(0.0, 1.0))

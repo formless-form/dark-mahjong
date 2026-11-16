@@ -57,21 +57,17 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
-/**
- * Today's Puzzle: a month's calendar, a tick on each day whose puzzle was solved and today ringed,
- * then today's puzzle and the button to play it. Only today's can be played, and there is no
- * streak to keep: the ticks are all there is. Earlier months back to the first solved day.
- */
+/** Only today's puzzle can be played, and no streak is kept: ticks only. Months back to the first solved day. */
 @Composable
 fun TodaysPuzzleScreen(
     progress: Progress,
-    // Today's puzzle, started and not yet solved
+    // Started and not yet solved
     inProgress: Boolean,
     onPlay: () -> Unit,
     onBack: () -> Unit,
     today: Long = TodaysPuzzle.today(),
     fireIntensity: Float = 0.5f,
-    // The menus' fire goes out with the phone's Remove animations
+    // Off with the phone's Remove animations
     fire: Boolean = true,
 ) {
     val todayDate = LocalDate.ofEpochDay(today)
@@ -83,11 +79,10 @@ fun TodaysPuzzleScreen(
     var month by rememberSaveable(today) { mutableStateOf(thisMonth) }
 
     ExpressiveScreen(title = TODAYS_PUZZLE, onBack = onBack, backdrop = { MenuBackdrop(fireIntensity, fire) }) { padding ->
-        // Near phone-width on a tablet or open foldable, so the calendar's square days leave room for the
-        // button: a little wider where the screen is tall enough, as on an upright tablet
+        // Near phone width on tablets and foldables so the square days leave room for the button;
+        // a little wider on tall screens
         BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             val width = minOf(maxWidth, (maxHeight * HEIGHT_TO_WIDTH).coerceIn(MIN_MAX_WIDTH, MAX_WIDTH))
-            // The calendar zoomed to fill that width, its days and numbers growing with it
             val zoom = ((width - 32.dp) / PHONE_CALENDAR).coerceAtLeast(1f)
             val density = LocalDensity.current
             Column(
@@ -142,7 +137,6 @@ fun TodaysPuzzleScreen(
                     onClick = onPlay,
                     primary = !solvedToday || inProgress,
                     icon = Icons.Rounded.PlayArrow,
-                    // As wide as its words, centred
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -153,7 +147,7 @@ fun TodaysPuzzleScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                // The button and its line halfway down the space below the puzzle's details
+                // Button halfway down the space below the details
                 Spacer(Modifier.weight(1f))
             }
         }
@@ -162,22 +156,22 @@ fun TodaysPuzzleScreen(
 
 private val MIN_MAX_WIDTH = 480.dp
 
-// A full month's seal: the silver of the brocade table it earns
+// The silver of the brocade table a full month earns
 private val MONTH_SEAL = Color(0xFFB9C1D9)
 private val MAX_WIDTH = 620.dp
 private const val HEIGHT_TO_WIDTH = 0.47f
-// The calendar's width on a typical phone
+// On a typical phone
 private val PHONE_CALENDAR = 395.dp
 // Extra room under the title as the calendar zooms
 private val ZOOM_GAP = 48.dp
 
-// A month, Monday first: solved days ticked, today ringed in gold, the rest plain numbers
+// Monday first: solved days ticked, today ringed in gold
 @Composable
 private fun Calendar(
     month: YearMonth,
     today: LocalDate,
     solved: Set<Long>,
-    // Every day of the month solved: sealed under its name
+    // Every day solved: sealed under its name
     full: Boolean,
     canGoBack: Boolean,
     canGoForward: Boolean,
@@ -227,7 +221,6 @@ private fun Calendar(
                     )
                 }
             }
-            // Blank days before the 1st, so it falls under its weekday
             val lead = month.atDay(1).dayOfWeek.ordinal
             val cells = List(lead) { null } + (1..month.lengthOfMonth()).map { month.atDay(it) }
             for (week in cells.chunked(7)) {
@@ -256,7 +249,6 @@ private fun Day(date: LocalDate, today: LocalDate, solved: Boolean) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            // A solved day's circle a little smaller than today's ring
             .size(if (solved && !isToday) 32.dp else 38.dp)
             .then(ring)
             .then(if (solved) Modifier.background(MaterialTheme.colorScheme.primary, CircleShape) else Modifier)

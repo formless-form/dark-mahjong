@@ -1,10 +1,6 @@
 package com.vortessence.mahjong.data.repository
 
-/**
- * Hand-written congratulations shown when a board is cleared. Each pool is dealt through a
- * persisted no-repeat shuffle ([PreferencesRepository.nextCongratsMessage]), so every message in a
- * pool appears once before any comes round again.
- */
+/** Each pool is dealt by a persisted no-repeat shuffle ([PreferencesRepository.nextCongratsMessage]). */
 enum class CongratsPool(val key: String, val messages: List<String>) {
     GENERAL(
         "general",
@@ -69,7 +65,7 @@ enum class CongratsPool(val key: String, val messages: List<String>) {
             "The mountains would be proud.",
             "Not one wasted move.",
             "That one sparkled.",
-            // A lighter touch now and then, to keep it from getting samey
+            // Lighter ones, so it isn't samey
             "The tiles have filed a complaint. Dismissed.",
             "You and the tiles: a match made in heaven.",
             "The bamboo never saw it coming.",

@@ -50,18 +50,14 @@ class MainActivity : ComponentActivity() {
         TileWear.prepareAsync()
         ImperialImages.assets = applicationContext.assets
         ConstellationRepository.prepareAsync()
-        // Play builds ask Google Play for newer versions; the open-source build never does
         updates = AppUpdates(this)
-        // Play builds can take optional tips through Google Play; the open-source build has none
         tips = Tips(this)
         enableEdgeToEdge()
-        // Full-screen game: system bars stay hidden and reappear briefly on an edge swipe
         WindowCompat.getInsetsController(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        // 60 frames a second at most: plenty for a calm board game, where 90 or 120 would only
-        // spend battery. The screen's 60 Hz mode at its current resolution, if it has one
+        // 60 fps is plenty for a calm board game; 90 or 120 would only spend battery
         display?.let { screen ->
             val current = screen.mode
             screen.supportedModes
@@ -72,11 +68,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             MahjongApp(viewModel = viewModel, updates = updates, tips = tips)
         }
-        // The first-game performance check: frames are timed while a game is in play, until it
-        // has decided (once per install)
+        // First-game performance check, once per install
         frameWatch = FrameWatch(window) { verdict ->
             viewModel.onFrameVerdict(verdict)
-            // Test builds say how it went, so a phone that passes (and gets no card) shows it too
+            // Test builds report a pass too, which gets no card
             if (BuildConfig.PERF_HOOKS) {
                 val result = when {
                     verdict.struggling -> "struggling"
@@ -101,11 +96,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // A phone near the line traces the fire's shadows lighter, by itself
         lifecycleScope.launch {
             viewModel.lightFireShadows.collect { FireShadows.light = it }
         }
-        // Only on a fresh start: a recreated activity (a dark-mode switch) keeps the game in play
+        // A recreated activity (dark-mode switch) keeps the game in play
         if (savedInstanceState == null) openPerfScene(intent)
     }
 
@@ -119,24 +113,22 @@ class MainActivity : ComponentActivity() {
     // (-S stops the app first, so the scene opens on a fresh start)
     private fun openPerfScene(intent: Intent?) {
         if (!BuildConfig.PERF_HOOKS) return
-        // --ez perfCheckReset true: the first-game performance check runs again, as on a new install
-        // (with a perf scene, the scene's frames are the ones timed)
+        // --ez perfCheckReset true: rerun the first-game check (on the scene's frames, if any)
         val checkReset = intent?.getBooleanExtra("perfCheckReset", false) == true
         if (checkReset) viewModel.resetPerfCheck()
-        // --es perfImperial earned (or locked): Imperial shown as earned, or as the Journey has it,
-        // kept until changed (test builds only; the player's progress itself is never touched)
+        // --es perfImperial earned|locked: kept until changed; real progress is never touched
         val perfPrefs = getSharedPreferences("perf", MODE_PRIVATE)
         intent?.getStringExtra("perfImperial")?.let { perfPrefs.edit().putBoolean("imperialEarned", it == "earned").apply() }
         PerfSwitches.imperialEarned = perfPrefs.getBoolean("imperialEarned", false)
-        // --es perfBrocade earned (or locked): the same for the silk brocade table
+        // --es perfBrocade earned|locked: the same for the brocade table
         intent?.getStringExtra("perfBrocade")?.let { perfPrefs.edit().putBoolean("brocadeEarned", it == "earned").apply() }
         PerfSwitches.brocadeEarned = perfPrefs.getBoolean("brocadeEarned", false)
         PerfSwitches.off = intent?.getStringExtra("perfOff")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
         val layout = intent?.getStringExtra("perfLayout") ?: return
         PerfSwitches.fireFps = intent.getIntExtra("perfFireFps", 0)
         val surface = intent.getStringExtra("perfSurface")?.let(TableSurface::fromStoredName)
-        // --es perfTiles IMPERIAL (a TileSet name) and --ef perfFireIntensity 1.0: the scene's tiles
-        // and fire, kept in the test app's settings (for listing pictures, 2026-11-15)
+        // --es perfTiles IMPERIAL --ef perfFireIntensity 1.0: kept in the test app's settings
+        // (for listing pictures, 2026-11-15)
         val tiles = intent.getStringExtra("perfTiles")?.let { name -> TileSet.entries.firstOrNull { it.name == name } }
         val intensity = intent.getFloatExtra("perfFireIntensity", -1f).takeIf { it >= 0f }
         viewModel.startPerfScene(

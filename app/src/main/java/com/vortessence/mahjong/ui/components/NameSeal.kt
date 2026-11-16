@@ -25,10 +25,8 @@ private val SealInk = Color(0xFF8E2A23)
 private val SealPaper = Color(0xFFF2E7D8)
 
 /**
- * The app's name seal: 暗夜麻將 ("dark-night mahjong") in seal script, cut white out of deep
- * vermilion like a carved stone chop. Read right column first, top to bottom: 暗夜 then 麻將.
- * An AGSL pass roughens the edges slightly and knocks a few flecks out of the ink, as a real
- * impression would.
+ * 暗夜麻將 ("dark-night mahjong") in seal script, cut white from vermilion like a stone chop, read
+ * right column first. An AGSL pass roughens the edges and flecks the ink like a real impression.
  */
 @Composable
 fun NameSeal(modifier: Modifier = Modifier, size: Dp = 70.dp) {
@@ -64,9 +62,8 @@ fun NameSeal(modifier: Modifier = Modifier, size: Dp = 70.dp) {
     }
 }
 
-// Samples the seal with a small noise-driven displacement (rough carved edges) and removes
-// scattered flecks where low-frequency noise peaks (worn ink). Sizes are in dp so the wear
-// looks the same at any density.
+// Noise displacement roughens the edges; low-frequency noise peaks knock out flecks. In dp, so the
+// wear looks the same at any density.
 private const val SEAL_WEAR_AGSL = """
 uniform shader content;
 uniform float dp;

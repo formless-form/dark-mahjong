@@ -43,10 +43,7 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/**
- * Asked when a wide board comes up and the player hasn't yet said how to show one: turn the phone
- * on its side, or keep it upright. The answer is kept (Settings, Wide boards).
- */
+/** Landscape or upright, asked at the first wide board; kept in Settings, Wide boards. */
 @Composable
 fun RotateDialog(
     animate: Boolean,
@@ -90,10 +87,7 @@ fun RotateDialog(
     }
 }
 
-/**
- * A phone turning onto its side between two curved arrows, over and over; held on its side while
- * the phone's Remove animations is on. Drawn in a 120-unit square.
- */
+/** A phone turning between curved arrows, looping (held on its side under Remove animations); 120-unit square. */
 @Composable
 fun RotatePhoneIcon(animate: Boolean, modifier: Modifier = Modifier) {
     val phone = MaterialTheme.colorScheme.secondary
@@ -117,7 +111,7 @@ fun RotatePhoneIcon(animate: Boolean, modifier: Modifier = Modifier) {
             ),
             label = "PhoneAngle",
         ).value
-        // The arrows brighten as the phone turns
+        // Arrows brighten as the phone turns
         arrowAlpha = cycle.animateFloat(
             initialValue = 0.25f,
             targetValue = 0.25f,
@@ -151,9 +145,8 @@ fun RotatePhoneIcon(animate: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-// An arc around the phone, clockwise from [start] degrees, ending in an open head. The head lines up
-// with the way the arc travels over its last stretch (not the tangent at the tip), so its two sides
-// look even on the curve
+// Clockwise arc from [start] degrees with an open head, aligned to the arc's last stretch rather
+// than the tip's tangent so its sides look even on the curve
 private fun DrawScope.drawArrow(start: Float, color: Color, line: Stroke, unit: Float) {
     val r = ARROW_RADIUS * unit
     val c = 60f * unit
@@ -172,7 +165,7 @@ private fun DrawScope.drawArrow(start: Float, color: Color, line: Stroke, unit: 
     val tip = Offset(c + r * cos(end).toFloat(), c + r * sin(end).toFloat())
     val from = Offset(c + r * cos(back).toFloat(), c + r * sin(back).toFloat())
     val length = hypot(tip.x - from.x, tip.y - from.y)
-    // Pointing back along the arrow, from the tip
+    // Back along the arrow from the tip
     val ux = (from.x - tip.x) / length
     val uy = (from.y - tip.y) / length
     fun barb(spread: Double) = Offset(
@@ -195,15 +188,15 @@ private val ARROW_STARTS = floatArrayOf(-72f, 108f)
 private const val HEAD_LENGTH = 11f
 private const val HEAD_SPREAD = 35.0
 
-/** The turning phone's own outline, upright: for the "Stay in portrait" button. */
+/** For the "Stay in portrait" button. */
 val PhonePortrait: ImageVector by lazy { phoneIcon(landscape = false) }
 
-/** The turning phone's own outline, on its side: for the "Play in landscape" button. */
+/** For the "Play in landscape" button. */
 val PhoneLandscape: ImageVector by lazy { phoneIcon(landscape = true) }
 
-// A 24-unit icon: a 12 x 20 phone with rounded corners and a short line for its speaker
+// 24-unit icon: a 12 x 20 rounded phone with a speaker line
 private fun phoneIcon(landscape: Boolean): ImageVector {
-    // Points of the upright phone, turned a quarter clockwise about the middle for landscape
+    // Turned a quarter clockwise about the middle for landscape
     fun p(x: Float, y: Float) = if (landscape) Offset(24f - y, x) else Offset(x, y)
     val outline = SolidColor(Color.Black)
     return ImageVector.Builder(

@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.random.Random
 
-/** The layouts ported from Mah by ffalt must be complete, distinct and always solvable. */
+/** Mah boards must be complete, distinct and always solvable. */
 class MahLayoutsTest {
     private val mah = ConstellationRepository.mahConstellations
 
@@ -44,7 +44,7 @@ class MahLayoutsTest {
         )
     }
 
-    // No imported board stacks its tiles like any other layout in the app, wherever it sits
+    // Compared by shape, wherever the board sits
     @Test
     fun noBoardDuplicatesAnotherLayout() {
         fun shape(positions: List<TilePosition>): Set<TilePosition> {
@@ -63,8 +63,7 @@ class MahLayoutsTest {
         }
     }
 
-    // Every board takes the complete standard set, each tile once, and always gets a deal that
-    // can be cleared (built by lifting free pairs off the full board in reverse)
+    // Deals built by lifting free pairs off the full board in reverse
     @Test
     fun everyBoardDealsTheFullSetSolvably() {
         val fullSet = Tile.createStandard144Set().groupingBy { it }.eachCount()

@@ -23,9 +23,8 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * The lamp at several colour temperatures (LampColour; 2000 K chosen), on the same deal: the green mat and walnut
- * with the fireplace lit, and the green mat by the lamp alone. Rendered into
- * build/lamp-colour-preview/<kelvin>/. Run: ./gradlew testFossDebugUnitTest --tests '*LampColourPreview*'
+ * The lamp at several colour temperatures (2000 K chosen) on one deal: mat and walnut by the fire,
+ * mat by the lamp alone. build/lamp-colour-preview/<kelvin>/. Run: ./gradlew testFossDebugUnitTest --tests '*LampColourPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")

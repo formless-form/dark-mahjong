@@ -21,25 +21,22 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
- * A set's sample tiles for Settings, as one picture: drawn once and kept, so Settings shows a
- * picture rather than drawing every tile each time it opens. Imperial's comes ready-made with its
- * images ([IMPERIAL_ASSET]), so Settings never loads the whole set just to show five of its tiles.
+ * A set's Settings sample tiles, drawn once into one picture. Imperial's ships ready-made
+ * ([IMPERIAL_ASSET]), so Settings never loads the whole set for five tiles.
  */
 object SampleStrip {
-    /** A tile's height in the picture, in pixels: shown smaller, so it stays sharp. */
+    /** Pixels; shown smaller, so it stays sharp. */
     const val TILE_HEIGHT = 320
 
-    /** The tiles each set shows in Settings. */
     val SETTINGS_TILES = listOf(Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3))
 
     /**
-     * Imperial's ready-made picture, made from its images (ImperialSettingsSamples, a Play-build
-     * test) and saved as lossless WebP, every pixel as drawn (Gareth, 2026-11-15: no compression
+     * Made by ImperialSettingsSamples (a Play-build test). Lossless WebP (Gareth, 2026-11-15: no
      * artifacts; lossless AVIF showed green on the Pixel)
      */
     const val IMPERIAL_ASSET = "imperial/settings-samples.webp"
 
-    /** The tiles Imperial shows, across the full width. */
+    /** Across the full width. */
     val IMPERIAL_TILES = listOf(
         Tile(TileSuit.WIND, 1), Tile(TileSuit.DRAGON, 1), Tile(TileSuit.CIRCLE, 5), Tile(TileSuit.BAMBOO, 3), Tile(TileSuit.CHARACTER, 9),
     )
@@ -48,7 +45,7 @@ object SampleStrip {
     private var imperial: ImageBitmap? = null
     private var imperialLooked = false
 
-    /** [tiles] of [kit], drawn the first time they're asked for; Imperial's read from its picture (null without it). */
+    /** Drawn on first request; Imperial's read from its picture (null without it). */
     fun of(kit: TileKit, tiles: List<Tile>): ImageBitmap? =
         if (kit.stone) imperial() else made.getOrPut(kit to tiles) { make(kit, tiles) }
 
@@ -65,10 +62,7 @@ object SampleStrip {
         return imperial
     }
 
-    /**
-     * [tiles] of [kit] side by side, lit as by the lamp over the table, with a margin all round for
-     * the tiles' sides (an Imperial stone stands a little proud of a tile's outline).
-     */
+    /** Lamp-lit, with a margin for the tiles' sides (an Imperial stone stands proud of its outline). */
     fun make(kit: TileKit, tiles: List<Tile>): ImageBitmap {
         val h = TILE_HEIGHT.toFloat()
         val w = h / BoardTransform.ASPECT_RATIO
@@ -85,7 +79,7 @@ object SampleStrip {
         return picture
     }
 
-    /** [picture] drawn as Settings shows samples: the tiles [TILES_OF_HEIGHT] of the height, centred. */
+    /** Tiles at [TILES_OF_HEIGHT] of the height, centred. */
     fun DrawScope.drawSamples(picture: ImageBitmap) {
         val k = size.height * TILES_OF_HEIGHT / TILE_HEIGHT
         val w = picture.width * k

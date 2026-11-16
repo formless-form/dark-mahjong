@@ -4,17 +4,13 @@ import com.vortessence.mahjong.data.model.Tile
 import com.vortessence.mahjong.data.model.TilePosition
 import com.vortessence.mahjong.engine.BoardSolvabilityGenerator
 
-// Tests only: play never checks whether a board can still be cleared, only whether a pair is left
-/**
- * Exhaustively checks whether [tiles] can be cleared completely.
- * Returns null if no verdict was reached within [maxStates] explored board states.
- */
+/** Exhaustive clearability check, tests only (play only checks a pair is left). Null if undecided within [maxStates] states. */
 fun canBeCleared(tiles: List<Pair<TilePosition, Tile>>, maxStates: Int = 20_000): Boolean? {
     val n = tiles.size
     if (n == 0) return true
     if (n >= Long.SIZE_BITS) return null
 
-    // Precompute blocking relations as bitmasks of tile indices
+    // Blockers as bitmasks of tile indices
     val above = LongArray(n)
     val left = LongArray(n)
     val right = LongArray(n)

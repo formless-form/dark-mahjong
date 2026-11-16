@@ -31,9 +31,8 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * Tile set candidates, each on a few tables: a close look (the tutorial's few big tiles) and a
- * full board, by firelight on walnut and by the lamp on the green mat.
- * Rendered into build/tile-kits/<kit>-<scene>.png.
+ * Tile set candidates: a close look (the tutorial's big tiles) and a full board, by fire on walnut
+ * and lamp on the mat. build/tile-kits/<kit>-<scene>.png.
  * Run: ./gradlew testFossDebugUnitTest --tests '*TileKitPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -61,7 +60,7 @@ class TileKitPreview {
         return MahjongGameEngine.startNewGame(constellation).copy(tiles = tiles)
     }
 
-    // One screen per test (a rule sets its content once), its scene changed between shots
+    // One screen per test (a rule sets content once); the scene changes between shots
     private fun scenes(kit: TileKit) {
         PerfSwitches.off = emptySet()
         TileWear.prepareNow()
@@ -110,7 +109,7 @@ class TileKitPreview {
             cutLight = Color(0x40FFFFFF),
             wear = 0.35f,
         )
-        // A shade darker charcoal, the pictures raised in bright white with a dark edge all round
+        // A shade darker, pictures raised in white with a dark edge
         val WHITE = CHARCOAL.copy(
             faceTop = Color(0xFF545351),
             faceBottom = Color(0xFF474644),

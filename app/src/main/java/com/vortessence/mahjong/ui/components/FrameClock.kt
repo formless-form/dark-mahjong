@@ -1,11 +1,9 @@
 package com.vortessence.mahjong.ui.components
 
 /**
- * Seconds for the firelight and the hint's pulse, from a frame's time. Frame times count from
- * the phone's start, and in a Float seconds since then lose their fraction within a few days of
- * uptime: the flicker went steppy. So they count from the app's first frame instead (less its
- * place within a 1000 s round, so each run starts the fire somewhere different), wrapping every
- * [WRAP_SECONDS], which a Float holds to well under a millisecond. Main thread only.
+ * Float seconds for the firelight and hint pulse. Counted from the app's first frame (rounded down
+ * to 1000 s, so each run starts the fire differently) and wrapped at [WRAP_SECONDS]: seconds since
+ * boot lose their fraction after days of uptime, making the flicker steppy. Main thread only.
  */
 internal object FrameClock {
     const val WRAP_SECONDS = 4096f
@@ -19,10 +17,7 @@ internal object FrameClock {
         return Math.floorMod(frameNanos - origin, WRAP_NANOS) / 1e9f
     }
 
-    /**
-     * Seconds from [then] to [now], both from [seconds], allowing for a wrap between them: a
-     * little below 0 if [now] was in fact read a frame or two before [then].
-     */
+    /** [now] - [then], allowing for a wrap; slightly negative if [now] was read a frame earlier. */
     fun since(now: Float, then: Float): Float {
         val d = now - then
         return when {

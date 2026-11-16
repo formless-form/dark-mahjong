@@ -26,8 +26,8 @@ import org.robolectric.annotation.Config
 import java.time.YearMonth
 
 /**
- * Settings with the choice of tile sets, as sample tiles or as a plain switch, on a screen tall
- * enough to show it all: build/tile-set-settings/<name>.png.
+ * Settings' tile-set choice, as sample tiles or a plain switch, on a screen tall enough for it all:
+ * build/tile-set-settings/<name>.png.
  * Run: ./gradlew testFossDebugUnitTest --tests '*TileSetSettingsPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -81,8 +81,7 @@ class TileSetSettingsPreview {
     @Test fun samplesIvory() = shoot(true, TileSet.IVORY, "samples-ivory")
     @Test fun switchCharcoal() = shoot(false, TileSet.CHARCOAL, "switch-charcoal")
 
-    // Imperial, which only the Play build has the images for (skipped elsewhere): locked partway
-    // through the Journey, and earned and chosen
+    // Imperial (Play build only, skipped elsewhere): locked partway through the Journey, and earned and chosen
     private fun imperial(): Boolean {
         ImperialImages.assets = RuntimeEnvironment.getApplication().assets
         return ImperialImages.available && ImperialImages.load() != null
@@ -100,7 +99,7 @@ class TileSetSettingsPreview {
         shoot(true, TileSet.IMPERIAL, "imperial-earned", ImperialProgress(100, 100))
     }
 
-    // The open-source build: no images, so no Imperial card, and a stored choice of it draws Ivory
+    // Open-source build: no images, no Imperial card, and a stored Imperial draws Ivory
     @Test
     fun imperialAbsentFallsBackToIvory() {
         ImperialImages.assets = null
@@ -108,17 +107,13 @@ class TileSetSettingsPreview {
         assertEquals(TileKits.IVORY, TileKits.of(TileSet.IMPERIAL))
     }
 
-    // The silk brocade table, under the other tables: on track this month, a day missed, and
-    // earned and chosen
-    // Taller, so the brocade card under the table row is in the picture
+    // Brocade: on track, a day missed, earned and chosen; taller, so its card under the tables shows
     @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun brocadeLocked() = shoot(true, TileSet.IVORY, "brocade-locked", brocade = BrocadeProgress(false, 14, 30, YearMonth.of(2026, 11), false))
 
-    // Taller, so the brocade card under the table row is in the picture
     @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun brocadeMissed() = shoot(true, TileSet.IVORY, "brocade-missed", brocade = BrocadeProgress(false, 12, 30, YearMonth.of(2026, 11), true))
 
-    // Taller, so the brocade card under the table row is in the picture
     @Test @Config(qualifiers = "w427dp-h2600dp-port-360dpi")
     fun brocadeEarned() = shoot(
         true, TileSet.IVORY, "brocade-earned",

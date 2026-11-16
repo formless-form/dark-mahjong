@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.random.Random
 
-/** Each layout's best clear: which counts as better, how it's stored, and that saves carry it. */
+/** Ranking, storage, and carrying through saves. */
 @RunWith(RobolectricTestRunner::class)
 class LevelRecordTest {
     @Test
@@ -55,12 +55,12 @@ class LevelRecordTest {
         assertEquals(LevelRecord(400_000, 0, 0, 0), repo.progressFlow.first().records[id])
     }
 
-    // The bug in the first test build: the win stopped the clock and its time was lost (0:00)
+    // First test build's bug: the win stopped the clock and lost its time (0:00)
     @Test
     fun aWinRecordsTheTimePlayed() {
         com.vortessence.mahjong.ui.viewmodel.MahjongViewModel.dealContext = kotlin.coroutines.EmptyCoroutineContext
-        // The view model lives in a store cleared at the end, so its work stops with the test: left
-        // running, it hung a later test's storage writes (PerfPhoneTest) in the full suite
+        // Store cleared at the end so the view model's work stops: left running, it hung PerfPhoneTest's
+        // writes in the full suite
         val store = androidx.lifecycle.ViewModelStore()
         val looper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
         try {
@@ -82,7 +82,7 @@ class LevelRecordTest {
             }
             assertTrue(vm.gameState.value!!.isWon)
             val id = state.constellation.id
-            // The win is written in the background: the main thread is let run while it's awaited
+            // Written in the background; the main thread is let run while it's awaited
             val repo = PreferencesRepository(app)
             var record: LevelRecord? = null
             repeat(100) {

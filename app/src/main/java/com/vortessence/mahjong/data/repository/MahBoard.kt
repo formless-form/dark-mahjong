@@ -5,9 +5,8 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.TilePosition
 
 /**
- * A layout from Mah by ffalt (MIT licence, see NOTICE.md), as listed in [MahLayouts]. [map] is
- * Mah's compact format: `[[z, [[y, [x | [x, count], ...]], ...]], ...]` in half-tile units, the
- * same grid as Dark Mahjong's own layouts, where `[x, count]` is a run of tiles side by side.
+ * From Mah by ffalt (MIT, see NOTICE.md). [map]: `[[z, [[y, [x | [x, count], ...]], ...]], ...]` in
+ * our half-tile units; `[x, count]` is a run of tiles side by side.
  */
 internal class MahBoard(
     val id: String,
@@ -15,7 +14,7 @@ internal class MahBoard(
     val category: String,
     val difficulty: Difficulty,
     val map: String,
-    // Played on its side (Constellation.onSide)
+    // Constellation.onSide
     val onSide: Boolean = false,
 ) {
     fun toConstellation() = Constellation(

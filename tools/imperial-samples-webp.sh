@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Saves Imperial's Settings picture (build/imperial-samples/settings-samples.png, made by the
-# Play-build test ImperialSettingsSamples) as lossless WebP into the Imperial images' folder,
-# keeping even the colour under transparent pixels. Then decodes it again and checks every pixel
-# matches before replacing the old one.
+# Saves ImperialSettingsSamples' picture as lossless WebP in the Imperial images' folder (keeping
+# colour under transparent pixels), checking every pixel round-trips before replacing the old one.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SRC="app/build/imperial-samples/settings-samples.png"

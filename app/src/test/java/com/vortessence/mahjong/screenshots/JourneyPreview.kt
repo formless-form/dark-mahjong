@@ -16,8 +16,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The Journey (the levels) with each cleared level's best clear, over sample records: perfect,
- * clean with undos, helped, and cleared before records were kept. Into build/journey/journey.png. Run: ./gradlew testFossDebugUnitTest --tests '*JourneyPreview*'
+ * The Journey with each level's best clear over sample records: perfect, clean with undos, helped,
+ * and from before records. build/journey/journey.png. Run: ./gradlew testFossDebugUnitTest --tests '*JourneyPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w427dp-h952dp-port-360dpi")

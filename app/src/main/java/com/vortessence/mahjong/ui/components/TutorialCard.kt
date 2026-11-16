@@ -21,9 +21,7 @@ import com.vortessence.mahjong.engine.TutorialAction
 import com.vortessence.mahjong.engine.TutorialScript
 import com.vortessence.mahjong.engine.TutorialStep
 
-/**
- * Instruction panel shown below the board while the guided tutorial runs.
- */
+/** Shown below the board during the guided tutorial. */
 @Composable
 fun TutorialCard(
     step: TutorialStep,
@@ -84,7 +82,7 @@ fun TutorialCard(
                         modifier = Modifier.align(Alignment.End)
                     )
                 } else {
-                    // The zoom steps can be skipped, for anyone who can't pinch
+                    // Zoom steps are skippable, for anyone who can't pinch
                     val skippable = current.action == TutorialAction.PINCH_ZOOM || current.action == TutorialAction.ZOOM_OUT
                     Row(
                         modifier = Modifier.fillMaxWidth(),

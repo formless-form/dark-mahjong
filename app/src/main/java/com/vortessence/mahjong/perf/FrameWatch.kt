@@ -10,30 +10,25 @@ import com.vortessence.mahjong.BuildConfig
 import com.vortessence.mahjong.ui.components.TileRenderer
 
 /**
- * Times the frames of the player's first game, once, for the first-game performance check: while
- * [setRecording] is on, each frame's drawing time goes into a [FrameTally] that lasts as long as
- * the app (a recreated activity carries on where the last left off). The phone's own frame
- * timings are read on a thread of their own; the verdict comes back on the main thread, once.
+ * Times the first game's frames, once, into an app-lifetime [FrameTally] (a recreated activity
+ * carries on). Metrics are read on their own thread; the verdict comes back once on the main thread.
  */
 class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdict) -> Unit) {
     private var thread: HandlerThread? = null
     private val main = Handler(Looper.getMainLooper())
 
-    // Frames before this (System.nanoTime) aren't counted: the app's first seconds are slow on any
-    // phone while its drawing is set up, and the first second back at the table after a pause
+    // System.nanoTime; skips the slow first seconds of the app, and the first second after a pause
     @Volatile private var countFrom = Long.MAX_VALUE
     @Volatile private var recording = false
-    // One refresh of the screen, but never less than a 60th of a second, since the app asks for 60
-    // frames a second at most (a screen with no 60 Hz mode runs faster than the game needs)
+    // At least 1/60 s: the app asks for 60 fps at most, though some screens have no 60 Hz mode
     @Volatile private var refreshNs = SIXTY_HZ_NS
-    // The vsync of the last frame counted (on the listener's thread), 0 after a pause
+    // Last counted frame's vsync (listener thread); 0 after a pause
     @Volatile private var lastVsync = 0L
 
     private val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
         if (!recording || Run.decided) return@OnFrameMetricsAvailableListener
         if (metrics.getMetric(FrameMetrics.FIRST_DRAW_FRAME) == 1L) return@OnFrameMetricsAvailableListener
-        // Until the tiles' images are made (in the background, slower on a slow phone), tiles are
-        // drawn shape by shape: not how the game draws, so not counted
+        // Until the tile atlas is made, tiles are drawn shape by shape: not representative
         if (!TileRenderer.TileAtlas.made) return@OnFrameMetricsAvailableListener
         if (metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP) < countFrom) return@OnFrameMetricsAvailableListener
         val vsync = metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP)
@@ -49,7 +44,7 @@ class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdic
         }
     }
 
-    /** Frames are counted while on: a game in play, with the check still to run. */
+    /** On while a game is in play and the check is still to run. */
     fun setRecording(on: Boolean) {
         if (Run.decided || on == recording) return
         if (on) {
@@ -69,7 +64,6 @@ class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdic
         if (BuildConfig.PERF_HOOKS) Log.i(TAG, if (on) "counting frames (refresh ${refreshNs / 1000} us)" else "paused")
     }
 
-    /** Stops listening (the activity is going, or the check is done). */
     fun release() {
         recording = false
         val t = thread ?: return
@@ -81,7 +75,7 @@ class FrameWatch(private val window: Window, private val onVerdict: (FrameVerdic
         t.quitSafely()
     }
 
-    // What lasts as long as the app does
+    // App lifetime
     private object Run {
         val tally = FrameTally()
         @Volatile var decided = false

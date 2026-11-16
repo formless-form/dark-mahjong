@@ -1,8 +1,8 @@
 package com.vortessence.mahjong.ui.components
 
 /**
- * Test builds only: drawing stages switched off over adb (MainActivity's perfOff extra, a
- * comma-separated list), to measure what each costs. Empty, and so never consulted, in Play builds.
+ * Test builds only: drawing stages switched off over adb (MainActivity's perfOff extra,
+ * comma-separated) to measure their cost. Empty in Play builds.
  */
 object PerfSwitches {
     @Volatile
@@ -10,15 +10,15 @@ object PerfSwitches {
 
     fun isOff(stage: String) = off.isNotEmpty() && stage in off
 
-    /** The firelight's frames a second, if set (perfFireFps), for comparing rates by eye; 0 for the game's own. */
+    /** Firelight fps override (perfFireFps); 0 = the game's own. */
     @Volatile
     var fireFps = 0
 
-    /** Imperial shown as earned whatever the Journey's progress (perfImperial=earned, kept until perfImperial=locked), to try it. */
+    /** Imperial shown as earned (perfImperial=earned, until perfImperial=locked). */
     @Volatile
     var imperialEarned = false
 
-    /** The silk brocade table shown as earned whatever the daily puzzles (perfBrocade=earned, kept until perfBrocade=locked). */
+    /** Brocade table shown as earned (perfBrocade=earned, until perfBrocade=locked). */
     @Volatile
     var brocadeEarned = false
 }

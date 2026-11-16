@@ -20,9 +20,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
- * Imperial is drawn from images that come with the Play build only. Whether or not a build has
- * them, drawing an Imperial tile must never fail: with them it is stamped from the images,
- * without them from the set's stand-in colours.
+ * Imperial's images come with the Play build only; with or without them an Imperial tile must
+ * draw (stamped from the images, or in the set's stand-in colours).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -30,8 +29,7 @@ class ImperialStandInTest {
     @Test
     fun `an Imperial tile draws with or without its images`() {
         ImperialImages.assets = RuntimeEnvironment.getApplication().assets
-        // Present in the Play build's tests, absent in the open-source build's: both are right,
-        // and the quick look agrees with what loading finds
+        // Present in Play, absent in open-source: either is right, if the quick look agrees with loading
         assertTrue(ImperialImages.present() == (ImperialImages.load() != null))
         val w = 120
         val h = 190
@@ -39,7 +37,7 @@ class ImperialStandInTest {
         CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap.asImageBitmap()), Size(w.toFloat(), h.toFloat())) {
             TileRenderer.drawSample(this, Tile(TileSuit.CHARACTER, 5), 4f, 4f, 100f, 133f, TileKits.IMPERIAL, look = 3)
         }
-        // Something was drawn: the middle of the face is not clear
+        // The middle of the face is not clear
         assertTrue(bitmap.getPixel(54, 70) ushr 24 > 0)
     }
 }

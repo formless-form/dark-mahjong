@@ -45,10 +45,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Shared building blocks in the Android 17 (Material 3 Expressive) style, so every menu screen
-// has the same bar, lists, switches and buttons
+// Shared Android 17 (M3 Expressive) building blocks for every menu screen
 
-/** A round tonal back button, as in Android 17's own Settings. */
+/** As in Android 17's own Settings. */
 @Composable
 fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     FilledTonalIconButton(
@@ -64,17 +63,14 @@ fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * A menu screen: a large title that shrinks into the bar as the content scrolls, a back button,
- * and the content below.
- */
+/** A menu screen whose large title shrinks into the bar on scroll. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpressiveScreen(
     title: String,
     onBack: () -> Unit,
     subtitle: String? = null,
-    // Drawn behind the whole screen, the bar included, in place of the plain page colour
+    // Behind the whole screen, bar included, instead of the page colour
     backdrop: (@Composable () -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -92,7 +88,7 @@ fun ExpressiveScreen(
                 navigationIcon = { BackButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = page,
-                    // Over a backdrop, the collapsed bar lets a little of it through
+                    // Slightly see-through over a backdrop
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = if (backdrop != null) 0.88f else 1f),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     subtitleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -107,25 +103,18 @@ fun ExpressiveScreen(
     }
 }
 
-/**
- * How opaque the panels of a menu screen are: fully, on the plain page; over a backdrop (the
- * stone), only faintly, so it shows through them.
- */
+/** Menu panel opacity: 1 on the plain page, faint over the stone backdrop so it shows through. */
 val LocalPanelAlpha = staticCompositionLocalOf { 1f }
 
-// Over a backdrop, a panel is a faint veil: enough to group its rows, little enough that the
-// stone reads through
+// Enough to group rows, little enough for the stone to read through
 private const val PANEL_ALPHA_OVER_BACKDROP = 0.34f
 
-/**
- * [colour] as a panel on this screen: as it is on the plain page, more see-through over a
- * backdrop, but never below [atLeast] of its own opacity (for controls that must stay legible).
- */
+/** [colour] at this screen's panel alpha, but at least [atLeast] of its own (legible controls). */
 @Composable
 fun panel(colour: Color, atLeast: Float = 0f): Color {
     val alpha = LocalPanelAlpha.current
     if (alpha >= 1f) return colour
-    // Over the stone, the panels' green tint is half drained, so they read as veils of the stone
+    // Half-desaturated over the stone, to read as veils of it
     val grey = 0.2126f * colour.red + 0.7152f * colour.green + 0.0722f * colour.blue
     return Color(
         red = grey + (colour.red - grey) * PANEL_SATURATION_OVER_BACKDROP,
@@ -135,28 +124,25 @@ fun panel(colour: Color, atLeast: Float = 0f): Color {
     )
 }
 
-// How much of their colour the panels keep over a backdrop
 private const val PANEL_SATURATION_OVER_BACKDROP = 0.5f
 
-/** The small accent-coloured heading above a group of list items. */
+/** The accent heading above a group of list items. */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
         text = title,
-        // 6 sp larger than the type scale's small title (chosen 2026-10-30)
+        // Small title + 6 sp (chosen 2026-10-30)
         style = MaterialTheme.typography.titleSmallEmphasized.let { it.copy(fontSize = (it.fontSize.value + 6f).sp) },
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp),
     )
 }
 
-/** Gap between the segments of a grouped list. */
 val SegmentGap: Dp = ListItemDefaults.SegmentedGap
 
 /**
- * Segment colours: slightly raised from the page, so each group reads as one rounded block. A
- * switched-on row looks the same as an off one (the switch shows the state), as in Android's
- * own Settings.
+ * Slightly raised from the page, so each group reads as one block. On rows look like off ones (the
+ * switch shows state), as in Android's Settings.
  */
 @Composable
 fun segmentColors(): ListItemColors = ListItemDefaults.segmentedColors(
@@ -171,7 +157,7 @@ fun segmentColors(): ListItemColors = ListItemDefaults.segmentedColors(
     selectedOverlineContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
 )
 
-/** A list item's leading icon, in a soft circle. */
+/** A list item's leading icon in a soft circle. */
 @Composable
 fun LeadingIcon(icon: ImageVector, enabled: Boolean = true, color: Color? = null) {
     Box(
@@ -180,13 +166,13 @@ fun LeadingIcon(icon: ImageVector, enabled: Boolean = true, color: Color? = null
             .size(40.dp)
             .background(panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.35f), CircleShape),
     ) {
-        // Greyed as Material greys a disabled row's text: the same colour at 38%
+        // 38%, as Material greys disabled text
         val tint = (color ?: MaterialTheme.colorScheme.primary).let { if (enabled) it else it.copy(alpha = 0.38f) }
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
     }
 }
 
-/** A switch whose thumb shows a tick when on. */
+/** Thumb shows a tick when on. */
 @Composable
 fun CheckSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, enabled: Boolean = true) {
     Switch(
@@ -201,10 +187,9 @@ fun CheckSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, enabled
     )
 }
 
-/** Height of the big action buttons: Material's medium button size. */
 val BigButtonHeight: Dp = ButtonDefaults.MediumContainerHeight
 
-/** A big pill-shaped button whose corners square off slightly when pressed. */
+/** A pill button whose corners square off slightly when pressed. */
 @Composable
 fun BigButton(
     text: String,
@@ -212,7 +197,7 @@ fun BigButton(
     modifier: Modifier = Modifier,
     primary: Boolean = false,
     icon: ImageVector? = null,
-    // Narrower side padding, for buttons sharing a row on a small phone
+    // Narrower padding, for buttons sharing a row on small phones
     compact: Boolean = false,
 ) {
     val content: @Composable RowScope.() -> Unit = {
@@ -245,7 +230,7 @@ fun BigButton(
     }
 }
 
-/** The page's loading state: Material's shape-morphing indicator, centred. */
+/** Material's shape-morphing indicator, centred. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadingPage(modifier: Modifier = Modifier) {

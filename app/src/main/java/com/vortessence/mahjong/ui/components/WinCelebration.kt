@@ -34,11 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
-/**
- * Shown over the board when it is cleared: a fireworks light show, then a quiet card with a warm
- * message and big buttons, over the board blurred behind it. With animations off, the card appears straight away and there are no
- * fireworks.
- */
+/** On a cleared board: fireworks, then a card over the blurred board. Animations off: the card only. */
 @Composable
 fun WinCelebration(
     message: String?,
@@ -48,13 +44,13 @@ fun WinCelebration(
     onNextLevel: () -> Unit,
     onPlayAgain: () -> Unit,
     onMainMenu: () -> Unit,
-    // Where the last button goes: the title, or for Today's Puzzle its calendar
+    // Last button: the title, or Today's Puzzle's calendar
     menuLabel: String = "Menu",
-    // Low-performance mode: a smaller show
+    // Low-performance mode
     liteFireworks: Boolean = false,
-    // The player's first clean clear: the card introduces the gold ribbon
+    // First clean clear: the card introduces the gold ribbon
     firstRibbon: Boolean = false,
-    // A Quick Game: its button deals another, rather than playing this one again
+    // Deals another rather than replaying
     quickGame: Boolean = false,
 ) {
     var showCard by remember { mutableStateOf(!animationsEnabled) }
@@ -70,7 +66,7 @@ fun WinCelebration(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.28f))
-            // Taps around the card stop here rather than reaching the toolbar under the blur
+            // Stops taps reaching the toolbar under the blur
             .pointerInput(Unit) {},
     ) {
         if (animationsEnabled) {
@@ -107,7 +103,7 @@ fun WinCelebration(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = subtitle,
-                        // The level's name, 4 sp up from body text so it reads clearly under the message
+                        // Level name: body + 4 sp, to read clearly under the message
                         style = MaterialTheme.typography.bodyMedium.let { it.copy(fontSize = (it.fontSize.value + 4f).sp) },
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -122,7 +118,7 @@ fun WinCelebration(
                         )
                     }
                     Spacer(Modifier.height(28.dp))
-                    // The buttons share the card's width, so they fit on a small phone too
+                    // Sharing the card's width, so they fit small phones
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         if (hasNextLevel) {
                             BigButton("Next", onClick = onNextLevel, primary = true, compact = true, modifier = Modifier.weight(1f))
@@ -138,5 +134,5 @@ fun WinCelebration(
     }
 }
 
-// The first ribbon's line, in the ribbon's own pale gold
+// The ribbon's pale gold
 private val RibbonText = Color(0xFFF2D58C)

@@ -43,10 +43,7 @@ import kotlin.math.sin
 import kotlin.math.roundToInt
 import com.vortessence.mahjong.tips.TipOffer
 
-/**
- * The tip jar: the tea-drinking monk, a line from Gareth, and the tips at the prices Google Play
- * gives; once one goes through, a thank-you in its place.
- */
+/** The tip jar, at Google Play's prices; a thank-you replaces it once a tip goes through. */
 @Composable
 fun TipCard(offers: List<TipOffer>, thanked: Boolean, onTip: (TipOffer) -> Unit, onClose: () -> Unit) {
     Dialog(onDismissRequest = onClose) {
@@ -56,8 +53,8 @@ fun TipCard(offers: List<TipOffer>, thanked: Boolean, onTip: (TipOffer) -> Unit,
             modifier = Modifier.widthIn(max = 420.dp),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp)) {
-                // The tea-drinking monk: a 3D render in a 192 px pixel-art style, kept crisp (no smoothing).
-                // Both pictures share one frame, so he stays put when the cat appears.
+                // Pixel art, kept crisp (no smoothing). Both pictures share one frame, so the monk
+                // stays put when the cat appears.
                 Box(Modifier.size(MONK_DP.dp)) {
                     Image(
                         bitmap = ImageBitmap.imageResource(if (thanked) R.drawable.tip_monk_thanks else R.drawable.tip_monk),
@@ -88,7 +85,7 @@ fun TipCard(offers: List<TipOffer>, thanked: Boolean, onTip: (TipOffer) -> Unit,
                     )
                     Spacer(Modifier.height(24.dp))
                     if (offers.isEmpty()) {
-                        // Google Play hasn't priced the tips (offline, or Play still starting up)
+                        // Unpriced: offline, or Play still starting
                         Text(
                             "Tips can't be reached right now. Please check your connection and try again later.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -114,18 +111,16 @@ fun TipCard(offers: List<TipOffer>, thanked: Boolean, onTip: (TipOffer) -> Unit,
     }
 }
 
-/** The monk pictures are 168 art pixels square, drawn one art pixel per dp. */
+/** 168 art pixels square, one per dp. */
 private const val MONK_DP = 168
 private const val ART_PX = 168f
 
-/** The middle of the jade teacup's rim, where the steam rises from, in art pixels. */
+/** Teacup rim centre, in art pixels. */
 private val STEAM_RIM = Offset(65f, 91f)
 
 /**
- * Three soft wisps of steam rising from the tea, swaying and leaning a little to the left as they go:
- * each a ribbon of single art pixels that drifts up about 18 pixels, fading in just above the rim and
- * out at the top. A faint shadow under each pixel lets it show against his white beard. Whole art
- * pixels again, so the steam sits in the picture's own grain.
+ * Three wisps of steam swaying up ~18 art pixels, leaning left, fading in and out. In whole art
+ * pixels to match the picture's grain; a faint shadow shows them against the white beard.
  */
 @Composable
 private fun SteamWisps(modifier: Modifier) {
@@ -160,15 +155,12 @@ private fun SteamWisps(modifier: Modifier) {
 private const val STEAM_PUFFS = 18
 private val STEAM_SHADOW = Color(0xFF3A302A)
 
-/** Where the zzz rise from, just above the sleeping cat's ear, in art pixels. */
+/** Above the cat's ear, in art pixels. */
 private val ZZZ_START = Offset(101f, 134f)
 private val ZZZ_FILL = Color(0xFFDBAE93)
 private val ZZZ_OUTLINE = Color.Black.copy(alpha = 0.47f)
 
-/**
- * Three pixel-art Z's drifting up and to the right from the cat, growing from 5 to 7 art pixels and
- * fading as they go. They move in whole art pixels so they stay in step with the picture.
- */
+/** Three Z's drifting up-right, growing 5 to 7 art pixels and fading; whole art pixels, as the picture. */
 @Composable
 private fun SleepyZs(modifier: Modifier) {
     val phase by rememberInfiniteTransition(label = "zzz").animateFloat(
@@ -194,7 +186,7 @@ private fun SleepyZs(modifier: Modifier) {
     }
 }
 
-/** A Z [n] art pixels square: full top and bottom bars joined by a two-pixel diagonal. */
+/** [n] art pixels square: top and bottom bars joined by a two-pixel diagonal. */
 private fun DrawScope.drawPixelZ(left: Float, top: Float, n: Int, px: Float, alpha: Float) {
     val cells = buildList {
         for (c in 0 until n) { add(c to 0); add(c to n - 1) }

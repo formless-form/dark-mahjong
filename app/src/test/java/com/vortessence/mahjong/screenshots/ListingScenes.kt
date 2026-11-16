@@ -76,7 +76,7 @@ class ListingScenes {
     @Test fun fireIvoryWalnut() = board("fire-ivory-walnut")
     @Test fun fireIvoryWalnutZoomed() = board("fire-ivory-walnut-zoomed", zoom = 260f)
 
-    // The Journey six levels in: best clears with their times and help, gold ribbons on the clean ones
+    // The Journey: best clears with times and help, gold ribbons on the clean ones
     @Test @Config(qualifiers = "w427dp-h952dp-port-360dpi")
     fun journey() {
         com.vortessence.mahjong.ui.components.MenuFire.flickers = false
@@ -98,13 +98,13 @@ class ListingScenes {
             MahjongTheme { LevelSelectScreen(progress = progress, levels = levels, onLevelSelected = {}, onBack = {}) }
         }
         compose.mainClock.advanceTimeBy(1500)
-        // Up the list, so the cleared levels and their best clears fill the screen
+        // Up the list, so the cleared levels fill the screen
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Level 2"))
         compose.mainClock.advanceTimeBy(800)
         compose.onRoot().captureRoboImage("build/listing/journey.png")
     }
 
-    // The name seal alone, large, on nothing: for the feature graphic
+    // The name seal alone, large: for the feature graphic
     @Test fun seal() {
         compose.setContent {
             // On pure green, keyed out afterwards

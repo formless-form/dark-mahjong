@@ -11,9 +11,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The tabletop must sit in exactly the same perspective as the tiles. Tiles are projected by
- * [TableCamera.planeMatrix]; the table shader maps each screen pixel back onto the table with its
- * own copy of the inverse maths (mirrored in [shaderScreenToPlane]). Both must agree everywhere.
+ * Table and tiles must share one perspective: the table shader inverts [TableCamera.planeMatrix]
+ * with its own maths (mirrored in [shaderScreenToPlane]), and both must agree everywhere.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -21,7 +20,7 @@ class TableCameraTest {
     private val w = 960f
     private val h = 1900f
 
-    /** The table shader's screen -> table mapping, transcribed from TableSurfaceRenderer's AGSL. */
+    /** Transcribed from TableSurfaceRenderer's AGSL. */
     private fun shaderScreenToPlane(px: Float, py: Float): Pair<Float, Float> {
         val tilt = Math.toRadians(TableCamera.TILT_DEGREES.toDouble()).toFloat()
         val d = TableCamera.DISTANCE
@@ -51,7 +50,7 @@ class TableCameraTest {
         val m = TableCamera.planeMatrix(w, h)
         val rnd = Random(2)
         repeat(500) {
-            // A point in the flat table layout (plane pixels), anywhere on or around the board
+            // Plane pixels, on or around the board
             val x = -0.2f * w + rnd.nextFloat() * 1.4f * w
             val y = -0.2f * h + rnd.nextFloat() * 1.4f * h
             val p = floatArrayOf(x, y)

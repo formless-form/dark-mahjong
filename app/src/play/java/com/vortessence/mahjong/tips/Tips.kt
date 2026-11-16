@@ -19,12 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Optional tips through Google Play Billing: three consumable products, so a player can tip as
- * often as they like. Google handles the payment; the game only learns that a tip went through,
- * and thanks them. Nothing in the game depends on it.
- *
- * Settings always offers them in this build; the card explains when Google Play can't price them
- * yet (offline, or Play still starting up).
+ * Optional tips via Google Play Billing: consumable products, so a player can tip repeatedly.
+ * Settings always offers them; the card explains when Play can't price them yet (offline, starting).
  */
 class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
     private val state = MutableStateFlow<List<TipOffer>>(emptyList())
@@ -35,19 +31,17 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
 
     private var details: Map<String, ProductDetails> = emptyMap()
 
-    // A payment sheet is open, so any paid tip that turns up is the player's tip and earns thanks
+    // Payment sheet open: any paid tip that turns up is the player's and earns thanks
     private var awaitingTip = false
 
-    // Purchases already being used up, so the payment result and the return to the game don't race
+    // Being consumed, so the payment result and the return to the game don't race
     private val consuming = mutableSetOf<String>()
 
-    /** The Play build always offers tips; the card says so if Google Play can't price them yet. */
     val available = true
 
     private val client: BillingClient = BillingClient.newBuilder(activity)
         .setListener { result, purchases ->
-            // Thanked the moment Google Play says the tip went through (or is on its way), without
-            // waiting for it to be used up: that step can lose a race with the return to the game
+            // Thank on Play's word (even pending), not after consuming, which can race the return to the game
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 purchases.orEmpty().forEach { purchase ->
                     if (purchase.purchaseState != Purchase.PurchaseState.UNSPECIFIED_STATE) thanks.value = true
@@ -65,16 +59,16 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
     }
 
     override fun onResume(owner: LifecycleOwner) {
-        // A tip paid while away (a pending payment that cleared) is finished off quietly
+        // A pending payment that cleared while away is finished off quietly
         if (client.isReady) finishPaid()
     }
 
     override fun onDestroy(owner: LifecycleOwner) = client.endConnection()
 
-    /** Opens Google Play's own payment sheet for [offer]. */
+    /** Opens Google Play's payment sheet. */
     fun tip(offer: TipOffer) {
         val product = details[offer.productId] ?: run {
-            // Test builds only: a sample tip just shows the thank-you, with no payment
+            // Test builds: a sample tip just shows the thank-you
             if (BuildConfig.PERF_HOOKS) thanks.value = true
             return
         }
@@ -91,7 +85,7 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
         awaitingTip = client.launchBillingFlow(activity, params).responseCode == BillingClient.BillingResponseCode.OK
     }
 
-    /** Called when the tip card opens: tries Google Play again if the prices haven't arrived. */
+    /** On tip card open: retries Google Play if prices haven't arrived. */
     fun refresh() {
         if (!client.isReady) connect() else if (details.isEmpty()) loadOffers()
     }
@@ -108,7 +102,7 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
                 finishPaid()
             }
 
-            // Tried again the next time the app comes to the front
+            // Retried when the app next comes to the front
             override fun onBillingServiceDisconnected() = Unit
         })
     }
@@ -129,40 +123,36 @@ class Tips(private val activity: ComponentActivity) : DefaultLifecycleObserver {
     }
 
     /**
-     * A tip's price. Products made in today's Play Console list their prices as purchase options and
-     * leave the older single offer empty unless one is marked backwards compatible, so the list is
-     * read first.
+     * New Play Console products list prices as purchase options and leave the old single offer empty
+     * unless marked backwards compatible, so the list is read first.
      */
     private fun offerOf(product: ProductDetails): ProductDetails.OneTimePurchaseOfferDetails? =
         product.oneTimePurchaseOfferDetailsList?.firstOrNull() ?: product.oneTimePurchaseOfferDetails
 
-    /**
-     * Test builds only (BuildConfig.PERF_HOOKS, set by tools/deploy-to-phone.sh): sample prices, so the
-     * tip card can be tried before Google Play has the products. Store builds never show these.
-     */
+    /** Test builds only (PERF_HOOKS, set by tools/deploy-to-phone.sh): sample prices before Play has the products. */
     private fun showSamples() {
         if (BuildConfig.PERF_HOOKS) state.value = TIP_PRODUCTS.zip(listOf("$0.50", "$1.00", "$2.00")) { id, price -> TipOffer(id, price) }
     }
 
-    // Any tip paid but not yet used up: consumed, so the same tip can be left again
+    // Consumes any paid tip not yet used up, so it can be left again
     private fun finishPaid() {
         client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()) { result, purchases ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryPurchasesAsync
             purchases.forEach { purchase ->
-                // Back from the payment sheet before its result arrived: still the player's tip
+                // Back from the payment sheet before its result: still the player's tip
                 if (awaitingTip && purchase.purchaseState == Purchase.PurchaseState.PURCHASED) thanks.value = true
                 consume(purchase)
             }
         }
     }
 
-    // Uses up a paid tip, so the same tip can be left again (a pending one waits until it's paid)
+    // A pending purchase waits until it's paid
     private fun consume(purchase: Purchase) {
         if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
         val token = purchase.purchaseToken
         if (!consuming.add(token)) return
         client.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(token).build()) { result, _ ->
-            // Tried again next time if it didn't go through
+            // Retried next time on failure
             if (result.responseCode != BillingClient.BillingResponseCode.OK) consuming.remove(token)
         }
     }

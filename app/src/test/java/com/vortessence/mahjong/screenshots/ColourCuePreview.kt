@@ -47,9 +47,8 @@ import java.io.FileOutputStream
 import kotlin.random.Random
 
 /**
- * Ways to bring colour back to Charcoal, so faces told apart by colour stay apart and a full board
- * reads: each as every face on one sheet, and as Quad on the green mat by the lamp and on walnut
- * by the fire. Into build/colour-cues/<variant>-<what>.png.
+ * Ways to bring colour back to Charcoal so colour-only faces stay apart: every face on a sheet, and
+ * Quad on the mat by the lamp and walnut by the fire. build/colour-cues/<variant>-<what>.png.
  * Run: ./gradlew testFossDebugUnitTest --tests '*ColourCuePreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -85,9 +84,8 @@ class ColourCuePreview {
         FileOutputStream("build/colour-cues/$name-faces.png").use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    // Eight faces large, in two rows: bamboo, circles and a character above (one, two and three
-    // colours in their bars), a wind, a dragon, a season and the one of circles below, each in a
-    // look of its own
+    // Eight large faces: above, one-, two- and three-colour bars; below, wind, dragon, season and
+    // one of circles; each its own look
     private fun bigSheet(kit: TileKit, name: String, tileW: Float = 260f, looks: List<Int> = (0..7).toList()) {
         val faces = listOf(
             Tile(TileSuit.BAMBOO, 6), Tile(TileSuit.BAMBOO, 9), Tile(TileSuit.CIRCLE, 9), Tile(TileSuit.CHARACTER, 5),
@@ -141,8 +139,8 @@ class ColourCuePreview {
             }
         }
         for (next in scenes) {
-            // Applied at once: by the lamp alone nothing moves, and a change waiting on the next
-            // frame was never seen (both boards came out as the first)
+            // Applied at once: by the lamp nothing moves, so a change waiting on the next frame was
+            // never seen (both boards came out as the first)
             Snapshot.withMutableSnapshot { scene = next }
             compose.mainClock.advanceTimeBy(1500)
             compose.onRoot().captureRoboImage("build/colour-cues/$name-${next.name}.png")
@@ -153,15 +151,15 @@ class ColourCuePreview {
     private val bright = mapOf(FaceColours.RED to Color(0xFFF0645A), FaceColours.GREEN to Color(0xFF3CC85A), FaceColours.BLUE to Color(0xFF6E8CFF))
     private val pastel = mapOf(FaceColours.RED to Color(0xFFF7B1AC), FaceColours.GREEN to Color(0xFF9DE3AC), FaceColours.BLUE to Color(0xFFB6C5FF))
     private val gold = Color(0xFFE0B860)
-    // Every picture a little smaller (the same for all), so the dots have room
+    // Pictures a little smaller, so the dots have room
     private val dots = TileKits.CHARCOAL.copy(colourDots = true, artScale = 0.8f)
-    // The colour bar along the bottom (Gareth's pick, 2026-11-13)
-    // A crisper outline for the embossed bars
+    // Bottom colour bar (Gareth's pick, 2026-11-13)
+    // Crisper outline for the embossed bars
     private val sharp = TileKits.CHARCOAL.copy(barOutline = 0.6f, barOutlineWidth = 0.08f)
     private val bar = dots.copy(dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artLift = 0.04f)
     private val cream = Color(0xFFF2E6C8)
 
-    // Ideas to make the tiles look better (2026-11-13), numbered as sent
+    // Tile-look ideas (2026-11-13)
     private val ivoryBar = TileKits.IVORY.copy(
         colourDots = true, dotPlace = DotPlace.BOTTOM_BAR, dotSize = 0.09f, artScale = 0.8f, artLift = 0.04f,
         barOutline = 0.4f, barOutlineWidth = 0.12f, barSplit = BarSplit.LINE, barGap = 0.22f,
@@ -186,7 +184,7 @@ class ColourCuePreview {
         faceTop = Color(0xFF494846), faceBottom = Color(0xFF3D3C3A), side = Color(0xFF2F2E2C), backing = Color(0xFF201F1E),
     )
 
-    // Wood sets (2026-11-13): Charcoal's white pictures and colour bar, the face in grained wood
+    // Wood sets (2026-11-13): Charcoal's white pictures and colour bar on grained wood
     private fun wood(top: Long, bottom: Long, side: Long, backing: Long, grain: Float = 1f) = TileKits.CHARCOAL.copy(
         name = "Wood", faceTop = Color(top), faceBottom = Color(bottom), side = Color(side), backing = Color(backing),
         bevelHighlight = Color(0xFFC8A880), terrazzo = 0f, woodGrain = grain, toneVariation = 0.8f, wear = 0.5f,

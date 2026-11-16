@@ -15,11 +15,9 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * Makes Imperial's ready-made picture for Settings from the Imperial images:
- * build/imperial-samples/settings-samples.png. It ships as the Imperial images'
- * settings-samples.webp, lossless (every pixel as drawn), so Settings never loads the whole
- * set. Make it again whenever the images change. Needs the images, so it runs in the Play
- * build only:
+ * Imperial's ready-made Settings picture, build/imperial-samples/settings-samples.png; ships as the
+ * images' lossless settings-samples.webp so Settings never loads the whole set. Remake whenever the
+ * images change (Play build only):
  *   ./gradlew testPlayDebugUnitTest --tests '*ImperialSettingsSamples*'
  *   tools/imperial-samples-webp.sh   (lossless WebP into the images' folder, checked pixel for pixel)
  */

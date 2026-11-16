@@ -11,12 +11,9 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * The look of well-used tiles: a few face-wear textures (handled grime gathered towards the edges
- * and corners, fine hairline scratches that catch the light, the odd tiny ding, a faint haze of
- * fingerprints), plus per-tile ivory ageing. Everything is chosen from the tile's id, so each
- * tile always looks the same and no two neighbours match.
- *
- * The textures are generated once on a background thread; tiles draw clean until they are ready.
+ * Well-used tiles: a few wear textures (edge grime, hairline scratches, dings, fingerprint haze)
+ * and ivory ageing, chosen by tile id so each tile is stable and neighbours differ. Generated once
+ * on a background thread; tiles draw clean until then.
  */
 object TileWear {
     const val VARIANTS = 8
@@ -41,7 +38,7 @@ object TileWear {
         }.start()
     }
 
-    /** Generates the textures on the calling thread (tests and previews). */
+    /** On the calling thread (tests and previews). */
     @Synchronized
     fun prepareNow() {
         if (overlays == null) build()
@@ -54,22 +51,16 @@ object TileWear {
         overlays = Array(VARIANTS) { made[it].first }
     }
 
-    /** The textures are made. */
     val ready: Boolean get() = overlays != null
 
-    /**
-     * Which of the [LOOKS] looks a tile has: a texture (look % VARIANTS) and its orientation
-     * (look / VARIANTS). Everything about a tile's worn face follows from it, so tiles can be drawn
-     * from a few shared images.
-     */
+    /** Texture (look % VARIANTS) and orientation (look / VARIANTS): all of a worn face follows from it. */
     fun look(id: Int): Int = mix(id) % LOOKS
 
     fun overlay(look: Int): ImageBitmap? = overlays?.get(look % VARIANTS)
 
     /**
-     * The glaze's specular streaks for this tile: the lamp's reflection broken up by the same
-     * ripples and scratches as its wear. Always drawn upright (the reflection belongs to the
-     * lamp, not to the tile), mirrored left-right when the wear is.
+     * The lamp's reflection, broken by the wear's ripples and scratches. Always upright (it belongs
+     * to the lamp), mirrored when the wear is.
      */
     fun sheen(look: Int): ImageBitmap? = sheens?.get(look % VARIANTS)
 
@@ -77,14 +68,13 @@ object TileWear {
     fun orientation(look: Int): Int = look / VARIANTS
 
     /**
-     * How yellowed the ivory is, as the alpha of a warm tint (0 = crisp, ~0.13 = aged). The same for
-     * every tile: a set ages together, and tiles of differing tone side by side read as a
-     * difference in light or height.
+     * Warm tint alpha (0 crisp, ~0.13 aged). The same for every tile: a set ages together, and
+     * differing tones side by side read as light or height differences.
      */
     @Suppress("UNUSED_PARAMETER")
     fun ageing(id: Int): Float = 0.065f
 
-    /** How much the glaze's surface wobbles (0..1), which bends the lamp's reflection in it. */
+    /** Glaze unevenness (0..1), bending the lamp's reflection. */
     fun wobble(look: Int): Float = (mix(look * 53 + 11) % 1000) / 1000f
 
     private fun mix(id: Int): Int {
@@ -133,7 +123,7 @@ object TileWear {
         val w = WIDTH
         val h = HEIGHT
 
-        // Hairline scratches: straight-ish, any direction, mostly faint, a few longer and brighter
+        // Hairline scratches: straight-ish, mostly faint, a few longer and brighter
         val n = 10 + rnd.nextInt(16)
         val sx0 = FloatArray(n); val sy0 = FloatArray(n); val sx1 = FloatArray(n); val sy1 = FloatArray(n)
         val sa = FloatArray(n); val sw = FloatArray(n)
@@ -148,7 +138,7 @@ object TileWear {
             sa[i] = 0.12f + 0.3f * rnd.nextFloat() * rnd.nextFloat()
             sw[i] = 0.55f + 0.6f * rnd.nextFloat()
         }
-        // Tiny dings, mostly near the edges where tiles knock together
+        // Dings, mostly near the edges where tiles knock
         val m = 2 + rnd.nextInt(4)
         val dxs = FloatArray(m); val dys = FloatArray(m); val drs = FloatArray(m); val das = FloatArray(m)
         for (i in 0 until m) {
@@ -173,19 +163,19 @@ object TileWear {
             for (x in 0 until w) {
                 val fx = x + 0.5f
                 val fy = y + 0.5f
-                // Rounded-rectangle mask matching the tile face
+                // Face-shaped rounded mask
                 val qx = max(0f, max(corner - fx, fx - (w - corner)))
                 val qy = max(0f, max(corner - fy, fy - (h - corner)))
                 val mask = (corner + 0.5f - sqrt(qx * qx + qy * qy)).coerceIn(0f, 1f)
                 if (mask <= 0f) continue
 
-                // Handled grime: a little everywhere, and patches of it worked into the edges
+                // Grime: a little everywhere, patches worked into the edges
                 val e = min(min(fx, w - fx), min(fy, h - fy))
                 val g = fbm(fx / w * 5f + off, fy / h * 6.5f)
                 var a = (0.025f + 0.09f * g * g + 0.16f * exp(-e / 5f) * smoothstep(0.42f, 0.72f, g)).coerceAtMost(0.3f)
                 var r = 88f; var gg = 66f; var b = 36f
 
-                // Uneven glaze: broad, faint ripples where it pooled thicker or ran thinner
+                // Uneven glaze: broad faint ripples
                 val ripple = fbm(fx / w * 2.2f + 31f + off, fy / h * 1.6f + variant * 1.3f)
                 val thin = smoothstep(0.38f, 0.22f, ripple) * 0.05f
                 if (thin > 0f) {
@@ -204,7 +194,7 @@ object TileWear {
                     a = na
                 }
 
-                // Faint fingerprint haze that dulls the glaze in patches
+                // Fingerprint haze, in patches
                 val haze = smoothstep(0.6f, 0.78f, fbm(fx / w * 3f + 11f + off, fy / h * 3f + variant)) * 0.06f
                 if (haze > 0f) {
                     val na = haze + a * (1f - haze)
@@ -214,7 +204,7 @@ object TileWear {
                     a = na
                 }
 
-                // Scratches catch the light: thin bright lines
+                // Scratches: thin bright lines
                 var s = 0f
                 for (i in 0 until n) {
                     val d = segmentDistance(fx, fy, sx0[i], sy0[i], sx1[i], sy1[i])
@@ -231,7 +221,7 @@ object TileWear {
                     a = na
                 }
 
-                // Dings: small dark chips
+                // Dings: dark chips
                 var dk = 0f
                 for (i in 0 until m) {
                     val ddx = fx - dxs[i]
@@ -247,8 +237,7 @@ object TileWear {
                     a = na
                 }
 
-                // Specular streaks: the lamp's reflection, in a curved zone across the upper face,
-                // broken into horizontal streaks by ripples in the glaze; scratches flare in it
+                // Lamp reflection across the upper face, streaked by glaze ripples; scratches flare
                 val u = fx / w
                 val v = fy / h
                 val zoneCentre = 0.2f + 0.08f * (u - 0.5f) * (u - 0.5f) * 4f
@@ -256,7 +245,7 @@ object TileWear {
                 val streak = smoothstep(0.48f, 0.78f, fbm(u * 2.6f + off * 0.7f, v * 19f + variant * 2.3f))
                 val rippleLight = 0.6f + 0.8f * smoothstep(0.35f, 0.75f, ripple)
                 var spec = zone * (0.12f + 0.5f * streak) * rippleLight + zone * s * 1.8f
-                // The whole face carries a faint lower sheen too, so streaks never end abruptly
+                // Faint sheen lower down, so streaks never end abruptly
                 spec += 0.05f * smoothstep(0.55f, 0.85f, fbm(u * 3f + 51f, v * 14f + off)) * (1f - v)
                 val specAlpha = (spec.coerceIn(0f, 0.6f) * mask * 255f).toInt()
                 sx[y * w + x] = (specAlpha shl 24) or 0xFFFBF2
@@ -276,9 +265,8 @@ object TileWear {
     }
 
     /**
-     * Every variant dulls a face by the same amount on average, so all tiles look equally used:
-     * the darkening parts (grime, dings, thin glaze) are scaled to [GRIME], the bright ones
-     * (scratches, haze) left as they are.
+     * Scales darkening wear (grime, dings, thin glaze) to [GRIME], leaving scratches and haze, so
+     * every variant looks equally used.
      */
     private fun evenOut(px: IntArray) {
         var dark = 0.0
@@ -300,8 +288,7 @@ object TileWear {
     private fun luminance(p: Int): Double =
         (0.299 * ((p shr 16) and 255) + 0.587 * ((p shr 8) and 255) + 0.114 * (p and 255)) / 255.0
 
-    // The face's ivory, roughly, and how much each variant's wear dulls it on average (the mean
-    // of the eight as first made)
+    // Rough face ivory, and mean dulling per variant (the eight's mean as first made)
     private const val FACE = 0.8
     private const val GRIME = -0.026
 

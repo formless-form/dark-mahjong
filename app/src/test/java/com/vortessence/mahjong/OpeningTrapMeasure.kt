@@ -9,16 +9,16 @@ import org.junit.Test
 import kotlin.random.Random
 
 /**
- * How often deals open with a match that leaves the board unclearable (TRAP_IDS=id,id with
- * TRAP_DEALS deals each), and how long every layout takes to deal (TRAP_ALL=1). Slow, so only
- * when asked. Quad: 10 of 40 deals had one before openings were checked (2026-11-13), none after.
+ * How often an opening match leaves the board unclearable (TRAP_IDS=id,id, TRAP_DEALS each), and
+ * each layout's deal time (TRAP_ALL=1). Slow: only when asked. Quad: 10 of 40 deals trapped before
+ * openings were checked (2026-11-13), none after.
  */
 class OpeningTrapMeasure {
     @Test
     fun dealTimes() {
         assumeTrue(System.getenv("TRAP_ALL") != null)
         var worst = 0.0
-        // Warm the JIT first, so the times are the dealing's own
+        // Warm the JIT first
         repeat(3) { BoardSolvabilityGenerator.deal(ConstellationRepository.getById("mah_773823936")!!, Random(it.toLong())) }
         for (layout in ConstellationRepository.constellations.filter { it.fixedTiles == null }) {
             val t0 = System.nanoTime()

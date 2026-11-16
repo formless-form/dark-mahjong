@@ -19,14 +19,13 @@ class BackgroundMusicPlayer(private val context: Context) {
     private var mediaPlayer: MediaPlayer? = null
     private var currentIndex = -1
     private var currentVolume = 0.4f
-    // Temporary lowering under other sounds (the win phrase); 1 means none
+    // Lowered under the win sound; 1 means none
     private var duckFactor = 1f
     private var isStarted = false
     private var isPaused = false
     private val lock = Any()
 
-    // The music's volume setting runs up to this much of the tracks' own level: they are mastered
-    // loud, and at full level they drowned out the game
+    // Tracks are mastered loud; at full level they drowned out the game
     private val maxLevel = 0.44f
 
     private fun level() = currentVolume * maxLevel * duckFactor
@@ -37,19 +36,19 @@ class BackgroundMusicPlayer(private val context: Context) {
             try {
                 mediaPlayer?.setVolume(level(), level())
             } catch (_: Exception) {
-                // Ignore if media player is not in a valid state
+                // Player not in a valid state
             }
         }
     }
 
-    /** Plays the music at [factor] of its volume (1 restores it), e.g. under the win phrase. */
+    /** Plays at [factor] of its volume; 1 restores it. */
     fun duck(factor: Float) {
         synchronized(lock) {
             duckFactor = factor.coerceIn(0f, 1f)
             try {
                 mediaPlayer?.setVolume(level(), level())
             } catch (_: Exception) {
-                // Ignore if media player is not in a valid state
+                // Player not in a valid state
             }
         }
     }
@@ -95,7 +94,6 @@ class BackgroundMusicPlayer(private val context: Context) {
             player.start()
             mediaPlayer = player
         } catch (_: Exception) {
-            // Ignore playback interruption
         }
     }
 
@@ -107,7 +105,6 @@ class BackgroundMusicPlayer(private val context: Context) {
                     mediaPlayer?.pause()
                 }
             } catch (_: Exception) {
-                // Ignore
             }
         }
     }
@@ -154,7 +151,6 @@ class BackgroundMusicPlayer(private val context: Context) {
                 release()
             }
         } catch (_: Exception) {
-            // Ignore
         }
         mediaPlayer = null
     }

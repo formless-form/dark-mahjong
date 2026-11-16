@@ -7,12 +7,9 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Painter's Algorithm order for tiles:
- * 1. Layer Z ascending (bottom layer first, apex layer last)
- * 2. X + Y ascending: a tile's depth edge extends right and down, so any tile overlapping it from
- *    the east or south must be drawn later. Tiles are 2x2 grid units, so such a neighbor always has
- *    a strictly larger X + Y, even on half-offset rows/columns where plain X-then-Y ordering fails.
- * 3. X ascending as a tie-breaker for diagonal neighbors that only touch at a corner
+ * Painter's order: Z; then X + Y, as depth edges extend right and down and tiles are 2x2 units, so
+ * an east/south overlapper always has a larger X + Y, even on half-offset rows where X-then-Y
+ * fails; then X, for diagonals touching only at a corner.
  */
 internal val TileDrawOrder: Comparator<BoardTile> =
     compareBy<BoardTile> { it.z }
@@ -20,24 +17,20 @@ internal val TileDrawOrder: Comparator<BoardTile> =
         .thenBy { it.x }
 
 /**
- * Which tiles the player can see. A tile entirely covered by tiles drawn after it is never drawn,
- * nor are its shadows (the tiles over it cast their own). Worked out in the layout's own grid
- * units (BoardTransform.unitX = 1), so it holds at any board size and zoom, and only when tiles
- * are removed or put back.
- *
- * Covering tiles count only where they are surely solid: their rounded corners, and the fraction
- * off square each tile sits at, are allowed for, so a sliver of a tile beneath never goes missing.
+ * Skips tiles wholly covered by later-drawn ones, and their shadows (the covers cast their own).
+ * In grid units (BoardTransform.unitX = 1), so it holds at any size and zoom; rerun only when tiles
+ * are removed or restored. Covers count only where surely solid (rounded corners and off-square
+ * offsets allowed for), so no sliver beneath goes missing.
  */
 internal object TileCulling {
     // Raster cells per grid unit (a tile is 2 units wide)
     private const val CELLS = 16
 
-    // A margin for safety: tiles are drawn a hair inside their places (the gap between neighbours,
-    // about 0.01 units). The covering tiles are taken this much smaller, the one beneath this much
-    // larger, so a sliver of a lower tile showing through a gap is never left out.
+    // Tiles sit ~0.01 units inside their places: covers shrink by this and the tile beneath grows,
+    // so a sliver showing through a gap is never lost
     private const val MARGIN = 0.025f
 
-    /** The standing tiles that are at least partly visible, in draw order. */
+    /** Standing tiles at least partly visible, in draw order. */
     fun visibleInDrawOrder(tiles: List<BoardTile>): List<BoardTile> {
         val standing = tiles.filter { !it.isRemoved }.sortedWith(TileDrawOrder)
         if (standing.size < 2) return standing
@@ -50,7 +43,7 @@ internal object TileCulling {
         fun left(t: BoardTile) = t.x - t.z * shiftX
         fun top(t: BoardTile) = t.y * BoardTransform.ASPECT_RATIO - t.z * shiftY
 
-        // The raster spans every tile, face and walls, with a cell to spare all round
+        // Spans every tile, face and walls, plus a cell all round
         var minX = Float.MAX_VALUE
         var minY = Float.MAX_VALUE
         var maxX = -Float.MAX_VALUE
@@ -63,13 +56,12 @@ internal object TileCulling {
         val cols = ceil((maxX + 1f - minX) * CELLS).toInt()
         val rows = ceil((maxY + 1f - minY) * CELLS).toInt()
 
-        // The last tile (in draw order) surely solid over each cell's centre
+        // Last tile in draw order surely solid over each cell centre
         val top = IntArray(cols * rows) { -1 }
         val inset = MARGIN
         val r = max(corner - inset, 0f)
         standing.forEachIndexed { i, t ->
-            // The body is the face swept back to its full depth: three steps along the sweep,
-            // each inset, cover it solidly
+            // The body is the face swept back; three inset steps along the sweep cover it solidly
             for (k in 0..2) {
                 val x0 = left(t) + shiftX * k / 2f + inset
                 val y0 = top(t) + shiftY * k / 2f + inset
@@ -81,8 +73,7 @@ internal object TileCulling {
             }
         }
 
-        // A tile is seen if any cell of its outline (allowing for its own slight offset) has
-        // nothing drawn after it surely covering that cell
+        // Seen if any cell of its (grown) outline has no later tile surely covering it
         val visible = ArrayList<BoardTile>(standing.size)
         val grow = MARGIN
         standing.forEachIndexed { i, t ->

@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """
-Builds Dark Mahjong's match sound: two tiles clacking together, with a soft burst of stardust
-(a scatter of tiny pentatonic chimes over a fine glitter fizz) underneath.
+Builds the match sound: two tiles clacking over a soft burst of stardust (tiny pentatonic chimes
+over a glitter fizz).
 
-Writes app/src/main/res/raw/tile_match_1.ogg to tile_match_4.ogg. Each take is at a slightly
-different pitch (the clack and its chimes together) with its own scatter of sparkles, so
-repeated matches never sound the same. The clack is the Imperial set's stone clack
-(sounds/stone_clack.wav, one hit already cut and levelled) sped up 2x into a bright tile tick: the
-old wooden clack (sounds/tile_clack-original.wav) sped up 1.4x got lost in the stardust on a
-phone's speaker (2026-11-14). Everything is CC0.
+Writes app/src/main/res/raw/tile_match_1.ogg to tile_match_4.ogg, each at a slightly different pitch
+with its own sparkles, so repeats differ. The clack is Imperial's stone clack (sounds/stone_clack.wav,
+cut and levelled) sped up 2x into a bright tick: the old wooden clack (sounds/tile_clack-original.wav)
+at 1.4x got lost in the stardust on a phone's speaker (2026-11-14). All CC0.
 
-The Imperial set's match (--stone) is the same clack at its own speed, not sped up (sped up, stone
-loses its weight), at the same pitches and over the same stardust. It writes stone_match_1.ogg to
-stone_match_4.ogg.
+--stone (Imperial's match): the clack at its own speed (sped up, stone loses its weight), same
+pitches and stardust; writes stone_match_1.ogg to stone_match_4.ogg.
 
 Needs Python 3 with numpy, and ffmpeg (with libvorbis). Run from the repo root:
     python3 tools/make-match-sounds.py [--stone] [--source WAV] [--speed X] [--out DIR]
@@ -30,7 +27,7 @@ SOURCE = os.path.join(ROOT, "sounds/stone_clack.wav")
 OUT = os.path.join(ROOT, "app/src/main/res/raw")
 SR = 44100
 
-# The clack: the stone clack (already mono, cut and levelled), sped up 2x (an octave up)
+# Sped up 2x: an octave up
 CLACK_CHAIN = "pan=mono|c0=c0,afade=t=in:d=0.001"
 SPEED = 2.0
 PITCHES = [0.955, 0.985, 1.015, 1.045]
@@ -39,7 +36,7 @@ PITCHES = [0.955, 0.985, 1.015, 1.045]
 PENTATONIC = [392.0, 440.0, 493.88, 587.33, 659.25]
 NOTES = [f * m for m in (8, 16) for f in PENTATONIC]
 STARDUST_LEVEL = 0.42   # stardust peak, relative to the clack's peak
-CLACK_LEVEL = 0.9       # the clack itself, turned down 10% after the stardust is set from it (2026-11-14)
+CLACK_LEVEL = 0.9       # down 10%, after the stardust is set from it (2026-11-14)
 STONE_CLACK_LEVEL = 0.81  # Imperial's, down another 10%
 LENGTH = 0.75           # seconds, with a short fade at the end
 

@@ -2,24 +2,17 @@
 """
 Imports layouts from Mah by ffalt (https://github.com/ffalt/mah, MIT licence) into Dark Mahjong.
 
-Reads ffalt/mah's src/assets/data/boards.json (downloaded at the pinned commit, or a local copy
-given as an argument) and writes app/src/main/java/.../data/repository/MahLayouts.kt, keeping
-each board in Mah's own compact map format. Their descriptions in Layouts are written by hand in
-MahDescriptions.kt, which this leaves alone: a newly kept board needs a line there.
+Reads Mah's src/assets/data/boards.json (at the pinned commit, or a local copy given as an
+argument) and writes .../data/repository/MahLayouts.kt in Mah's compact map format. Descriptions
+are hand-written in MahDescriptions.kt (left alone): a newly kept board needs a line there.
 
-Which boards are kept: those whose tiles are at least MIN_TILE_DP wide when the whole board is
-fitted to a Pixel 9 Pro's board area, so none needs constant zooming and panning (the app's
-own level tiles are about 47 dp), and whose upper tiles rest fully on the layer below. Mah
-draws flat, so some of its boards let tiles overhang thin air; Dark Mahjong lights its tiles as
-solid objects, and its tests require full support. None of the kept boards duplicates a Dark
-Mahjong layout:
-checked by tile arrangement when this was first run (2026-10-26); the closest share an outline
-but stack their tiles quite differently.
+Kept: boards whose tiles are at least MIN_TILE_DP wide fitted to a Pixel 9 Pro's board area (the
+app's own level tiles are about 47 dp), and whose upper tiles rest fully on the layer below (Mah
+draws flat; Dark Mahjong lights tiles as solids and its tests require support). None duplicated a
+Dark Mahjong layout by tile arrangement when checked (2026-10-26).
 
-Difficulty, provisional until a proper difficulty measure exists: the share of tiles free at
-the start (every board here is a full 144 tiles, so the count says nothing). The app now labels
-and orders layouts by their measured clear rate (LayoutDifficulty.kt); this label is only used
-for a layout not yet measured.
+Difficulty is provisional: the share of tiles free at the start (all boards are 144 tiles). The app
+orders by measured clear rate (LayoutDifficulty.kt), using this only for an unmeasured layout.
 
 Run from the repo root:
     python3 tools/import-mah-layouts.py [boards.json]
@@ -43,15 +36,13 @@ TILT_DEGREES, CAMERA_DISTANCE = 20.0, 2.2
 LAYER_SHIFT_X, LAYER_SHIFT_Y, TILE_ASPECT = 0.03, 0.13, 1.333
 BOARD_W, BOARD_H, PADDING = 427.0, 792.0, 16.0
 
-# On its side (the board area of a Pixel 9 Pro held sideways, beside the game's side rail): a board
-# too small upright is kept if its tiles reach MIN_SIDE_TILE_DP there, and the game plays it on its
-# side (WideBoard.kt). Added in 1.4.16, when the game had learned to play wide boards
+# A Pixel 9 Pro held sideways, beside the side rail: a board too small upright is kept if its tiles
+# reach MIN_SIDE_TILE_DP there, and played on its side (WideBoard.kt, 1.4.16)
 SIDE_W, SIDE_H = 830.0, 410.0
 MIN_SIDE_TILE_DP = 27.5
 
-# Spelling fixes to Mah's board names, and names for the boards kept since 1.4.16: Dark Mahjong's
-# own, so none clashes with or reads like another layout's (Mah's "Pikachu" is a trademark), and the
-# Chinese zodiac's animals named as such (chosen with Gareth, 2026-11-13)
+# Spelling fixes, and Dark Mahjong's own names for boards kept since 1.4.16 so none clashes with
+# another layout (Mah's "Pikachu" is a trademark); zodiac animals named as such (Gareth, 2026-11-13)
 RENAMES = {
     "Teotihucan": "Teotihuacan", "Potted": "Potted Plant",
     "Checkers": "Go Board", "Leaf": "Willow Leaf", "Bridge": "Lattice Gate", "Arena": "Courtyard",

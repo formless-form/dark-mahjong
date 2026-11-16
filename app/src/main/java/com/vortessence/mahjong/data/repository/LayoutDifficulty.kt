@@ -3,90 +3,88 @@ package com.vortessence.mahjong.data.repository
 import com.vortessence.mahjong.data.model.Difficulty
 
 /**
- * How hard each layout really is: the share of its deals cleared without hints, undo or
- * reshuffles, averaged over a player taking any free pair at random and one taking the highest
- * pair first, 1,000 deals each (LevelDifficultyMeasure, 2026-10-30; the wide and themed layouts
- * 2026-10-31, ten more themed 2026-11-11; Mah's boards that play on their side 2026-11-13). Levels and the Layouts list run from the highest to
- * the lowest, and the difficulty labels come from it. A new layout needs measuring: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
+ * Each layout's clear rate without help, averaged over a random-pair player and a highest-pair-first
+ * player, 1,000 deals each (LevelDifficultyMeasure). Levels and Layouts run highest first, and the
+ * labels come from it. Measure a new layout: MEASURE_LEVELS=1000 ./gradlew testFossDebugUnitTest --tests '*LevelDifficultyMeasure'
  */
 internal object LayoutDifficulty {
 
     val clearRate: Map<String, Float> = mapOf(
-        "jade_pillar" to 0.9940f, // Jade Pillar
-        "bamboo_spire" to 0.9875f, // Bamboo Spire
-        "mini_turtle" to 0.9825f, // Mini Turtle
-        "dragon_saber" to 0.9820f, // Dragon Saber
-        "celestial_lantern" to 0.9515f, // Celestial Lantern
-        "torii_arch" to 0.9440f, // Torii Arch
-        "paper_lantern" to 0.9405f, // Paper Lantern
-        "temple_bell" to 0.9395f, // Temple Bell
+        "jade_pillar" to 0.9940f,
+        "bamboo_spire" to 0.9875f,
+        "mini_turtle" to 0.9825f,
+        "dragon_saber" to 0.9820f,
+        "celestial_lantern" to 0.9515f,
+        "torii_arch" to 0.9440f,
+        "paper_lantern" to 0.9405f,
+        "temple_bell" to 0.9395f,
         "cross" to 0.9370f, // Four Winds Cross
         "diamond" to 0.9285f, // Imperial Diamond
-        "celadon_hourglass" to 0.9275f, // Celadon Hourglass
+        "celadon_hourglass" to 0.9275f,
         "pyramid" to 0.9100f, // Terraced Pyramid
-        "stone_bridge" to 0.8815f, // Stone Bridge
-        "cascading_falls" to 0.8595f, // Cascading Falls
-        "phoenix_tower" to 0.8410f, // Phoenix Tower
+        "stone_bridge" to 0.8815f,
+        "cascading_falls" to 0.8595f,
+        "phoenix_tower" to 0.8410f,
         "heart" to 0.8120f, // Jade Heart
-        "imperial_monolith" to 0.8085f, // Imperial Monolith
-        "teapot" to 0.7985f, // Teapot
-        "ruyi_scepter" to 0.7900f, // Ruyi Scepter
-        "rice_bowl" to 0.7870f, // Rice Bowl
-        "pillar_of_heaven" to 0.7785f, // Pillar of Heaven
-        "twin_peaks" to 0.7780f, // Twin Peaks
-        "maple_leaf" to 0.7730f, // Maple Leaf
-        "bonsai_tree" to 0.7355f, // Bonsai Tree
-        "folding_fan" to 0.7320f, // Folding Fan
-        "stone_arch" to 0.7270f, // Stone Arch
+        "imperial_monolith" to 0.8085f,
+        "teapot" to 0.7985f,
+        "ruyi_scepter" to 0.7900f,
+        "rice_bowl" to 0.7870f,
+        "pillar_of_heaven" to 0.7785f,
+        "twin_peaks" to 0.7780f,
+        "maple_leaf" to 0.7730f,
+        "bonsai_tree" to 0.7355f,
+        "folding_fan" to 0.7320f,
+        "stone_arch" to 0.7270f,
         "crab" to 0.7145f, // Golden Crab
-        "red_fox" to 0.6810f, // Red Fox
+        "red_fox" to 0.6810f,
         "butterfly" to 0.6725f, // Emerald Butterfly
-        "crane_in_flight" to 0.6475f, // Crane in Flight
-        "paper_kite" to 0.6460f, // Paper Kite
+        "crane_in_flight" to 0.6475f,
+        "paper_kite" to 0.6460f,
         "mah_828570775" to 0.6415f, // Fence
         "pagoda_spire" to 0.6145f, // Grand Pagoda Spire
-        "tortoise" to 0.6125f, // Tortoise
-        "twin_pyramids" to 0.5885f, // Twin Pyramids
+        "tortoise" to 0.6125f,
+        "twin_pyramids" to 0.5885f,
         "fortress" to 0.5745f, // Iron Fortress
         "mah_1088330854" to 0.5655f, // Steps
-        "junk_ship" to 0.5590f, // Junk Ship
-        "mountain_pass" to 0.5565f, // Mountain Pass
-        "three_tier_pagoda" to 0.5535f, // Three-Tier Pagoda
-        "great_wall" to 0.5415f, // Great Wall
+        "junk_ship" to 0.5590f,
+        "mountain_pass" to 0.5565f,
+        "three_tier_pagoda" to 0.5535f,
+        "great_wall" to 0.5415f,
         "mah_3101065593" to 0.5380f, // White Dragon
         "mah_2232624362" to 0.5195f, // Flower
-        "standing_owl" to 0.4765f, // Standing Owl
-        "city_skyline" to 0.4705f, // City Skyline
+        "standing_owl" to 0.4765f,
+        "city_skyline" to 0.4705f,
         "mah_3316304069" to 0.4580f, // Green Dragon
-        "sleeping_cat" to 0.4355f, // Sleeping Cat
-        "comet" to 0.4335f, // Comet
+        "sleeping_cat" to 0.4355f,
+        "comet" to 0.4335f,
         "mah_2036373485" to 0.4210f, // Abstract Garden
         "mah_2005925237" to 0.4150f, // Block
-        "hot_air_balloon" to 0.4090f, // Hot-Air Balloon
-        "feast_table" to 0.4055f, // Feast Table
-        "koi_carp" to 0.3785f, // Koi Carp
+        "hot_air_balloon" to 0.4090f,
+        "feast_table" to 0.4055f,
+        "koi_carp" to 0.3785f,
         "mah_979337589" to 0.3775f, // Tree
-        "steam_train" to 0.3765f, // Steam Train
-        "dragon_boat" to 0.3730f, // Dragon Boat
-        "moon_bridge" to 0.3675f, // Moon Bridge
+        "steam_train" to 0.3765f,
+        "dragon_boat" to 0.3730f,
+        "moon_bridge" to 0.3675f,
         "mah_554306016" to 0.3640f, // Cactus
         "castle" to 0.3620f, // Dragon Castle
         "mah_2283982827" to 0.3575f, // Heart
-        "ziggurat" to 0.3575f, // Ziggurat
+        "ziggurat" to 0.3575f,
         "mah_2788427354" to 0.3420f, // Pyramid
         "mah_1048565772" to 0.3295f, // Invader
-        "treasure_chest" to 0.3230f, // Treasure Chest
+        "treasure_chest" to 0.3230f,
         "mah_179167734" to 0.3150f, // Elephant
         "mah_130253071" to 0.3070f, // Fortress
         "mah_773823936" to 0.3055f, // Quad
-        "blue_whale" to 0.2980f, // Blue Whale
+        "blue_whale" to 0.2980f,
         "mah_1593808196" to 0.2890f, // Blossom
         "mah_2756835802" to 0.2885f, // Stairs
-        "lotus_pond" to 0.2860f, // Lotus Pond
+        "lotus_pond" to 0.2860f,
         "mah_2926596175" to 0.2840f, // Platypus
         "mah_450647981" to 0.2830f, // Potted Plant
         "mah_3906642412" to 0.2825f, // Diamond
-        "classic_turtle" to 0.2765f, // Classic Turtle
+        "classic_turtle" to 0.2765f,
         "mah_2881142435" to 0.2755f, // Circle
         "mah_738084013" to 0.2735f, // Pawn
         "mah_1870648008" to 0.2705f, // Mushroom
@@ -98,7 +96,7 @@ internal object LayoutDifficulty {
         "mah_2838350141" to 0.1930f, // Apple
         "mah_702162641" to 0.1930f, // Red Dragon
         "pagoda" to 0.1395f, // Nine Dragon Pagoda
-        // Mah's boards played on their side (1.4.16), 2026-11-13
+        // Mah's on-side boards (1.4.16)
         "mah_4277830847" to 0.7767f, // Lattice Gate
         "mah_1830783848" to 0.7384f, // Dragonfly
         "mah_1492921254" to 0.6667f, // Ceremony Hall
@@ -146,22 +144,22 @@ internal object LayoutDifficulty {
         "mah_3707661927" to 0.1817f, // Willow Leaf
         "mah_1647425443" to 0.1784f, // Go Board
         "mah_2206664028" to 0.1600f, // Picture Frame
-        // Made for the Journey, taking it to 100 levels (2026-11-14)
-        "paper_boat" to 0.9450f, // Paper Boat
-        "ancient_coin" to 0.8365f, // Ancient Coin
-        "paper_umbrella" to 0.7885f, // Paper Umbrella
-        "winter_plum" to 0.7570f, // Winter Plum
-        "giant_panda" to 0.7515f, // Giant Panda
-        "snow_peak" to 0.6510f, // Snow Peak
-        "tea_pavilion" to 0.5515f, // Tea Pavilion
-        "sampan" to 0.5440f, // Sampan
-        "longevity_peach" to 0.5115f, // Longevity Peach
-        "autumn_bloom" to 0.4140f, // Autumn Bloom
-        "festival_drum" to 0.3815f, // Festival Drum
-        "frontier_wall" to 0.1865f, // Frontier Wall
+        // Made for the Journey (2026-11-14)
+        "paper_boat" to 0.9450f,
+        "ancient_coin" to 0.8365f,
+        "paper_umbrella" to 0.7885f,
+        "winter_plum" to 0.7570f,
+        "giant_panda" to 0.7515f,
+        "snow_peak" to 0.6510f,
+        "tea_pavilion" to 0.5515f,
+        "sampan" to 0.5440f,
+        "longevity_peach" to 0.5115f,
+        "autumn_bloom" to 0.4140f,
+        "festival_drum" to 0.3815f,
+        "frontier_wall" to 0.1865f,
     )
 
-    /** The label for a clear rate: Easy from 90%, Medium from 60%, Hard from 35%, Expert below. */
+    /** Easy from 90%, Medium from 60%, Hard from 35%, Expert below. */
     fun label(rate: Float): Difficulty = when {
         rate >= 0.90f -> Difficulty.EASY
         rate >= 0.60f -> Difficulty.MEDIUM
@@ -170,23 +168,17 @@ internal object LayoutDifficulty {
     }
 
     /**
-     * The highest unlocked level after the reorder, for a player whose highest was [highest] in the
-     * old numbering: every layout they could play stays playable, so it becomes the furthest any of
-     * those layouts moved to (which may also open some levels between). Past the last level means
-     * all were cleared, and stays so.
+     * [highest] in the old numbering -> the furthest any layout they could play moved to (maybe opening
+     * levels between). Past the last level (all cleared) stays so.
      */
     fun highestAfterReorder(highest: Int, newLevelOf: (String) -> Int?, before: List<String> = levelsBeforeMeasuredOrder): Int {
-        // All cleared: the level after the furthest any of them moved to
+        // All cleared: one past the furthest any moved to
         if (highest > before.size) return before.mapNotNull(newLevelOf).maxOrNull()?.plus(1)?.coerceAtLeast(highest) ?: highest
         val reached = before.take(highest).mapNotNull(newLevelOf).maxOrNull() ?: return highest
         return maxOf(highest, reached)
     }
 
-    /**
-     * The levels as they were numbered in 1.4.16 (88: the phone-shaped layouts and the ones from Mah),
-     * before the twelve made for the Journey joined them, so a player's unlocked levels are carried
-     * over once more.
-     */
+    /** 1.4.16's numbering (88 levels), before the Journey's twelve, to carry unlocks over. */
     val levelsBeforeJourney100: List<String> = listOf(
         "jade_pillar",
         "bamboo_spire",
@@ -278,11 +270,7 @@ internal object LayoutDifficulty {
         "mah_2206664028",
     )
 
-    /**
-     * The levels as they were numbered in 1.4.15 and earlier (after the measured reorder), before
-     * the 47 boards from Mah that play on their side joined them in 1.4.16, so a player's unlocked
-     * levels are carried over once more.
-     */
+    /** 1.4.15's numbering, before 1.4.16's 47 on-side Mah boards, to carry unlocks over. */
     val levelsBeforeWideMah: List<String> = listOf(
         "jade_pillar",
         "bamboo_spire",
@@ -327,19 +315,16 @@ internal object LayoutDifficulty {
         "mah_702162641",
     )
 
-    /**
-     * The levels as they were numbered before they were ordered by clear rate (1.3.6 and earlier),
-     * so a player's unlocked levels can be carried over once.
-     */
+    /** Numbering before the clear-rate order (1.3.6 and earlier), to carry unlocks over. */
     val levelsBeforeMeasuredOrder: List<String> = listOf(
-        "jade_pillar", // Jade Pillar
-        "bamboo_spire", // Bamboo Spire
-        "dragon_saber", // Dragon Saber
-        "celestial_lantern", // Celestial Lantern
-        "torii_arch", // Torii Arch
-        "celadon_hourglass", // Celadon Hourglass
-        "cascading_falls", // Cascading Falls
-        "phoenix_tower", // Phoenix Tower
+        "jade_pillar",
+        "bamboo_spire",
+        "dragon_saber",
+        "celestial_lantern",
+        "torii_arch",
+        "celadon_hourglass",
+        "cascading_falls",
+        "phoenix_tower",
         "mah_2283982827", // Heart
         "mah_828570775", // Fence
         "mah_1870648008", // Mushroom
@@ -347,9 +332,9 @@ internal object LayoutDifficulty {
         "mah_1843357205", // Clover
         "mah_2232624362", // Flower
         "mah_979337589", // Tree
-        "imperial_monolith", // Imperial Monolith
-        "ruyi_scepter", // Ruyi Scepter
-        "pillar_of_heaven", // Pillar of Heaven
+        "imperial_monolith",
+        "ruyi_scepter",
+        "pillar_of_heaven",
         "mah_2926596175", // Platypus
         "mah_179167734", // Elephant
         "mah_3101065593", // White Dragon

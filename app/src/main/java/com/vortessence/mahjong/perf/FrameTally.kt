@@ -3,12 +3,10 @@ package com.vortessence.mahjong.perf
 import kotlin.math.roundToInt
 
 /**
- * The first-game check's frame count, judged as the eye sees it: by stutters. Motion at a steady 20
- * or 30 frames a second looks smooth (the firelight itself redraws at 20), so a frame a refresh or
- * two behind goes unnoticed. A stutter is a frame that came late (past the deadline the phone
- * itself gave it) and left the last picture up more than [STUTTER_GAP_NS], a moment below about
- * 17 frames a second: the motion visibly jumps. A long gap before a frame on time is only a pause
- * in play. Late frames are counted too, for the log, but only stutters decide.
+ * First-game frame check, judged by stutters as the eye sees them: a steady 20 or 30 fps looks
+ * smooth (the firelight redraws at 20). A stutter is a frame past the phone's deadline that left
+ * the last picture up over [STUTTER_GAP_NS] (below ~17 fps); a long gap before an on-time frame is
+ * just a pause. Late frames are only logged.
  */
 class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val timeEnoughNs: Long = TIME_ENOUGH_NS) {
     private var frames = 0
@@ -17,15 +15,11 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
     private var stutters = 0
     private var near = 0
     private var playedNs = 0L
-    // How many frames came this many milliseconds after the one before (the last, a second or more)
+    // Count of frames by ms since the previous one (last bucket: a second or more)
     private val gapsMs = IntArray(MAX_GAP_MS + 1)
     private var gaps = 0
 
-    /**
-     * One frame of play: [totalNs] from its vsync to done, against the [deadlineNs] the phone gave
-     * it (one refresh, [refreshNs], where the phone gives none); [gapNs] since the frame before,
-     * or 0 for the first.
-     */
+    /** [totalNs] vsync to done; [deadlineNs] 0 means one refresh; [gapNs] since the last frame, 0 for the first. */
     @Synchronized
     fun add(totalNs: Long, deadlineNs: Long, refreshNs: Long, gapNs: Long) {
         val deadline = if (deadlineNs > 0) deadlineNs else refreshNs
@@ -44,7 +38,7 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
     /** Null until enough frames are in; then whether the phone is struggling. */
     @Synchronized
     fun verdict(): FrameVerdict? {
-        // Enough frames, or (on a phone so slow that they come few and far between) enough time
+        // Enough frames, or on a very slow phone enough time
         if (frames < framesNeeded && (playedNs < timeEnoughNs || frames < MIN_FRAMES)) return null
         val lateShare = late.toFloat() / frames
         val veryLateShare = veryLate.toFloat() / frames
@@ -63,7 +57,7 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
         )
     }
 
-    // The frame rate from the middle spacing of frames, 60 at most
+    // From the median frame spacing, 60 at most
     private fun fps(): Int {
         if (gaps == 0) return 0
         var seen = 0
@@ -75,21 +69,17 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
     }
 
     companion object {
-        // 30 seconds of play with the firelight at 20 frames a second
+        // 30 s of play at the firelight's 20 fps
         const val FRAMES_NEEDED = 600
-        // ...or 45 seconds of play, with at least 60 frames in it
+        // ...or 45 s with at least 60 frames
         const val TIME_ENOUGH_NS = 45_000_000_000L
         const val MIN_FRAMES = 60
-        // A picture up longer than this, when the frame after it was late, is a stutter
         const val STUTTER_GAP_NS = 60_000_000L
-        // Cautious, since a phone wrongly judged slow loses its firelight: a stutter in 15% of
-        // frames is choppy most of the time, not the odd hitch. A Pixel 9 Pro playing Quad by
-        // itself, fire lit, looks perfectly smooth with 17% of frames late and 6% more than a
-        // refresh late (2026-11-12)
+        // Cautious, as a phone wrongly judged slow loses its firelight: 15% is choppy most of the
+        // time. A Pixel 9 Pro on Quad, fire lit, looks smooth with 17% late, 6% a refresh late (2026-11-12)
         const val STUTTER_SHARE = 0.15f
-        // Near the line: a late frame after a picture up over 40 ms (below 25 frames a second), in
-        // as many frames as would be stutters. Alex's moto g05, a steady 20 a second by the fire
-        // with no stutters at all, is near it; a phone at 30 has a decent margin (2026-11-13)
+        // Near the line: late after over 40 ms (below 25 fps). Alex's moto g05, a steady 20 fps with
+        // no stutters, is near; a phone at 30 has margin (2026-11-13)
         const val NEAR_GAP_NS = 40_000_000L
         const val NEAR_SHARE = 0.15f
         private const val MAX_GAP_MS = 1000
@@ -98,15 +88,14 @@ class FrameTally(private val framesNeeded: Int = FRAMES_NEEDED, private val time
 
 data class FrameVerdict(
     val struggling: Boolean,
-    // Frames that came late and left the last picture up over 60 ms
+    // Late, after a picture up over 60 ms
     val stutterShare: Float,
-    // Frames a second, from how far apart they came
     val fps: Int,
     val frames: Int,
     val lateShare: Float,
     val veryLateShare: Float,
-    // Frames that came late after a picture up over 40 ms: near a stutter
+    // Late, after a picture up over 40 ms
     val nearShare: Float = 0f,
-    // Kept up, but near the line: lighter fire shadows by itself
+    // Kept up, but near the line: lighter fire shadows
     val close: Boolean = false,
 )

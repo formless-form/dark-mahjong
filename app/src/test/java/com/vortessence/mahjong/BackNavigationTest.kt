@@ -31,10 +31,10 @@ class BackNavigationTest {
         // The menus' firelight never settles: the clock is stepped by hand
         MenuFire.flickers = false
         compose.mainClock.autoAdvance = false
-        // Deals made at once, on the test's thread, so the game is on the table when it's looked at
+        // Deal on the test's thread, so the game is on the table at once
         MahjongViewModel.dealContext = EmptyCoroutineContext
         try {
-            // Updates made before the activity starts, as in its onCreate: the Play build's register then
+            // Updates made before start, as in onCreate: the Play build registers then
             val controller = Robolectric.buildActivity(ComponentActivity::class.java).create()
             val activity = controller.get()
             val viewModel = MahjongViewModel(activity.application)

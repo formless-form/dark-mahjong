@@ -70,16 +70,16 @@ fun GameScreen(
     gameState: GameState?,
     levelIndex: Int?,
     settings: GameSettings = GameSettings(),
-    // Today's Puzzle: named so, one deal (Restart replays it), and the win leads to its calendar
+    // One deal (Restart replays it); the win leads to its calendar
     todaysPuzzle: Boolean = false,
     tutorialStep: TutorialStep? = null,
     winMessage: String? = null,
     firstRibbon: Boolean = false,
-    // Hints left to spend; null where they're free (the tutorial)
+    // Null where free (the tutorial)
     hints: Int? = null,
-    // Counts the deals: a new one (or the same again) starts the board afresh, zoomed out
+    // A change starts the board afresh, zoomed out
     deal: Int = 0,
-    // A Quick Game: the win card offers another of the same difficulty
+    // The win card offers another of the same difficulty
     quickGame: Boolean = false,
     onAnotherQuickGame: () -> Unit = {},
     totalLevels: Int = ConstellationRepository.totalLevels,
@@ -97,7 +97,7 @@ fun GameScreen(
     onSettingsChanged: (GameSettings) -> Unit = {},
     onBoardZoom: (Boolean) -> Unit = {},
     onWinShown: () -> Unit = {},
-    // Every tile left is free: offered as a button, the board then clears itself
+    // The board is clearing itself
     finishing: Boolean = false,
     onFinish: () -> Unit = {},
 ) {
@@ -115,37 +115,32 @@ fun GameScreen(
         else -> tutorialStep.targetTileIds
     }
 
-    // The tutorial's zoom steps: each new step is checked against the zoom as it stands, so one
-    // already done (zoomed in before the pinch step) passes at once. The pinch step lets the
-    // zoom settle a moment first, so its card doesn't change in the middle of the pinch
+    // Each tutorial zoom step is checked against the current zoom, so one already done passes at
+    // once; the pinch step waits for the zoom to settle so its card doesn't change mid-pinch
     var boardZoomedIn by remember { mutableStateOf(false) }
     LaunchedEffect(tutorialStep, boardZoomedIn) {
         if (tutorialStep?.action == TutorialAction.PINCH_ZOOM && boardZoomedIn) delay(700.milliseconds)
         onBoardZoom(boardZoomedIn)
     }
 
-    // The final pair smashes before the celebration and its fanfare begin. Saved, so a recreated
-    // screen doesn't play the fanfare again; leaving the board first means it never plays
+    // Saved, so a recreated screen doesn't replay the fanfare
     var celebrating by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(gameState.isWon) {
         if (!gameState.isWon) {
             celebrating = false
         } else if (!celebrating) {
-            // Without the smash there's nothing to wait for
             if (settings.matchSmash) delay(WIN_REVEAL)
             celebrating = true
             onWinShown()
         }
     }
 
-    // Restart asks first (the tutorial always deals the same tiles, so it just starts again);
-    // the "no moves" dialog can be closed to look over the board, and Hint brings it back
+    // The tutorial restarts without asking (same tiles); Hint brings back a closed "no moves" dialog
     var askRestart by remember { mutableStateOf(false) }
     val restart = {
         if (ConstellationRepository.TUTORIAL_ID == gameState.constellation.id || todaysPuzzle) onRestart() else askRestart = true
     }
     var stalemateClosed by remember(gameState.tiles) { mutableStateOf(false) }
-    // Out of hints, a tap says how to earn one
     var noHintsNote by remember { mutableStateOf(0) }
     val hint: () -> Unit = {
         when {
@@ -155,15 +150,13 @@ fun GameScreen(
         }
     }
 
-    // A wide board is held on its side if the player chose so; the first one asks. On its side the
-    // header and toolbar become a rail beside the board (the tutorial, never wide, keeps its card)
+    // On its side, header and toolbar become a rail beside the board (the tutorial is never wide)
     val wide = remember(gameState.constellation.id) { isWideBoard(gameState.tiles, gameState.constellation.onSide) }
     HoldOrientation(landscape = wide && settings.wideBoards == WideBoards.LANDSCAPE)
     var askedSideways by rememberSaveable(gameState.constellation.id) { mutableStateOf(false) }
     val sideways = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && tutorialStep == null
 
-    // When the board is cleared it softly blurs behind the celebration, as Android 17 blurs
-    // what sits behind its own panels
+    // Blurs behind the celebration, as Android 17 blurs behind its panels
     val blur by animateDpAsState(
         targetValue = if (celebrating) 14.dp else 0.dp,
         animationSpec = MaterialTheme.motionScheme.slowEffectsSpec(),
@@ -218,14 +211,12 @@ fun GameScreen(
             onBackClick = onBack,
         )
 
-        // The table runs on to the bottom of the screen, under the toolbar (or tutorial card) and
-        // the navigation bar; the tiles are fitted above them
+        // The table runs under the toolbar and navigation bar; tiles fit above them
         Box(modifier = Modifier.weight(1f)) {
             val density = LocalDensity.current
             var overlay by remember { mutableIntStateOf(0) }
-            // The board refits to the card or toolbar once it has settled, not on every frame of
-            // the card growing or shrinking (each refit rebuilds the shadow map); the first
-            // measured size is taken at once
+            // Refits once the card has settled, not every frame (each refit rebuilds the shadow
+            // map); the first size is taken at once
             var boardOverlay by remember { mutableIntStateOf(0) }
             LaunchedEffect(Unit) {
                 snapshotFlow { overlay }.collectLatest { h ->
@@ -245,7 +236,7 @@ fun GameScreen(
                 bottomOverlap = with(density) { boardOverlay.toDp() },
                 modifier = Modifier.fillMaxSize()
             )
-            // Just above the toolbar, without taking room from the board
+            // Above the toolbar without taking room from the board
             FinishButton(
                 visible = gameState.canFinish && !finishing && tutorialStep == null,
                 onClick = onFinish,
@@ -276,7 +267,6 @@ fun GameScreen(
                         onHintClick = hint,
                         onUndoClick = onUndo,
                         onRestartClick = restart,
-                        // Nothing to hint or undo once the board is cleared
                         hintAndUndoEnabled = !gameState.isWon,
                         hints = hints,
                     )
@@ -285,13 +275,12 @@ fun GameScreen(
         }
     }
 
-    // Fireworks and a warm message when the board is cleared
     if (gameState.isWon && celebrating) {
         WinCelebration(
             message = winMessage,
             subtitle = listOfNotNull(place, gameState.constellation.name).distinct().joinToString(" · "),
             hasNextLevel = hasNextLevel,
-            // Low-performance mode keeps a lighter show; the phone's Remove animations, none
+            // Low-performance mode: a lighter show; Remove animations: none
             animationsEnabled = settings.matchSmash,
             liteFireworks = !settings.animationsEnabled,
             firstRibbon = firstRibbon,
@@ -303,7 +292,6 @@ fun GameScreen(
         )
     }
 
-    // Stalemate / no more moves dialog
     if (gameState.isStalemate && !gameState.isWon && !stalemateClosed) {
         StalemateDialog(
             canUndo = gameState.moveHistory.isNotEmpty(),
@@ -325,7 +313,7 @@ fun GameScreen(
                 askedSideways = true
                 onSettingsChanged(settings.copy(wideBoards = WideBoards.PORTRAIT))
             },
-            // Closed without an answer: asked again with the next wide board
+            // Asked again with the next wide board
             onDismiss = { askedSideways = true },
         )
     }
@@ -339,13 +327,11 @@ fun GameScreen(
     }
 }
 
-// How long the final pair has to smash before the celebration
 private val WIN_REVEAL = 600.milliseconds
 
-// How long the tutorial card's size has to hold before the board refits to it
 private val OVERLAY_SETTLE = 120.milliseconds
 
-// Offered at a board's end (a few pairs left on the lowest layer): the rest clears itself
+// Offered at a board's end, when every tile left is free
 @Composable
 private fun FinishButton(visible: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     AnimatedVisibility(
@@ -358,8 +344,7 @@ private fun FinishButton(visible: Boolean, onClick: () -> Unit, modifier: Modifi
     }
 }
 
-// Tapping Hint with none left: a short note, for a few seconds, of how to earn one. [tapped]
-// counts the taps, so each shows it afresh
+// How to earn a hint, shown a few seconds; [tapped] counts taps so each shows it afresh
 @Composable
 private fun NoHintsNote(tapped: Int, modifier: Modifier = Modifier) {
     var visible by remember { mutableStateOf(false) }

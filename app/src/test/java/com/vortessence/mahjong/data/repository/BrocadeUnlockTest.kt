@@ -8,7 +8,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.YearMonth
 
-/** The silk brocade table is earned by solving every daily puzzle of one calendar month, for good. */
+/** Earned by solving every daily puzzle of one calendar month, for good. */
 class BrocadeUnlockTest {
     private val november = YearMonth.of(2026, 11)
 
@@ -33,7 +33,7 @@ class BrocadeUnlockTest {
         assertEquals(14, p.solved)
     }
 
-    // Today itself not solved yet is no miss: the day isn't over
+    // The day isn't over
     @Test
     fun todayUnsolvedIsNotAMiss() {
         val p = Progress(puzzleDaysSolved = days(november, 1..14)).brocadeProgress(day(november, 15))
@@ -54,7 +54,7 @@ class BrocadeUnlockTest {
         assertTrue(p.brocadeProgress(day(november, 30)).earned)
     }
 
-    // Earned for good: later months, missed days and all, never take it back
+    // Later months, missed days and all, never take it back
     @Test
     fun earnedForGood() {
         val p = Progress(puzzleDaysSolved = days(november, 1..30) + day(november.plusMonths(1), 2))
@@ -63,7 +63,7 @@ class BrocadeUnlockTest {
         assertTrue(later.missed)
     }
 
-    // February in a leap year needs its 29th, and a 30-day month only its 30
+    // Leap February needs its 29th; a 30-day month only its 30
     @Test
     fun monthLengthsCount() {
         val feb = YearMonth.of(2028, 2)
@@ -72,7 +72,6 @@ class BrocadeUnlockTest {
         assertTrue(Progress(puzzleDaysSolved = days(november, 1..30)).isFullPuzzleMonth(november))
     }
 
-    // Days spread over two months, neither full, earn nothing
     @Test
     fun aRunAcrossMonthsIsNotAMonth() {
         val run = (0L until 31L).map { LocalDate.of(2026, 10, 20).toEpochDay() + it }.toSet()

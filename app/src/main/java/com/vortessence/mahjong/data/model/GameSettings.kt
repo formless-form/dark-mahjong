@@ -1,38 +1,34 @@
 package com.vortessence.mahjong.data.model
 
-// Order matters: the table shader selects the surface by ordinal
-// shortName: one word, for the four buttons in Settings, where the full names don't fit
+// Order matters: the table shader selects by ordinal. shortName fits the Settings buttons
 enum class TableSurface(val displayName: String, val shortName: String) {
     GREEN_MAT("Green mat", "Felt"),
-    // Elm boards, honey brown, the grain looping round its eyes (Gareth, 2026-11-15). It replaced
-    // the walnut table, in its place: a stored "WALNUT" loads as this (fromStoredName)
+    // Honey-brown elm (Gareth, 2026-11-15), replacing walnut
     ELM_WOOD("Elm wood", "Elm Wood"),
     THAI_STRAW("Thai straw", "Thai Straw Mat"),
     SLATE("Slate", "Slate"),
-    // The reward for solving every one of a month's daily puzzles
+    // Reward for solving every daily puzzle in a month
     BROCADE("Silk brocade", "Brocade");
 
     companion object {
-        /** The table stored as [name], or null; walnut, which the elm replaced (2026-11-15), is the elm. */
+        /** Stored name to table, or null; "WALNUT" (replaced 2026-11-15) loads as the elm. */
         fun fromStoredName(name: String): TableSurface? =
             if (name == "WALNUT") ELM_WOOD else entries.firstOrNull { it.name == name }
     }
 }
 
-// The tiles' set (TileKits): the classic ivory, or charcoal terrazzo, jade or wood with soft gold
-// pictures and a colour bar. CHARCOAL is shown as "Terrazzo" and WOOD as "Olivewood" (named
-// 2026-11-13); their stored names stay, so a choice already made carries over
+// See TileKits. CHARCOAL and WOOD were renamed Terrazzo and Olivewood (2026-11-13); stored names
+// kept so saved choices carry over
 enum class TileSet(val shortName: String) {
     IVORY("Ivory"),
     CHARCOAL("Terrazzo"),
     JADE("Jade"),
     WOOD("Olivewood"),
-    // Earned by finishing the Journey, and only in builds that have the Imperial images
+    // Earned by finishing the Journey; only in builds with the Imperial images
     IMPERIAL("Imperial"),
 }
 
-// How a wide board (one that plays much bigger with the phone on its side) is shown: the player is
-// asked the first time one comes up, and the answer is kept
+// Wide boards (much bigger with the phone on its side): asked once, then the answer is kept
 enum class WideBoards(val shortName: String) {
     ASK("Ask"),
     LANDSCAPE("Landscape"),
@@ -46,51 +42,42 @@ data class GameSettings(
     val musicVolume: Float = 0.6f,
     val autoZoomEnabled: Boolean = true,
     val highlightFreeTiles: Boolean = false,
-    // Not a setting of the game's own: it follows the phone's Remove animations (accessibility),
-    // and is never saved
+    // Follows the phone's Remove animations; never saved
     val animationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val tableSurface: TableSurface = TableSurface.GREEN_MAT,
     val tileSet: TileSet = TileSet.IVORY,
-    // The lamp over the table is always lit; how brightly, 0..1, the middle its natural strength
+    // Lamp is always lit; 0..1, 0.5 = natural strength
     val lampBrightness: Float = 0.5f,
-    // A fire in a hearth beside the table, lit or not, and how brightly it burns (as the lamp)
+    // fireIntensity on the lamp's scale
     val fireplaceLit: Boolean = true,
     val fireIntensity: Float = 0.6f,
-    // The fire's crackle, on its own volume (subtle by default)
     val fireVolume: Float = 0.4f,
     val wideBoards: WideBoards = WideBoards.ASK,
-    // For slower phones: the fire, fireworks and other moving effects off (as with the phone's
-    // Remove animations); the lamp and the tiles' look stay
+    // Slower phones: fire, fireworks and other motion off; lamp and tile look stay
     val lowPerformance: Boolean = false,
-    // The phone's own Remove animations, as read (never saved): low-performance mode keeps the
-    // match smash, with a lighter sparkle, unless the phone wants no motion at all
+    // Phone's Remove animations, never saved. Low-performance mode keeps the match smash (lighter
+    // sparkle) unless this is off
     val phoneAnimates: Boolean = true,
 ) {
-    /** A match lifts the pair and smashes them together (with or without the full sparkle). */
+    /** Pair lifts and smashes together, with or without the full sparkle. */
     val matchSmash: Boolean get() = animationsEnabled || (lowPerformance && phoneAnimates)
 }
 
-/**
- * The first-game performance check: frames of the player's first game are timed, once, and on a
- * phone that can't keep up the player is asked whether to turn on Low-performance mode.
- */
+/** First game's frames timed once; a phone that can't keep up is offered Low-performance mode. */
 enum class PerfCheck {
-    // Still to run
     PENDING,
-    // The phone kept up
     PASSED,
-    // It kept up, but near the line: the fire's shadows are traced lighter (FireShadows), by itself
+    // Near the line: fire shadows traced lighter automatically (FireShadows)
     PASSED_CLOSE,
-    // It didn't: the player is to be asked about Low-performance mode
+    // To ask about Low-performance mode
     SLOW,
-    // They said yes, and the mode went on
+    // Player accepted; mode on
     SWITCHED,
-    // They said no thanks
     DECLINED,
-    // The player set Low-performance mode themselves before the check ran: never run
+    // Player set the mode before the check: never run
     MANUAL,
 }
 
-// [stutterPercent]: the share of frames that stuttered in the check
+// [stutterPercent]: share of the check's frames that stuttered
 data class PerfCheckState(val check: PerfCheck = PerfCheck.PENDING, val stutterPercent: Int = 0)

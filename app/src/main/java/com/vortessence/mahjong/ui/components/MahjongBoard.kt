@@ -104,11 +104,11 @@ private class SmashAnimationItem(
     val tile2: BoardTile,
     val animatable: Animatable<Float, AnimationVector1D>,
 ) {
-    // The pair as drawn in flight: standing and free, whatever the board now says of them
+    // Drawn standing and free, whatever the board now says
     val flying1 = tile1.copy(isRemoved = false, isFree = true)
     val flying2 = tile2.copy(isRemoved = false, isFree = true)
 
-    // Its click and burst at contact, and its flight: an undo cancels both
+    // Click-and-burst at contact, and the flight: an undo cancels both
     var contact: Job? = null
     var flight: Job? = null
 }
@@ -129,22 +129,19 @@ fun MahjongBoard(
     modifier: Modifier = Modifier,
     settings: GameSettings = GameSettings(),
     highlightedTileIds: Set<Int> = emptySet(),
-    // The tutorial points the zoom-out button out, ringed in its blue
+    // Tutorial: ring the zoom-out button
     highlightZoomOut: Boolean = false,
     onZoomedInChange: (Boolean) -> Unit = {},
     onTileClick: (Int) -> Unit,
     onTileMatch: () -> Unit = {},
-    // How much of the bottom of the board's area lies under something drawn over it (the game
-    // toolbar): the table carries on underneath, but the tiles are fitted above it
+    // Covered by the toolbar: the table runs on underneath, tiles are fitted above
     bottomOverlap: Dp = 0.dp,
-    // Counts the deals: a new one (a restart, or the same deal replayed) starts the board afresh,
-    // its zoom and any animation in flight with it
+    // A new deal (restart or replay) resets the board, zoom and animations
     deal: Int = 0,
 ) {
     val density = LocalDensity.current
     val paddingPx = with(density) { 16.dp.toPx() }
 
-    // Blocked shake/flash state
     var blockedFlashId by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(gameState.blockedTileId) {
         val blockedId = gameState.blockedTileId
@@ -165,13 +162,12 @@ fun MahjongBoard(
     Box(
         modifier = modifier
             .fillMaxSize()
-            // A zoomed-in scene must stay within the board's area
+            // Keeps a zoomed-in scene within the board's area
             .clipToBounds()
             .onSizeChanged { boardSize = it }
     ) {
         val canvasW = boardSize.width.toFloat()
-        // The table is laid out, lit and seen in perspective in the area above the overlap, and
-        // simply continues below it
+        // Laid out, lit and projected above the overlap; it simply continues below
         val canvasH = (boardSize.height - with(density) { bottomOverlap.toPx() }).coerceAtLeast(1f)
 
         if ((canvasW > 0f) && (canvasH > 0f) && gameState.tiles.isNotEmpty()) {
@@ -215,7 +211,7 @@ private fun BoardContent(
     val context = LocalContext.current
     val graphicsLayer = rememberGraphicsLayer()
 
-    // Base transform: unzoomed full layout bounds
+    // Unzoomed, whole layout
     val baseTransform = remember(gameState.tiles.size, canvasW, canvasH, paddingPx) {
         computeBoardTransform(
             tiles = gameState.tiles,
@@ -225,7 +221,7 @@ private fun BoardContent(
         )
     }
 
-    // Target transform: shrinks/zooms in on remaining active tiles when autoZoomEnabled is true
+    // Zooms in on the remaining tiles when autoZoomEnabled
     val targetTransform = remember(
         gameState.tiles,
         canvasW,
@@ -243,8 +239,7 @@ private fun BoardContent(
                     availableWidth = canvasW,
                     availableHeight = canvasH,
                     paddingPx = paddingPx,
-                    // At most 1.8 times the whole board's size, and never past a comfortable tile
-                    // size, so the last few tiles of a board with big tiles don't fill the screen
+                    // Capped so a big-tiled board's last few tiles don't fill the screen
                     maxZoomFactor = min(AUTO_ZOOM_FACTOR, with(density) { AUTO_ZOOM_MAX_TILE.toPx() } / 2f / baseTransform.unitX)
                         .coerceAtLeast(1.0001f),
                     baseUnitX = baseTransform.unitX
@@ -296,21 +291,18 @@ private fun BoardContent(
         depthY = currentShiftY
     )
 
-    // Matching tiles smash animations, each ending in a small firework burst where they meet
-    // Low-performance mode's sparkle is a third the size: fewer sparks, no crackle
+    // Each match smash ends in a small burst; low-performance mode's is lite
     val matchBursts = remember(settings.animationsEnabled) { MatchBursts(lite = !settings.animationsEnabled) }
     var activeSmashes by remember { mutableStateOf<List<SmashAnimationItem>>(emptyList()) }
     var prevMoveCount by remember { mutableIntStateOf(gameState.moveHistory.size) }
 
-    // Read the latest values inside the gesture detector so it is not restarted on every
-    // zoom animation frame (which would drop in-flight taps), and in the match animations, which
-    // run on while the board re-fits around what is left
+    // Latest values for the gesture detector (restarting it every zoom frame would drop taps) and
+    // the match animations, which run on while the board re-fits
     val latestTiles by rememberUpdatedState(gameState.tiles)
     val latestTransform by rememberUpdatedState(currentTransform)
     val latestOnTileClick by rememberUpdatedState(onTileClick)
 
-    // The smash, the match sound and the burst are launched in the board's own scope, not the
-    // effect's: the next match restarts the effect, and must not cut short the one before
+    // Not the effect's scope: the next match restarts the effect and must not cut this one short
     val animationScope = rememberCoroutineScope()
     LaunchedEffect(matchBursts) { matchBursts.run() }
     LaunchedEffect(gameState.moveHistory.size, settings.matchSmash) {
@@ -329,8 +321,8 @@ private fun BoardContent(
                 )
                 activeSmashes += smashItem
                 smashItem.contact = animationScope.launch {
-                    // Click and burst the moment the raised pair's edges touch, where they meet:
-                    // where the board stands by then, as it may be re-fitting around what is left
+                    // Click and burst as the raised pair's edges touch, at the board's position
+                    // by then (it may be re-fitting)
                     delay((SMASH_MILLIS * smashContactFraction(t1, t2, currentTransform)).toLong().milliseconds)
                     onTileMatch()
                     val transform = latestTransform
@@ -351,8 +343,7 @@ private fun BoardContent(
                 }
             }
         } else if (currentCount < prevMoveCount) {
-            // Undo occurred: cancel in-flight animations so restored tiles display normally, and
-            // with them any click and burst still to come
+            // Undo: cancel in-flight animations and pending click-and-bursts
             for (smash in activeSmashes) {
                 smash.contact?.cancel()
                 smash.flight?.cancel()
@@ -362,21 +353,19 @@ private fun BoardContent(
         prevMoveCount = currentCount
     }
 
-    // Flat table layout -> screen through the tilted camera, and back again for taps
+    // Flat layout -> screen via the tilted camera, inverted for taps
     val planeMatrix = remember(canvasW, canvasH) { TableCamera.planeMatrix(canvasW, canvasH) }
     val screenToPlane = remember(planeMatrix) { android.graphics.Matrix().also { planeMatrix.invert(it) } }
-    // As drawn now: the board's area changes height when the toolbar or tutorial card below changes
+    // The area's height changes with the toolbar or tutorial card
     val latestScreenToPlane by rememberUpdatedState(screenToPlane)
-    // A hint's pair pulses gently in gold for as long as the hint shows (steady with animations
-    // off), timed from when it appeared
+    // The hinted pair pulses gold, timed from its appearance (steady with animations off)
     val hinting = (gameState.hintPair != null) && settings.animationsEnabled
     var hintShownAt by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(gameState.hintPair) {
         if (gameState.hintPair != null) hintShownAt = withFrameNanos { FrameClock.seconds(it) }
     }
-    // Firelight flickers, so the board is redrawn for it, 20 times a second (chosen by eye against
-    // 30: the flicker looks the same), and as often for a hint's pulse; the lamp alone never changes
-    // The fire goes out with the phone's Remove animations, whatever the setting
+    // Redrawn at 20 fps for the flicker (looks the same as 30) and the hint pulse; the lamp alone
+    // never changes. Remove animations puts the fire out, whatever the setting
     val firelit = settings.fireplaceLit && settings.animationsEnabled
     val ticking = firelit || hinting
     val clockSeconds by produceState(0f, ticking) {
@@ -391,17 +380,13 @@ private fun BoardContent(
             }
         }
     }
-    // The board's ambient occlusion and the fire's long shadows, worked out only when tiles are
-    // removed (or the screen changes size): the first at once, later ones off the main thread,
-    // with the old map shown meanwhile. When the board scales or moves, the map is placed under
-    // it as it is now, so the shading keeps up every frame without being rebuilt.
+    // Shadow map rebuilt only when tiles go or the size changes: first at once, later off the main
+    // thread, the old map shown meanwhile. Scaling only re-places it
     val tracedShadows = firelit
-    // Where neighbours on a layer stand against each other's sides, which are shaded there
     val seams = remember(gameState.tiles) { seams(gameState.tiles) }
-    // The highest layer still standing, from which lower layers are shaded darker
+    // Lower layers are shaded darker from here
     val topLayer = remember(gameState.tiles) { gameState.tiles.filter { !it.isRemoved }.maxOfOrNull { it.z } ?: 0 }
-    // By the fire, a set drawn from images with surface maps has the board's surface map made too,
-    // so the fire's light turns with the stone's relief (made again once those images are loaded)
+    // Surface map for image sets by the fire, so its light follows the relief (remade once loaded)
     val relief = firelit && !settings.lowPerformance && TileKits.current.stone && ImperialImages.loaded.value
     val shadowMap by produceState<BoardShadowMap?>(null, gameState.tiles, canvasW, canvasH, relief) {
         val layout = currentTransform
@@ -412,12 +397,10 @@ private fun BoardContent(
         }
     }
     val placedShadows = shadowMap?.placed(currentTransform, canvasH)
-    // The map is of the tiles as drawn (not still being remade after a match or an undo), so
-    // the shaders may skip what lies under the tiles
+    // Map matches the tiles drawn (not mid-rebuild), so shaders may skip what lies under tiles
     val shadowsFresh = (shadowMap?.tiles === gameState.tiles) && !PerfSwitches.isOff("cullunder")
-    // Or only tiles taken away since the map was made, none put back (as just after a match, while
-    // the new map is made): where the map has no tile there is none now either, so the tiles'
-    // light can still skip the rest of their layer, though the table can't skip what was under them
+    // Or tiles only removed since (just after a match): the tiles' light can still skip the rest
+    // of their layer, though the table can't skip what was under them
     val tilesWithinMap = remember(shadowMap, gameState.tiles) {
         val then = shadowMap?.tiles
         (then != null) && (then.size == gameState.tiles.size) && gameState.tiles.indices.all { i ->
@@ -427,19 +410,16 @@ private fun BoardContent(
     }
     val tilesCulled = shadowsFresh || (tilesWithinMap && !PerfSwitches.isOff("cullunder"))
     val tableAlbedo = remember(graphicsLayer) { TableSurfaceRenderer.AlbedoCache(graphicsLayer) }
-    // Only what the player can see is drawn: tiles wholly covered by others are left out
+    // Wholly covered tiles are left out
     val visibleTiles = remember(gameState.tiles) {
         if (PerfSwitches.isOff("cull")) gameState.tiles.filter { !it.isRemoved }.sortedWith(TileDrawOrder)
         else TileCulling.visibleInDrawOrder(gameState.tiles)
     }
-    // Pinch-to-zoom: a camera zoom over the whole scene (table, tiles and lamp light alike), with
-    // screen = scene * zoom + pan. Panning stops at the scene's edges, so the table always fills
-    // the view.
+    // Pinch zoom over the whole scene: screen = scene * zoom + pan, clamped so the table fills the view
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     val zoomedIn by remember { derivedStateOf { zoom > 1.01f } }
-    // The view has held still a moment (no pinch, pan or spring back): the table's colour is then
-    // drawn afresh for it, at its sharpest, rather than following it
+    // Once still a moment, the table's colour is redrawn sharp rather than scaled
     var viewSettled by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         snapshotFlow { zoom to pan }.collectLatest {
@@ -448,12 +428,9 @@ private fun BoardContent(
             viewSettled = true
         }
     }
-    // For the layers drawn each frame
     val layerPaint = remember { Paint() }
-    // A table with a relief (slate, elm wood): its surface map, which way each spot of it
-    // faces, so the lamp and the fire catch its ridges: worked out on the GPU for the view once
-    // it settles (as the table's colour is drawn afresh), and kept, still placed right, while
-    // the view moves
+    // Relief tables' (slate, elm) normal map, so the light catches ridges: drawn on the GPU when
+    // the view settles, and kept, re-placed, while it moves
     val surfaceLayer = rememberGraphicsLayer()
     var tableRelief by remember { mutableStateOf<TableSurfaceRenderer.Relief?>(null) }
     val layoutDirection = LocalLayoutDirection.current
@@ -470,7 +447,7 @@ private fun BoardContent(
         )?.let { tableRelief = it }
     }
     val tapAt = { offset: Offset ->
-        // Back through the zoom and the camera to the flat layout
+        // Undo zoom and camera
         val p = floatArrayOf((offset.x - pan.x) / zoom, (offset.y - pan.y) / zoom)
         latestScreenToPlane.mapPoints(p)
         val tappedId = findTappedTileId(p[0], p[1], latestTiles, latestTransform)
@@ -509,8 +486,8 @@ private fun BoardContent(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                // Every finger is a tap of its own, so two thumbs can take a pair at once (the
-                // standard tap detector keeps only the last finger up)
+                // Each finger taps separately, so two thumbs can take a pair (the standard
+                // detector keeps only the last finger up)
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val pressed = mutableSetOf(down.id)
@@ -520,8 +497,7 @@ private fun BoardContent(
                             if (change.changedToDownIgnoreConsumed()) {
                                 pressed.add(change.id)
                             } else if (change.id in pressed) {
-                                // A pinch or a drag past the touch slop is consumed by the
-                                // transform detector, and isn't a tap
+                                // Pinches and drags are consumed by the transform detector
                                 if (change.isConsumed || change.isOutOfBounds(size, extendedTouchPadding)) {
                                     pressed.remove(change.id)
                                 } else if (change.changedToUpIgnoreConsumed()) {
@@ -534,13 +510,13 @@ private fun BoardContent(
                     }
                 }
             }
-            // Inside the tap detector, so a pinch or a drag past the touch slop cancels the tap.
-            // Keyed on nothing, so a change of size (the tutorial card) doesn't drop a pinch
+            // Inside the tap detector, so a pinch or drag cancels the tap. Unkeyed, so a size change
+            // (tutorial card) doesn't drop a pinch
             .pointerInput(Unit) {
                 detectTransformGestures { centroid, panChange, zoomChange, _ ->
                     zoomOutJob?.cancel()
                     val newZoom = (zoom * zoomChange).coerceIn(1f, TableCamera.MAX_ZOOM)
-                    // Keep the spot under the fingers where it is, then follow the fingers
+                    // Keep the spot under the fingers fixed, then follow them
                     val scenePoint = (centroid - pan) / zoom
                     pan = latestClampPan(centroid - scenePoint * newZoom + panChange, newZoom)
                     zoom = newZoom
@@ -548,11 +524,10 @@ private fun BoardContent(
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // The tiles in the set chosen in Settings (read here, so a change draws the board anew)
+            // Read here, so a change redraws the board
             TileKits.chosen = if (TileKits.OFFERED) TileKits.of(settings.tileSet) else TileKits.IVORY
-            // The table's colour never flickers: drawn once, in screen pixels, and kept until the
-            // zoom, pan, size or surface changes (a pinch or pan is followed by scaling it, and it
-            // is drawn afresh once the view settles)
+            // The table's colour never flickers: drawn once in screen pixels, scaled during a pinch
+            // or pan, redrawn once the view settles or the size or surface changes
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableAlbedo(
                 this, tableAlbedo, settings.tableSurface, canvasW, canvasH, context, zoom, pan, viewSettled,
                 tile = baseTransform.tileWidth,
@@ -561,7 +536,7 @@ private fun BoardContent(
             drawContext.canvas.translate(pan.x, pan.y)
             drawContext.canvas.scale(zoom, zoom)
 
-            // On a table wider than tall (played on its side) the hearth is beyond the far edge
+            // On its side, the hearth is beyond the far edge
             val flame = FlameLight.at(clockSeconds, settings.lampBrightness, firelit, settings.fireIntensity, hearthAbove = canvasW > canvasH)
             val hintStrength = if (hinting) hintPulse(FrameClock.since(clockSeconds, hintShownAt)) else 1f
             if (!PerfSwitches.isOff("table")) TableSurfaceRenderer.drawTableLight(
@@ -584,15 +559,15 @@ private fun BoardContent(
             val nativeCanvas = drawContext.canvas.nativeCanvas
             nativeCanvas.save()
             nativeCanvas.concat(planeMatrix)
-            // One layer for everything on the table, so the lamp light can be applied to it whole
+            // One layer, so the lamp light applies to it whole
             drawContext.canvas.saveLayer(
                 Rect(-canvasW * 0.25f, -canvasH * 0.25f, canvasW * 1.25f, canvasH * 1.25f),
                 layerPaint,
             )
             var layerShaded = 0
             if (!PerfSwitches.isOff("tiles")) for (tile in sortedTiles) {
-                // On reaching each raised layer, first lay all its contact shadows on the layer
-                // below; its own tiles then cover any that reach a neighbour of the same height
+                // Each raised layer's contact shadows go down first, so its own tiles cover any
+                // reaching a same-height neighbour
                 if (tile.z > layerShaded) {
                     layerShaded = tile.z
                     for (above in sortedTiles) {
@@ -638,8 +613,7 @@ private fun BoardContent(
                 )
             }
 
-            // Lamp and firelight: multiplies everything drawn on the table (alpha untouched), full and
-            // warm under the lamp, falling off towards the dark edges
+            // Lamp and firelight multiply everything on the table (alpha untouched)
             if (!PerfSwitches.isOff("tilelight")) drawRect(
                 brush = TableSurfaceRenderer.tileLight(canvasW, canvasH, flame, placedShadows, tracedShadows, fresh = tilesCulled),
                 topLeft = Offset(-canvasW * 0.25f, -canvasH * 0.25f),
@@ -647,9 +621,8 @@ private fun BoardContent(
                 blendMode = BlendMode.Modulate,
             )
 
-            // Matching pairs being raised, smashed into each other and disappearing: on a small
-            // layer of their own over the lit board, lit by the lamp and flame but not shaded by
-            // the board's shadows, which would show the tiles beneath through them
+            // Smashing pairs on their own small layer, lit but not shadow-mapped (that would show
+            // the tiles beneath through them)
             if (activeSmashes.isNotEmpty()) {
                 val area = smashBounds(activeSmashes, currentTransform, density)
                 drawContext.canvas.saveLayer(area, layerPaint)
@@ -673,9 +646,8 @@ private fun BoardContent(
             drawContext.canvas.restore()
         }
 
-        // Match bursts on a layer of their own (a graphics layer: without one, each burst frame
-        // would record and draw the whole board again), so a burst redraws only itself.
-        // Firework light is its own, so it goes on after the lamp's falloff
+        // Own graphics layer, so a burst frame doesn't redraw the whole board; after the lamp's
+        // falloff, as firework light is its own
         Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
             if (matchBursts.frame == 0L || matchBursts.idle) return@Canvas
             val nativeCanvas = drawContext.canvas.nativeCanvas
@@ -687,7 +659,7 @@ private fun BoardContent(
             nativeCanvas.restore()
         }
 
-        // Once zoomed in, one tap at the edge of the screen goes back to the whole board
+        // When zoomed in: one tap back to the whole board
         AnimatedVisibility(
             visible = zoomedIn,
             enter = fadeIn() + scaleIn(initialScale = 0.6f),
@@ -713,10 +685,7 @@ private fun BoardContent(
     }
 }
 
-/**
- * The tutorial's pointer for a button: a ring in its sky blue around it, gently pulsing (steady
- * with animations off).
- */
+/** Tutorial pointer: a pulsing sky-blue ring (steady with animations off). */
 @Composable
 private fun Modifier.tutorialRing(animate: Boolean): Modifier {
     val pulse = if (animate) {
@@ -733,20 +702,15 @@ private fun Modifier.tutorialRing(animate: Boolean): Modifier {
 }
 
 /**
- * The lamp's shadow, cast away from it as a point light casts it: a tile's top, standing zh
- * above whatever it rests on, throws its shadow (centre - light) * zh / (lightHeight - zh). A
- * raised tile's shadow mostly lands on the tiles beneath it, one tile's height down, so every
- * tile casts as one tile tall. The lamp hangs high and to one side, so its shadows lean away from
- * it, a little more for tiles further from it.
+ * The lamp's point-light shadow: offset (centre - light) * zh / (lightHeight - zh), every tile
+ * casting as one tile tall (raised tiles' shadows land on the tiles beneath).
  *
- * It is as dark as the lamp's share of all the light reaching the tile: beside the hearth the
- * fire fills it in. It holds still, weighed against the fire as it burns on average, so it
- * changes only with the two sliders. The fire's own long shadows are traced by the shaders
+ * Darkness is the lamp's share of the light reaching the tile, against the average fire, so it
+ * holds still and changes only with the two sliders. The fire's long shadows are in the shaders
  * ([BoardShadowMap]).
  */
 private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h: Float, flame: FlameLight): TileShadows {
-    // A tile stands about an eighth of its width tall; the light's height counts from the
-    // surface the tile rests on
+    // About an eighth of its width tall; light height counts from the surface it rests on
     val top = tileW * 0.12f
     val base = z * tileW * 0.12f
     fun cast(lx: Float, ly: Float, lightHeight: Float, cap: Float): Offset {
@@ -758,20 +722,20 @@ private fun tileShadows(cx: Float, cy: Float, z: Int, tileW: Float, w: Float, h:
     val stretch = TableSurfaceRenderer.lampStretch(w, h)
     val lamp = cast(w / 2f + LAMP_U * stretch * h, h / 2f - LAMP_V * h, LAMP_HEIGHT * h, tileW * 0.35f)
     if (flame.power <= 0f) return TileShadows(lamp)
-    // The light reaching this tile from each, as the shaders light it (the fire by its brightness)
+    // Light from each reaching this tile, as the shaders light it
     val u = (cx - w / 2f) / h
     val v = (h / 2f - cy) / h
     val lampHere = flame.lamp * TableSurfaceRenderer.lampLight(u, v, stretch)
     fun fireShare(fu: Float, fv: Float, power: Float): Float {
-        val fireHere = flame.falloff(u, v, fu, fv, power) * 0.6f // the fire's brightness
+        val fireHere = flame.falloff(u, v, fu, fv, power) * 0.6f
         return fireHere / (fireHere + lampHere)
     }
     val steady = fireShare(flame.steadyU, flame.steadyV, flame.steadyPower)
-    // The lamp's resting shadow is partly the tile's own contact shadow, which no light fills
+    // Partly the tile's contact shadow, which no light fills
     return TileShadows(lamp, lampDarkness = 1f - 0.6f * steady)
 }
 
-/** How strongly a tile's glossy face reflects the lamp and the fire, by its centre in flat table pixels. */
+/** Glossy face's reflection of lamp and fire, by its centre in flat table pixels. */
 private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLight): Float {
     val u = (cx - w / 2f) / h
     val v = (h / 2f - cy) / h
@@ -779,10 +743,9 @@ private fun tileGlare(cx: Float, cy: Float, w: Float, h: Float, flame: FlameLigh
 }
 
 /**
- * For each standing tile, the stretches of its right and lower sides that stand against a
- * standing neighbour on its layer: (side, from, to) triples for TileRenderer, from and to along the
- * side from 0 to 1. A neighbour half a row off shares only part of a side; a matched-away one
- * shares none. (Left and upper sides aren't seen: the camera looks down at the right and lower.)
+ * Per standing tile, the stretches of its right and lower sides against a same-layer neighbour,
+ * shaded there: (side, from, to) triples for TileRenderer, from/to 0..1. Left and upper sides
+ * aren't seen.
  */
 private fun seams(tiles: List<BoardTile>): Map<Int, FloatArray> {
     val out = HashMap<Int, FloatArray>()
@@ -799,8 +762,7 @@ private fun seams(tiles: List<BoardTile>): Map<Int, FloatArray> {
             }
             val spans = ArrayList<Float>()
             for ((side, stretches) in listOf(TileRenderer.SEAM_RIGHT to right, TileRenderer.SEAM_BOTTOM to below)) {
-                // Stretches that meet (two neighbours half a row off) run on as one, so the shade
-                // fades only where the side truly opens
+                // Merge meeting stretches, so the shade fades only where the side truly opens
                 for (run in merged(stretches)) {
                     spans += side.toFloat()
                     spans += run.start
@@ -823,17 +785,14 @@ private fun merged(stretches: List<ClosedFloatingPointRange<Float>>): List<Close
     return runs
 }
 
-// How much darker each layer below the top is drawn, and the most any is, so layers read apart
-// by tone without the lowest going murky
+// Per layer below the top, and the cap, so layers read apart without the lowest going murky
 private const val LAYER_SHADE = 0.05f
 private const val LAYER_SHADE_MAX = 0.21f
 
 /**
- * How much darker a tile's side is for facing away from the light reaching it: the side at flat
- * table pixel ([sx], [sy]) faces direction ([nu], [nv]) across the table (u right, v up the
- * table). The light is the lamp's and the fire's, each weighed by how brightly it reaches there
- * (as the shaders light the table). A side facing a light keeps its brightness, one it skims is a
- * little darker, one facing away clearly so, up to [SIDE_AWAY].
+ * Darkening of a side at flat pixel ([sx], [sy]) facing ([nu], [nv]) (u right, v up the table),
+ * by lamp and fire weighted as the shaders light the table: none facing a light, up to
+ * [SIDE_AWAY] facing away.
  */
 private fun sideAway(sx: Float, sy: Float, w: Float, h: Float, flame: FlameLight, nu: Float, nv: Float): Float {
     val u = (sx - w / 2f) / h
@@ -858,65 +817,58 @@ private fun sideAway(sx: Float, sy: Float, w: Float, h: Float, flame: FlameLight
     return SIDE_AWAY * (0.5f - 1.5f * facing / weight).coerceIn(0f, 1f)
 }
 
-// The darkest a side facing away from the light is drawn
 private const val SIDE_AWAY = 0.35f
 
 private const val SMASH_MILLIS = 840
 
-// A hint's pulse: one slow swell and fade of its gold every HINT_PULSE_SECONDS, never fainter than
-// HINT_PULSE_LOW of its full strength
+// One slow swell and fade per HINT_PULSE_SECONDS, never below HINT_PULSE_LOW
 private const val HINT_PULSE_SECONDS = 1.6f
 private const val HINT_PULSE_LOW = 0.35f
 
-/** How strongly a hinted pair shows its gold, [seconds] after the hint appeared: full at first. */
+/** Gold strength [seconds] after the hint appeared: full at first. */
 private fun hintPulse(seconds: Float): Float {
     val wave = 0.5f + 0.5f * cos(2f * PI.toFloat() * seconds.coerceAtLeast(0f) / HINT_PULSE_SECONDS)
     return HINT_PULSE_LOW + (1f - HINT_PULSE_LOW) * wave
 }
 
-// How long the view must hold still before the table's colour is drawn afresh for it
+// Stillness before the table's colour is redrawn
 private const val VIEW_SETTLE_MILLIS = 150
 
-// The smash's phases, as fractions of its progress: until RUSH_END the pair rises and rushes
-// together in one movement, starting slowly and gathering speed all the way to the clash; then it
-// shrinks into the burst and is gone
+// Smash phases (fractions of progress): until RUSH_END the pair rises and rushes together,
+// accelerating to the clash; then it shrinks into the burst
 private const val RUSH_END = 0.70f
 
-// Along that movement (its distance travelled, 0..1), the pair has risen fully by LIFT_END and
-// starts drawing together at RUSH_START
+// Along that movement (distance 0..1): fully risen by LIFT_END, closing from RUSH_START
 private const val LIFT_END = 0.17f
 private const val RUSH_START = 0.05f
 
-// The pair's size at the clash, from rising and arching in, as if nearer the eye
+// Size at the clash, as if nearer the eye
 private const val PEAK_SCALE = 1.4f
 
-// How sharply that movement gathers speed: its distance grows with time to this power
+// Distance grows with time to this power
 private const val EASE_IN_POWER = 3.5f
 
-// The firelight's frame interval: 20 a second, less a little so a 60 or 120 Hz screen's frames
-// land on it (every 3rd or 6th)
+// 20 fps, less a little so 60/120 Hz frames land on it (every 3rd/6th)
 private const val FIRE_FRAME_NANOS = 1_000_000_000L / 20 - 2_000_000L
 
 /**
- * The point in the smash (0..1 of [drawSmashAnimation]'s progress) when the two raised tiles,
- * rushing together, first touch edge to edge. Never before the rush is half done, so even a pair
- * that starts side by side visibly collides.
+ * Smash progress (0..1) at which the raised pair first touch. Never before the rush is half done,
+ * so even neighbours visibly collide.
  */
 private fun smashContactFraction(t1: BoardTile, t2: BoardTile, transform: BoardTransform): Float {
     val dx = abs(transform.tilePixelX(t1.x, t1.z) - transform.tilePixelX(t2.x, t2.z))
     val dy = abs(transform.tilePixelY(t1.y, t1.z) - transform.tilePixelY(t2.y, t2.z))
-    // The rectangles touch once both gaps are within a raised tile's width and height (at about
-    // its full size by then)
+    // Touching once both gaps are within a raised tile's size (near full by then)
     val apart = minOf(
         if (dx > 0f) PEAK_SCALE * transform.tileWidth / dx else 1f,
         if (dy > 0f) PEAK_SCALE * transform.tileHeight / dy else 1f,
     ).coerceIn(0f, 1f)
-    // The rush closes the gap by its share of the way squared (see drawSmashAnimation)
+    // The rush closes the gap by its share squared (see drawSmashAnimation)
     val share = sqrt(1f - apart).coerceAtLeast(0.5f)
     return RUSH_END * (RUSH_START + (1f - RUSH_START) * share).pow(1f / EASE_IN_POWER)
 }
 
-/** The area the smashes in flight can reach: both tiles, raised and enlarged, their glow and shadows. */
+/** Reach of the smashes in flight: raised, enlarged tiles with glow and shadows. */
 private fun smashBounds(smashes: List<SmashAnimationItem>, transform: BoardTransform, density: Density): Rect {
     val pad = transform.tileWidth * 0.6f + with(density) { 24.dp.toPx() }
     var left = Float.MAX_VALUE
@@ -954,17 +906,14 @@ private fun DrawScope.drawSmashAnimation(
 
     val maxLift = with(density) { 16.dp.toPx() }
 
-    // One movement from the first lift to the clash: the distance travelled grows with time to
-    // the power 3.5, so it starts very slowly and keeps accelerating. Along it the pair rises first
-    // (most of its height early on), and draws together ever faster once it is up
+    // One accelerating movement from lift to clash: rising first, then closing ever faster
     val travelled = (p / RUSH_END).coerceIn(0f, 1f).pow(EASE_IN_POWER)
     val liftT = (travelled / LIFT_END).coerceIn(0f, 1f)
     val liftFraction = 1f - (1f - liftT) * (1f - liftT)
     val liftY = -maxLift * liftFraction
     val share = ((travelled - RUSH_START) / (1f - RUSH_START)).coerceIn(0f, 1f)
     val rushEased = share * share
-    // How high the pair seems: it rises, then keeps growing as it arches in towards the clash,
-    // its shadow falling further away, as if still gaining height
+    // Apparent height: keeps growing as it arches in, the shadow falling further away
     val height = 0.6f * liftFraction + 0.4f * rushEased
 
     val frame = if (p < RUSH_END) {
@@ -978,7 +927,7 @@ private fun DrawScope.drawSmashAnimation(
             impactFraction = 0f
         )
     } else {
-        // Shrinking into the burst, solid until it is half gone, then fading out
+        // Shrinking into the burst, fading after halfway
         val impact = (p - RUSH_END) / (1f - RUSH_END)
         SmashFrame(
             x1 = midX,
@@ -991,7 +940,7 @@ private fun DrawScope.drawSmashAnimation(
         )
     }
 
-    // 1. Raised shadow cast on table plane during lift and rush
+    // Shadow on the table during lift and rush
     if (frame.alpha > 0.05f && p < RUSH_END) {
         val shadowAlpha = 0.35f * liftFraction
         val shadowCorner = CornerRadius(transform.tileWidth * 0.085f)
@@ -1013,12 +962,11 @@ private fun DrawScope.drawSmashAnimation(
         )
     }
 
-    // 2. Draw colliding raised tiles: the lower first (then the one further left, then further
-    // up); fading out, both together on one layer
+    // Lower tile first (then left, then upper); when fading, both on one layer
     if (frame.alpha > 0.01f) {
         val fading = frame.alpha < 0.99f
         if (fading) {
-            // They have met by now: one tile's size around them reaches past their glow
+            // Met by now: a tile's size around them covers their glow
             val w = transform.tileWidth
             val h = transform.tileHeight
             fadePaint.alpha = frame.alpha
@@ -1050,7 +998,7 @@ private fun DrawScope.drawSingleAnimatingTile(
     withTransform({
         scale(scale, scale, pivot = pivot)
     }) {
-        // Shape by shape, as the pair grows larger than the atlas's images
+        // From shapes: the pair outgrows the atlas's images
         TileRenderer.drawTile(
             scope = this,
             boardTile = tile,
@@ -1064,10 +1012,7 @@ private fun DrawScope.drawSingleAnimatingTile(
     }
 }
 
-/**
- * Geometric transformation calculating exact tile positions and sizes
- * to guarantee that the constellation fits in the viewport.
- */
+/** Tile positions and sizes that fit the constellation in the viewport. */
 data class BoardTransform(
     val unitX: Float,
     val tileWidth: Float,
@@ -1088,17 +1033,17 @@ data class BoardTransform(
     }
 
     companion object {
-        const val ASPECT_RATIO = 1.333f // Mahjong tile ratio (width : height = 3 : 4)
-        // The camera looks slightly up the table, so each tile's thickness shows mostly on its
-        // front (lower) edge and only a sliver on its right; stacked tiles shift the same way
+        const val ASPECT_RATIO = 1.333f // width : height = 3 : 4
+        // The camera looks slightly up the table: thickness shows mostly on the lower edge, a
+        // sliver on the right; stacked tiles shift the same way
         const val LAYER_SHIFT_FACTOR_X = 0.03f
         const val LAYER_SHIFT_FACTOR_Y = 0.13f
     }
 }
 
 /**
- * Where tiles reach in the board's own units (a tile is 2 wide and 2 x [BoardTransform.ASPECT_RATIO]
- * tall), each layer shifted up and to the left as it's drawn; a 10-unit square when there are none.
+ * Tile extent in board units (a tile is 2 x 2 * [BoardTransform.ASPECT_RATIO]), layers shifted up
+ * and left as drawn; a 10-unit square when empty.
  */
 internal class BoardBounds(val minX: Float, val maxX: Float, val minY: Float, val maxY: Float) {
     val width get() = max(1f, maxX - minX)
@@ -1175,16 +1120,14 @@ internal fun computeBoardTransform(
     )
 }
 
-/**
- * Maps screen touch coordinate to top-most active tile.
- */
+/** The top-most active tile at a touch. */
 private fun findTappedTileId(
     touchX: Float,
     touchY: Float,
     tiles: List<BoardTile>,
     transform: BoardTransform
 ): Int? {
-    // Test in reverse draw order (top-most visible tile first)
+    // Reverse draw order: top-most first
     val sorted = tiles
         .filter { !it.isRemoved }
         .sortedWith(TileDrawOrder.reversed())
@@ -1202,7 +1145,6 @@ private fun findTappedTileId(
     return null
 }
 
-// Auto-zoom on the tiles left: at most this many times the whole board's size, and tiles at most
-// this wide (about 1.3 times the gentlest levels' tiles on a phone)
+// Auto-zoom caps: times the whole board's size, and tile width (~1.3x the gentlest levels' tiles)
 private const val AUTO_ZOOM_FACTOR = 1.8f
 private val AUTO_ZOOM_MAX_TILE = 62.dp

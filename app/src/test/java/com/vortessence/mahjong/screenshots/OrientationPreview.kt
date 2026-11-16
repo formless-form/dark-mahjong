@@ -22,11 +22,9 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * One wide board (Nine Dragon Pagoda) played upright and on its side, lamp alone and with the
- * fireplace, on walnut and the green mat: for weighing how brightly each is lit. Each is drawn
- * again with no tiles (name ending "-bare"), so the tiles' pixels can be told from the table's.
- * Rendered into build/orientation-preview/<set> (-PperfSet, default "current"), with any
- * -PperfOff stages off.
+ * Nine Dragon Pagoda upright and on its side, by lamp and fire, on walnut and mat, to compare
+ * brightness; each again with no tiles ("-bare") to tell tile pixels from table.
+ * build/orientation-preview/<set> (-PperfSet, default "current"), -PperfOff stages off.
  * Run: ./gradlew testFossDebugUnitTest --tests '*OrientationPreview*' [-PperfSet=name]
  */
 @RunWith(RobolectricTestRunner::class)
@@ -42,7 +40,7 @@ class OrientationPreview {
         PerfSwitches.off = extraOff.toSet() + if (bare) setOf("tiles") else emptySet()
         TileWear.prepareNow()
         TileRenderer.TileAtlas.bakeInline = true
-        // The same deal every time, so renders compare alike
+        // Same deal every time, so renders compare
         val constellation = ConstellationRepository.getById("pagoda")!!
         val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(constellation, Random(7)))
         val state = MahjongGameEngine.startNewGame(constellation).copy(tiles = tiles)

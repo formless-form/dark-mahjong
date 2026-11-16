@@ -5,12 +5,9 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.TilePosition
 
 /**
- * Twelve layouts made for the Journey (2026-11-14), taking it from 88 levels to 100: three
- * boards played on their side and nine upright, each slotted in by its measured clear rate
- * (LayoutDifficulty). Each raised layer sits half a tile off the one below, so stacks always leave
- * tiles in pairs, and every deal works first time.
- * Each row is a layer ([z]), a row of the board ([y]) and the tiles along it ([x]), in the
- * half-tile units of every layout.
+ * Twelve layouts taking the Journey from 88 to 100 levels (2026-11-14), slotted in by clear rate
+ * (LayoutDifficulty). Each raised layer sits half a tile off the one below, so stacks leave tiles in
+ * pairs and every deal works first time. Rows are [z], [y], [x...] in half-tile units.
  */
 internal object JourneyLayouts {
     val layouts: List<Constellation> by lazy {
@@ -304,13 +301,13 @@ internal object JourneyLayouts {
         row(z = 2, y = 5, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28)
     }
 
-    // [onSide]: a wide board, always played with the phone on its side (as Mah's wide levels)
+    // [onSide]: wide, always on the phone's side (as Mah's wide levels)
     private fun layout(id: String, name: String, description: String, onSide: Boolean = false, rows: MutableList<TilePosition>.() -> Unit) =
         Constellation(
             id = id,
             name = name,
             onSide = onSide,
-            // Provisional: replaced by the measured label
+            // Replaced by the measured label
             difficulty = Difficulty.HARD,
             description = description,
             positions = mutableListOf<TilePosition>().apply(rows),

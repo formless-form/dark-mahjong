@@ -96,7 +96,7 @@ class TutorialTest {
         assertEquals("Seasons", resumed.title)
     }
 
-    // The board as it stands when [index] is shown: every guided pair before it matched
+    // Board at step [index]: every guided pair before it matched
     private fun boardAtStep(index: Int): GameState {
         val start = MahjongGameEngine.startNewGame(tutorial)
         val gone = TutorialScript.steps.take(index).filter { it.action == TutorialAction.MATCH_PAIR }.flatMap { it.targetTileIds }.toSet()

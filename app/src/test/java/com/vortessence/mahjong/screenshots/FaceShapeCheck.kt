@@ -18,9 +18,8 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * Faces told apart only by colour: each face drawn in one colour (as a single-colour tile set
- * would), and every pair compared. Pairs whose shapes nearly coincide are written to
- * build/face-shapes.txt, with how much of their shape they share.
+ * Faces told apart only by colour: each drawn in one colour and every pair compared; near-identical
+ * shapes go to build/face-shapes.txt with the share they have in common.
  * Run: ./gradlew testFossDebugUnitTest --tests '*FaceShapeCheck*'
  */
 @RunWith(RobolectricTestRunner::class)

@@ -4,10 +4,7 @@ import androidx.activity.ComponentActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * The open-source build has nothing to buy, tips included, so it offers none and Settings shows no
- * tip row (the Play build's Tips goes through Google Play).
- */
+/** Open-source build: nothing to buy, so no tips and no Settings tip row. */
 @Suppress("UNUSED_PARAMETER")
 class Tips(activity: ComponentActivity) {
     val offers: StateFlow<List<TipOffer>> = MutableStateFlow(emptyList())

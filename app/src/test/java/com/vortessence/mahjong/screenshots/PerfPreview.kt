@@ -22,9 +22,8 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * Fixed deals of big layouts at a fixed moment of the fire, at the Pixel 9 Pro's size, for
- * comparing the look before and after rendering changes. Rendered into build/perf-preview/<set>,
- * where <set> is the system property perfSet (default "current").
+ * Fixed deals of big layouts at a fixed moment of the fire, Pixel 9 Pro size, to compare the look
+ * across rendering changes. build/perf-preview/<set> (perfSet, default "current").
  * Run: ./gradlew testFossDebugUnitTest --tests '*PerfPreview*' [-PperfSet=name] [-PperfOff=stage,stage]
  */
 @RunWith(RobolectricTestRunner::class)
@@ -84,7 +83,7 @@ class PerfPreview {
     @Test fun quadFeltHighlightsLamp() = shoot("Quad", TableSurface.GREEN_MAT, false, "quad-felt-highlights-lamp", highlights = true)
     @Test fun clearedWalnutFire() = shoot("Quad", TableSurface.ELM_WOOD, true, "cleared-walnut-fire", cleared = true)
 
-    // The same, drawn shape by shape rather than from the tile atlas, to compare the two
+    // Drawn shape by shape rather than from the tile atlas, to compare
     @Test fun quadWalnutFireLive() = shoot("Quad", TableSurface.ELM_WOOD, true, "quad-walnut-fire-live", setOf("atlas"))
     @Test fun quadFeltLampLive() = shoot("Quad", TableSurface.GREEN_MAT, false, "quad-felt-lamp-live", setOf("atlas"))
 }

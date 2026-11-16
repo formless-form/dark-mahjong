@@ -21,19 +21,19 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-/** Where a back gesture has got to, read by [predictiveBack] while drawing. */
+/** A back gesture's progress, read by [predictiveBack] while drawing. */
 @Stable
 class PredictiveBackState {
-    /** 0 at rest, rising to 1 as the back gesture is dragged in. */
+    /** 0 at rest to 1 as the gesture is dragged in. */
     var progress by mutableFloatStateOf(0f)
 
     /** [BackEventCompat.EDGE_LEFT] or [BackEventCompat.EDGE_RIGHT]. */
     var swipeEdge by mutableIntStateOf(BackEventCompat.EDGE_LEFT)
 
-    /** 0 to 1 as the screen fades away once the gesture is let go. */
+    /** 0 to 1 as the screen fades once let go. */
     var exit by mutableFloatStateOf(0f)
 
-    /** Set when a gesture has just completed, so the screen swap that follows doesn't animate again. */
+    /** Set on completion, so the screen swap that follows doesn't animate again. */
     var committed = false
 
     /** True while the screen behind should be drawn. */
@@ -47,9 +47,8 @@ class PredictiveBackState {
 }
 
 /**
- * Android 17's predictive back: as the back gesture is dragged in, the screen shrinks and drifts
- * toward the side it came from, its corners rounding like a card, with the screen it goes back
- * to visible behind. Let go and it fades away; change your mind and it springs back.
+ * Android 17 predictive back: the screen shrinks, drifts toward the gesture's edge and rounds like
+ * a card over the screen behind; let go and it fades, cancel and it springs back.
  */
 @Composable
 fun PredictiveBackHandling(enabled: Boolean, state: PredictiveBackState, onBack: () -> Unit) {
@@ -73,7 +72,7 @@ fun PredictiveBackHandling(enabled: Boolean, state: PredictiveBackState, onBack:
     }
 }
 
-/** Draws the screen as [PredictiveBackHandling] describes; does nothing at rest. */
+/** Draws [PredictiveBackHandling]'s effect; nothing at rest. */
 fun Modifier.predictiveBack(state: PredictiveBackState): Modifier = graphicsLayer {
     val progress = state.progress
     val exit = state.exit

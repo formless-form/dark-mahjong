@@ -15,60 +15,45 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * The board's shading, worked out once each time the tiles change (see FLAME_AGSL).
+ * The board's shading, rebuilt off the main thread (tens of ms) when tiles change; see FLAME_AGSL.
  *
- * - **The height map:** how tall the stack stands at each point, in layers (31 per layer, up to
- *   8), at the flat table's full resolution. Each tile is drawn into it exactly as TileRenderer
- *   draws it: square on the grid, its rounded corners, and its side walls swept below
- *   and to the right. So the fire's long shadows, traced through it per pixel every frame, follow
- *   each tile's curved edges; they stop at a taller stack, fall across lower ones, soften as they
- *   reach away (the fire is broad) and sway with the flames.
- * - **Ambient occlusion on the table:** how hemmed in each point of the table is by the tiles
- *   around it, which darkens the table at the board's edge and in the gaps. A cheap, soft stand-in
- *   at a quarter resolution, used by the table only (the tiles' own walls and contact shadows darken
- *   their foot instead), so no tile picks up a rim from it.
+ * - **Height map:** stack height in layers (31 per layer, up to 8) at full table resolution, each
+ *   tile drawn as TileRenderer draws it (rounded corners, walls swept down-right). The fire's
+ *   long shadows are traced through it per pixel each frame, so they follow curved edges.
+ * - **Table ambient occlusion:** darkens the table at the board's edge and in gaps. Quarter
+ *   resolution, table only (tiles get their own contact shadows), so no tile picks up a rim.
+ * - **Surface map** (sets with ImperialImages surface maps): face normals at half resolution, so
+ *   the stone's relief turns to the flickering fire. Fire only, so never in low-performance mode.
  *
- * - **The surface map**, for a set drawn from images that has surface maps (ImperialImages):
- *   which way each point of the tiles' faces turns, each standing tile's own surface map drawn
- *   where the tile is, at half resolution. The tiles' light reads it every frame, so the stone's
- *   relief turns towards the fire as it flickers. Made only by the fire, and never in
- *   low-performance mode (which has no fire): otherwise the stone keeps the light its pictures
- *   were made in.
- *
- * All are made for the board as it was laid out when they were built, and only rebuilt when
- * tiles are removed. When the board grows or moves (its automatic scaling), that is only a
- * scale and a shift, so [placed] tells the shaders how to find the map from the board as it is
- * now, and the shading keeps up every frame. Building one takes some tens of milliseconds, so
- * the board makes it off the main thread.
+ * Board scaling is only a scale and shift, so [placed] maps the current board onto the maps.
  */
 class BoardShadowMap private constructor(
     private val heights: BitmapShader,
     private val occlusion: BitmapShader,
     // Null for a set with no surface maps
     private val relief: BitmapShader?,
-    // The board's layout when the map was made
+    // Layout when built
     private val built: BoardTransform,
-    // The number of layers in the tallest stack
+    // In the tallest stack
     private val layers: Int,
-    // Where tiles stand in the map (left, top, right, bottom, in map pixels), with a margin; left
-    // beyond right when none do. The shaders look for shadows only within it
+    // Tiles' extent plus margin (left, top, right, bottom, map pixels); left > right when empty.
+    // The shaders look for shadows only within it
     private val box: FloatArray,
-    /** The tiles it was made from. */
     val tiles: List<BoardTile>,
 ) {
 
-    /** The map, placed under the board as it is laid out [now], on a table [tableHeight] tall. */
+    /** The map placed under the board as laid out [now], on a table [tableHeight] tall. */
     fun placed(now: BoardTransform, tableHeight: Float) = Placed(now, tableHeight)
 
     inner class Placed(now: BoardTransform, tableHeight: Float) {
-        // Table pixels now to map pixels: the map scaled and shifted with the board
+        // Table pixels now to map pixels
         private val scale = built.unitX / now.unitX
         private val offsetX = built.startX - now.startX * scale
         private val offsetY = built.startY - now.startY * scale
-        // One layer's height in table heights (as the shaders' q), at the board's size now
+        // One layer in table heights (as the shaders' q)
         private val layer = now.tileWidth * TILE_HEIGHT / tableHeight
 
-        /** [fireShadows]: trace the fire's long shadows as well as the table's ambient occlusion. */
+        /** [fireShadows]: trace the fire's long shadows as well as ambient occlusion. */
         fun setUniforms(s: RuntimeShader, fireShadows: Boolean) {
             s.setInputShader("heightMap", heights)
             s.setInputShader("aoMap", occlusion)
@@ -84,12 +69,12 @@ class BoardShadowMap private constructor(
 
     companion object {
         private const val AO_SCALE = 0.25f
-        // The surface map's pixels per height-map pixel: the light's change across a face is broad
+        // Per height-map pixel: light changes broadly across a face
         private const val RELIEF_SCALE = 0.5f
         private const val PER_LAYER = 31
         private const val AMBIENT_OCCLUSION = 0.8f
 
-        // A tile stands about this much of its width tall
+        // Tile height as a fraction of its width
         private const val TILE_HEIGHT = 0.15f
 
         private val none by lazy {
@@ -109,7 +94,7 @@ class BoardShadowMap private constructor(
             s.setFloatUniform("boardBox", 1f, 1f, 0f, 0f)
         }
 
-        /** [relief]: the surface map too, for a set that has one (wanted only by the fire). */
+        /** [relief]: the surface map too, where the set has one (fire only). */
         fun build(tiles: List<BoardTile>, transform: BoardTransform, w: Float, h: Float, relief: Boolean = false): BoardShadowMap? {
             if (w <= 0f || h <= 0f) return null
             val standing = tiles.filter { !it.isRemoved }.sortedBy { it.z }
@@ -126,10 +111,7 @@ class BoardShadowMap private constructor(
             )
         }
 
-        /**
-         * Where the standing tiles lie, faces and walls, in map pixels: wide enough for the map's
-         * smoothing, so nothing of theirs lies outside it.
-         */
+        /** Standing tiles' extent in map pixels, with room for the map's smoothing. */
         private fun bounds(standing: List<BoardTile>, transform: BoardTransform): FloatArray {
             if (standing.isEmpty()) return floatArrayOf(1f, 1f, 0f, 0f)
             var left = Float.MAX_VALUE
@@ -149,10 +131,8 @@ class BoardShadowMap private constructor(
         }
 
         /**
-         * The board's surface map, for a set drawn from images that has surface maps: each standing
-         * tile's body's map where the tile is drawn (the body of its own look, as the atlas stamps
-         * it), its face's engraving's over that, in the order the tiles are drawn, so each point
-         * holds the top tile's. Null for any other set, or until the images are loaded.
+         * Each tile's body map (its own look, as the atlas stamps it) with its engraving's over it,
+         * in draw order so each point holds the top tile's. Null for other sets or until loaded.
          */
         private fun surfaceMap(standing: List<BoardTile>, transform: BoardTransform, w: Float, h: Float): BitmapShader? {
             if (!TileKits.current.stone) return null
@@ -178,11 +158,11 @@ class BoardShadowMap private constructor(
             }
         }
 
-        /** The full-resolution height map, each tile drawn exactly as on screen. */
+        /** Full resolution, each tile drawn exactly as on screen. */
         private fun heightMap(standing: List<BoardTile>, transform: BoardTransform, w: Float, h: Float): BitmapShader {
             val bitmap = Bitmap.createBitmap(w.toInt().coerceAtLeast(1), h.toInt().coerceAtLeast(1), Bitmap.Config.ALPHA_8)
             val canvas = Canvas(bitmap)
-            // Each tile replaces what's below it (lowest first), so a point holds the top tile's height
+            // SRC, lowest first, so each point holds the top tile's height
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC) }
             val tw = transform.tileWidth
             val th = transform.tileHeight
@@ -193,7 +173,7 @@ class BoardShadowMap private constructor(
                 val x = transform.tilePixelX(tile.x, tile.z)
                 val y = transform.tilePixelY(tile.y, tile.z)
                 paint.alpha = ((tile.z + 1) * PER_LAYER).coerceAtMost(255)
-                // The face, and the side walls swept out to their full depth
+                // Face, then walls swept to full depth
                 for (k in 0..3) {
                     val dx = depthX * k / 3f
                     val dy = depthY * k / 3f
@@ -206,9 +186,8 @@ class BoardShadowMap private constructor(
         }
 
         /**
-         * The table's ambient occlusion at a quarter resolution: two rings of neighbours around each
-         * point, each darkening by how steeply it rises above the table. Worked out only around
-         * the board ([box]): further out, nothing rises.
+         * Quarter resolution: two rings of neighbours per point, each darkening by how steeply it
+         * rises. Only around the board ([box]); nothing rises further out.
          */
         private fun occlusionMap(
             standing: List<BoardTile>,
@@ -226,7 +205,7 @@ class BoardShadowMap private constructor(
             val depthY = transform.tileHeight * BoardTransform.LAYER_SHIFT_FACTOR_Y
             val radius = transform.tileWidth * 0.085f * AO_SCALE
 
-            // A coarse height map with rounded tiles (no nudges: the occlusion is soft anyway)
+            // Coarse height map, rounded tiles (no nudges: the occlusion is soft anyway)
             val height = FloatArray(mw * mh)
             for (tile in standing) {
                 val top = (tile.z + 1) * layer
@@ -266,7 +245,7 @@ class BoardShadowMap private constructor(
             val ringX = FloatArray(8) { cos(it * 0.785398f + 0.3f) }
             val ringY = FloatArray(8) { sin(it * 0.785398f + 0.3f) }
             val pixels = IntArray(mw * mh)
-            // The board's bounds in map cells, out as far as the outer ring reaches
+            // Board bounds in cells, plus the outer ring's reach
             val ringReach = tileCells * 0.22f + 2f
             val i0 = (box[0] * AO_SCALE - ringReach).toInt().coerceIn(0, mw)
             val i1 = (box[2] * AO_SCALE + ringReach).toInt().coerceIn(0, mw - 1)

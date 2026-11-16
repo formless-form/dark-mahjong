@@ -37,7 +37,7 @@ fun StalemateDialog(
     onReshuffle: () -> Unit,
     onUndo: () -> Unit,
     onRestart: () -> Unit,
-    // Back closes it, to look over the board; the Hint button brings it back
+    // Back closes it to view the board; the Hint button reopens it
     onDismiss: () -> Unit = {},
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(dismissOnClickOutside = false)) {
@@ -84,10 +84,7 @@ fun StalemateDialog(
     }
 }
 
-/**
- * Restart asks first: the same deal again from the start, or new tiles on the same layout. Back
- * or a tap outside keeps the game as it is.
- */
+/** Restart's choice: same deal again, or new tiles on the same layout. Back or outside cancels. */
 @Composable
 fun RestartDialog(
     onSameDeal: () -> Unit,
@@ -135,15 +132,13 @@ fun RestartDialog(
     }
 }
 
-/**
- * Blurs whatever is behind the dialog's window, as Android 17 does behind its own dialogs and
- * menus, with a lighter dim since the blur already sets the dialog apart. Phones that have
- * blur turned off (battery saver, or the accessibility setting) just get the dim.
- */
-// About as wide as an upright phone (which it still fills), so a dialog keeps its shape on a board
-// played on its side
+// About an upright phone's width, so a dialog keeps its shape on a board played on its side
 val DIALOG_MAX_WIDTH = 440.dp
 
+/**
+ * Blurs behind the dialog's window as Android 17's own dialogs do, with a lighter dim. Where blur
+ * is off (battery saver, accessibility) just the dim.
+ */
 @Composable
 fun BlurBehindDialog(radius: Dp = 28.dp) {
     val view = LocalView.current

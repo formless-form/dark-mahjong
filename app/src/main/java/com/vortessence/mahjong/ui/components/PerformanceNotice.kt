@@ -33,11 +33,9 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * The first-game performance check found this phone stuttering: the player is asked whether to
- * turn on Low-performance mode. Nothing changes unless they say yes; Back is a no. A stray tap
- * beside the card doesn't close it, so the question is never lost unanswered; nor do its buttons
- * take a tap in its first half-second, one meant for what was there before it. On a short screen
- * (on its side, or with large text) it scrolls.
+ * Offers Low-performance mode when the first-game check found stutter; Back is a no. Taps outside
+ * don't close it, so it is never lost unanswered, and its buttons ignore taps for the first
+ * half-second (meant for what was there before). Scrolls on short screens.
  */
 @Composable
 fun PerformanceNotice(
@@ -90,7 +88,7 @@ fun PerformanceNotice(
     }
 }
 
-// How long the buttons wait before taking a tap, in milliseconds
+// Ms before the buttons take a tap
 private const val ARMING = 500
 
 const val PERFORMANCE_QUESTION =

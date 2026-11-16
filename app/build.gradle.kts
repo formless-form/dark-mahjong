@@ -10,29 +10,25 @@ android {
     }
 
     defaultConfig {
-        // Own ID so Dark Mahjong installs alongside upstream; the Kotlin namespace stays
-        // upstream's to keep merges from PcmciaKai/mahjong_solitaire easy
+        // Own ID to install alongside upstream; namespace stays upstream's for easy merges
         applicationId = "com.formlessform.darkmahjong"
-        // Android 13: AGSL RuntimeShader for the generated backgrounds and tile effects
+        // Android 13: AGSL RuntimeShader
         minSdk = 33
         targetSdk = 37
         versionCode = 31
         versionName = "1.4.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // Test builds for the phone (-PperfHooks=true, as tools/deploy-to-phone.sh builds them)
-        // can be told over adb to open a fixed scene for measuring; Play builds never can
+        // -PperfHooks=true (tools/deploy-to-phone.sh): adb can open fixed scenes for measuring
         buildConfigField("boolean", "PERF_HOOKS", (findProperty("perfHooks") == "true").toString())
-        // -PsideBySide=true: a test build under its own ID and name, installed beside the Play copy
-        // so testing never touches a player's own games
+        // -PsideBySide=true: own ID and name, so testing never touches the Play copy's games
         val sideBySide = findProperty("sideBySide") == "true"
         if (sideBySide) applicationIdSuffix = ".test"
         manifestPlaceholders["appLabel"] = if (sideBySide) "Dark Mahjong Test" else "Dark Mahjong"
     }
 
-    // Two builds: "play" for Google Play also asks Play whether a newer version is out (Google's
-    // in-app update library, which is closed source); "foss", for F-Droid and anyone building
-    // from source, has none of it. They differ only in AppUpdates
+    // "play" adds Google's closed-source in-app update and billing libraries; "foss" (F-Droid,
+    // source builds) has none. They differ only in AppUpdates and Tips
     flavorDimensions += "store"
     productFlavors {
         create("play") { dimension = "store" }
@@ -47,10 +43,9 @@ android {
         }
     }
     dependenciesInfo {
-        // Disables dependency metadata when building APKs (for F-Droid)
+        // For F-Droid
         includeInApk = false
-        // Kept in the App Bundle, which only Google Play receives (encrypted), so Play Console can
-        // flag outdated or vulnerable libraries
+        // Only Play gets the bundle (encrypted); lets Play Console flag vulnerable libraries
         includeInBundle = true
     }
     compileOptions {
@@ -63,18 +58,18 @@ android {
     }
     testOptions {
         unitTests {
-            // Robolectric screenshot tests render real resources with Android's own graphics stack
+            // Robolectric screenshot tests
             isIncludeAndroidResources = true
             all {
                 it.systemProperty("robolectric.graphicsMode", "NATIVE")
                 it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
                 it.systemProperty("roborazzi.test.record", "true")
-                // PerfPreview: -PperfSet=<folder> names the renders' set, -PperfOff=<stages> switches
-                // drawing stages off in every render (as the test builds' perfOff), to compare
+                // PerfPreview: -PperfSet=<folder> names the render set, -PperfOff=<stages> turns
+                // drawing stages off (as the test builds' perfOff)
                 findProperty("perfSet")?.let { v -> it.systemProperty("perfSet", v) }
                 findProperty("perfOff")?.let { v -> it.systemProperty("perfOff", v) }
                 it.maxHeapSize = "3g"
-                // Robolectric reaches into FileDescriptor internals, which newer JDKs lock down
+                // Robolectric reaches into FileDescriptor internals, locked down on newer JDKs
                 it.jvmArgs(
                     "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
                     "--add-opens=java.base/java.io=ALL-UNNAMED",
@@ -101,7 +96,6 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
 
     "playImplementation"(libs.play.app.update)
-    // Optional tips through Google Play Billing (closed source), in the Play build only
     "playImplementation"(libs.play.billing)
 
     debugImplementation(libs.androidx.compose.ui.tooling)

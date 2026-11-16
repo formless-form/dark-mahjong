@@ -14,9 +14,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The menus' slate by firelight, without and with the bamboo standing between the hearth and the
- * screen, casting its long shadow across it, at the Pixel's size. Rendered into
- * build/props-preview.
+ * The menus' slate by firelight, without and with the bamboo's long shadow from between hearth and
+ * screen. build/props-preview.
  * Run: ./gradlew testFossDebugUnitTest --tests '*PropsPreview*'
  */
 @RunWith(RobolectricTestRunner::class)

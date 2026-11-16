@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Not used yet (parked 2026-10-29: the knots read too large at table scale). Builds a wood tabletop (res/drawable-nodpi/table_wood.webp) from its source photo.
+"""Not used yet (parked 2026-10-29: knots too large at table scale). Builds res/drawable-nodpi/table_wood.webp.
 
 Source: "Wood grain structure, annual rings" (Needpix 294637, CC0):
 https://www.needpix.com/photo/download/294637/
-It is turned a quarter round so the figure runs up the table, and each colour channel is scaled
-so the wood's average matches the darker tone of the procedural walnut it replaced (its albedo
-before the lamp lights it). Usage: tools/make-table-wood.py [r g b]
+Turned a quarter so the figure runs up the table; each channel scaled so the average matches the
+procedural walnut's albedo. Usage: tools/make-table-wood.py [r g b]
 """
 import sys
 from pathlib import Path

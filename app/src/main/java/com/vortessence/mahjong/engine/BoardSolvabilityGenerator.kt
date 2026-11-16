@@ -10,13 +10,10 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
 
-/**
- * Tiles placed on positions, and an order their pairs can be taken in to clear the board: the
- * order they were lifted off the full board while dealing.
- */
+/** Tiles on positions, and a clearing order: the order the pairs were lifted while dealing. */
 class Assignment(val tiles: Map<TilePosition, Tile>, val order: List<Pair<TilePosition, TilePosition>>)
 
-/** A new deal, and an order its pairs can be taken in to clear it (empty if none is known). */
+/** A deal and a clearing order ([plan] empty if none is known). */
 class Deal(val tiles: List<BoardTile>, val plan: List<Move>)
 
 object BoardSolvabilityGenerator {
@@ -25,18 +22,12 @@ object BoardSolvabilityGenerator {
     private const val TILE_H = 2.0f
     private const val EPS = 0.05f
 
-    /**
-     * Checks if tile B overlaps tile A in the 2D plane.
-     */
     fun isOverlap2D(ax: Float, ay: Float, bx: Float, by: Float): Boolean {
         val overlapX = max(ax, bx) < min(ax + TILE_W, bx + TILE_W) - EPS
         val overlapY = max(ay, by) < min(ay + TILE_H, by + TILE_H) - EPS
         return overlapX && overlapY
     }
 
-    /**
-     * Checks if tile A is covered from above by any higher layer tile in [positions].
-     */
     fun isCovered(a: TilePosition, positions: Collection<TilePosition>): Boolean {
         for (b in positions) {
             if (b.z > a.z && isOverlap2D(a.x, a.y, b.x, b.y)) {
@@ -46,13 +37,9 @@ object BoardSolvabilityGenerator {
         return false
     }
 
-    /**
-     * Checks if tile A is blocked on the left by another tile on the same layer.
-     */
     fun isBlockedLeft(a: TilePosition, positions: Collection<TilePosition>): Boolean {
         for (b in positions) {
             if (b.z == a.z && b != a) {
-                // b is to the left of a and touching or overlapping
                 val touching = abs((b.x + TILE_W) - a.x) < 0.15f || (b.x < a.x && b.x + TILE_W > a.x)
                 if (touching) {
                     val verticalOverlap = max(a.y, b.y) < min(a.y + TILE_H, b.y + TILE_H) - EPS
@@ -63,13 +50,9 @@ object BoardSolvabilityGenerator {
         return false
     }
 
-    /**
-     * Checks if tile A is blocked on the right by another tile on the same layer.
-     */
     fun isBlockedRight(a: TilePosition, positions: Collection<TilePosition>): Boolean {
         for (b in positions) {
             if (b.z == a.z && b != a) {
-                // b is to the right of a and touching or overlapping
                 val touching = abs((a.x + TILE_W) - b.x) < 0.15f || (b.x > a.x && a.x + TILE_W > b.x)
                 if (touching) {
                     val verticalOverlap = max(a.y, b.y) < min(a.y + TILE_H, b.y + TILE_H) - EPS
@@ -80,9 +63,6 @@ object BoardSolvabilityGenerator {
         return false
     }
 
-    /**
-     * A tile is free if not covered and free on at least one horizontal side.
-     */
     fun isTileFree(a: TilePosition, positions: Collection<TilePosition>): Boolean {
         if (isCovered(a, positions)) return false
         val left = isBlockedLeft(a, positions)
@@ -90,21 +70,15 @@ object BoardSolvabilityGenerator {
         return !left || !right
     }
 
-    /**
-     * Generates a board for [constellation] guaranteed to be solvable.
-     */
     fun generateSolvableBoard(constellation: Constellation, random: Random = Random): List<BoardTile> =
         deal(constellation, random).tiles
 
-    /**
-     * Deals a solvable board for [constellation], with the order its pairs were lifted in, which
-     * hints follow.
-     */
+    /** A solvable deal, with the order its pairs were lifted in, which hints follow. */
     fun deal(constellation: Constellation, random: Random = Random): Deal {
         val totalCount = constellation.positions.size
         require(totalCount % 2 == 0) { "Constellation tile count must be even" }
 
-        // Scripted layouts (e.g. the tutorial) deal the same tiles every time
+        // Scripted layouts (e.g. the tutorial)
         constellation.fixedTiles?.let { fixed ->
             require(fixed.size == totalCount) { "Fixed tiles must match the constellation tile count" }
             return Deal(
@@ -115,12 +89,10 @@ object BoardSolvabilityGenerator {
 
         val pairCount = totalCount / 2
 
-        // Prepare matching pairs of tiles
         val tilePairs = generateTilePairs(pairCount, random)
 
-        // Try reverse simulation to guarantee a valid solution path. A deal with an opening match
-        // that loses the board is dealt again (on Quad, with about three free pairs to start, a
-        // quarter of deals had one), as many times as it takes, within reason
+        // Reverse simulation guarantees a solution. Deals with an opening match that loses the board
+        // are redealt (a quarter of Quad deals had one)
         var assigned = assignSolvable(constellation.positions, tilePairs, random)
         var tries = 1
         while (assigned != null && tries < SAFE_OPENING_TRIES && !openingIsSafe(constellation.positions, assigned)) {
@@ -143,14 +115,13 @@ object BoardSolvabilityGenerator {
             )
         }
 
-        // Fallback: direct pairing if constellation is unusually constrained
+        // Unusually constrained layout: direct pairing
         return Deal(fallbackAssignment(constellation.positions, tilePairs, random), plan = emptyList())
     }
 
     /**
-     * Whether every match open at the start of [assignment] leaves a board that can still be
-     * cleared (checked where few are open, [NARROW_OPENING]): each is tried, and the rest solved (the deal's own order guides the search, so a
-     * board that can be cleared is found so in a moment). A search that runs out of [budget]
+     * Whether every opening match leaves a clearable board (checked only when at most
+     * [NARROW_OPENING] are open). The deal's order guides the search; running out of [budget]
      * counts as lost.
      */
     internal fun openingIsSafe(positions: List<TilePosition>, assignment: Assignment, budget: Int = OPENING_BUDGET): Boolean {
@@ -160,8 +131,7 @@ object BoardSolvabilityGenerator {
         )
         val plan = assignment.order.map { (a, b) -> Move(ids.getValue(a), ids.getValue(b)) }
         val openings = MahjongGameEngine.findAvailablePairs(tiles)
-        // With plenty of matches open, one poor first choice is rarely fatal and quickly seen; the
-        // check (a search per opening) is kept for boards that open narrow, like Quad
+        // With many open, a poor first choice is rarely fatal; the search is kept for narrow ones like Quad
         if (openings.size > NARROW_OPENING) return true
         for ((a, b) in openings) {
             val after = tiles.map { if (it.id == a || it.id == b) it.copy(isRemoved = true) else it }
@@ -170,17 +140,12 @@ object BoardSolvabilityGenerator {
         return true
     }
 
-    // Deals tried for one whose every opening match can still be cleared, and the search each
-    // opening is given
+    // Deals tried for a safe opening; OPENING_BUDGET is the search per opening
     private const val SAFE_OPENING_TRIES = 12
-    // At most this many matches open at the start: a narrow opening, checked
     private const val NARROW_OPENING = 5
     private const val OPENING_BUDGET = 20_000
 
-    /**
-     * Redistributes [tiles] over [positions] so that the resulting board is solvable.
-     * Returns null if the tiles cannot be paired or no solvable arrangement was found.
-     */
+    /** Redistributes [tiles] solvably; null if they can't be paired or no arrangement was found. */
     fun reassignSolvable(
         positions: List<TilePosition>,
         tiles: List<Tile>,
@@ -204,9 +169,7 @@ object BoardSolvabilityGenerator {
         return null
     }
 
-    /**
-     * Groups [tiles] into matching pairs, or returns null if some tile has no partner.
-     */
+    /** Null if some tile has no partner. */
     private fun pairUp(tiles: List<Tile>): List<Pair<Tile, Tile>>? {
         val available = tiles.toMutableList()
         val pairs = mutableListOf<Pair<Tile, Tile>>()
@@ -228,14 +191,12 @@ object BoardSolvabilityGenerator {
         val assignedTiles = mutableMapOf<TilePosition, Tile>()
         val order = mutableListOf<Pair<TilePosition, TilePosition>>()
 
-        // In reverse generation:
-        // We start with all tiles present. At each step, we find free tiles,
-        // assign a matching pair to 2 of them, and "remove" them from our simulation set.
-        // That way, in forward play, removing this pair in reverse order is always valid!
+        // From the full board, put each pair on two free positions and lift them: forward play can
+        // always take them in this order
         for (pair in pairs) {
             val free = remaining.filter { isTileFree(it, remaining) }
             if (free.size < 2) {
-                return null // Need to backtrack/retry
+                return null
             }
             val shuffled = free.shuffled(random)
             val pos1 = shuffled[0]
@@ -275,14 +236,10 @@ object BoardSolvabilityGenerator {
         }
     }
 
-    /**
-     * Generates [pairCount] matching pairs of traditional Mahjong tiles.
-     */
     fun generateTilePairs(pairCount: Int, random: Random = Random): List<Pair<Tile, Tile>> {
         val full144 = Tile.createStandard144Set().shuffled(random)
         val pairs = mutableListOf<Pair<Tile, Tile>>()
 
-        // Form pairs from full144
         val available = full144.toMutableList()
         var i = 0
         while (i < available.size && pairs.size < pairCount) {
@@ -303,7 +260,7 @@ object BoardSolvabilityGenerator {
             }
         }
 
-        // If pairCount > available from standard 144, duplicate existing pairs
+        // More pairs than the standard 144 holds: duplicate some
         while (pairs.size < pairCount) {
             val randomPair = pairs.random(random)
             pairs.add(Pair(randomPair.first.copy(), randomPair.second.copy()))

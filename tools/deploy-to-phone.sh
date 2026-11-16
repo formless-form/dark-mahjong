@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Build a small minified APK (the Play build), sign it with the local debug key, install it on the connected
-# phone and launch it. Usage: tools/deploy-to-phone.sh [--no-launch] [adb-serial]
-# --no-launch installs without opening the app (e.g. while the phone is in use).
+# Builds a minified Play APK, signs it with the local debug key, installs and launches it.
+# Usage: tools/deploy-to-phone.sh [--no-launch] [adb-serial]  (--no-launch: e.g. while the phone is in use)
 # The build runs in its own systemd unit, outside the calling process (no memory cap).
 set -euo pipefail
 cd "$(dirname "$0")/.."

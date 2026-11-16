@@ -25,7 +25,6 @@ class MahjongEngineTest {
 
     @Test
     fun testTileMatchingRules() {
-        // Standard suits match identical suit and value
         val char1A = Tile(TileSuit.CHARACTER, 1)
         val char1B = Tile(TileSuit.CHARACTER, 1)
         val char2 = Tile(TileSuit.CHARACTER, 2)
@@ -35,17 +34,14 @@ class MahjongEngineTest {
         assertFalse("Different character values should not match", char1A.matches(char2))
         assertFalse("Different suits should not match", char1A.matches(bam1))
 
-        // Special rule: Any Season matches any Season
         val spring = Tile(TileSuit.SEASON, Tile.SEASON_SPRING)
         val winter = Tile(TileSuit.SEASON, Tile.SEASON_WINTER)
         assertTrue("Any Season matches any other Season", spring.matches(winter))
 
-        // Special rule: Any Flower matches any Flower
         val plum = Tile(TileSuit.FLOWER, Tile.FLOWER_PLUM)
         val bamboo = Tile(TileSuit.FLOWER, Tile.FLOWER_BAMBOO)
         assertTrue("Any Flower matches any other Flower", plum.matches(bamboo))
 
-        // Season cannot match Flower
         assertFalse("Season should not match Flower", spring.matches(plum))
     }
 
@@ -54,62 +50,53 @@ class MahjongEngineTest {
         val standardSet = Tile.createStandard144Set()
         assertEquals("Standard set must contain 144 tiles", 144, standardSet.size)
 
-        // 36 characters (4 of each 1-9)
+        // 4 of each 1-9
         val chars = standardSet.filter { it.suit == TileSuit.CHARACTER }
         assertEquals(36, chars.size)
 
-        // 36 bamboos
         val bams = standardSet.filter { it.suit == TileSuit.BAMBOO }
         assertEquals(36, bams.size)
 
-        // 36 circles
         val circles = standardSet.filter { it.suit == TileSuit.CIRCLE }
         assertEquals(36, circles.size)
 
-        // 16 winds (4 of each E, S, W, N)
+        // 4 each of E, S, W, N
         val winds = standardSet.filter { it.suit == TileSuit.WIND }
         assertEquals(16, winds.size)
 
-        // 12 dragons (4 of each Red, Green, White)
+        // 4 each of Red, Green, White
         val dragons = standardSet.filter { it.suit == TileSuit.DRAGON }
         assertEquals(12, dragons.size)
 
-        // 4 seasons
         val seasons = standardSet.filter { it.suit == TileSuit.SEASON }
         assertEquals(4, seasons.size)
 
-        // 4 flowers
         val flowers = standardSet.filter { it.suit == TileSuit.FLOWER }
         assertEquals(4, flowers.size)
     }
 
     @Test
     fun testTileFreedomRules() {
-        // Tile size is 2x2.
-        // Place 3 tiles in a horizontal row:
-        // Tile L at (0, 0, 0), Tile C at (2, 0, 0), Tile R at (4, 0, 0)
+        // Tiles are 2x2: L, C, R side by side
         val posL = TilePosition(0f, 0f, 0)
         val posC = TilePosition(2f, 0f, 0)
         val posR = TilePosition(4f, 0f, 0)
 
         val positions = listOf(posL, posC, posR)
 
-        // posC is blocked on both left (posL) and right (posR)
         assertTrue("C is blocked on left", BoardSolvabilityGenerator.isBlockedLeft(posC, positions))
         assertTrue("C is blocked on right", BoardSolvabilityGenerator.isBlockedRight(posC, positions))
         assertFalse("C should NOT be free", BoardSolvabilityGenerator.isTileFree(posC, positions))
 
-        // posL is only blocked on right, left is open -> FREE
         assertFalse("L is not blocked on left", BoardSolvabilityGenerator.isBlockedLeft(posL, positions))
         assertTrue("L is blocked on right", BoardSolvabilityGenerator.isBlockedRight(posL, positions))
         assertTrue("L should BE free", BoardSolvabilityGenerator.isTileFree(posL, positions))
 
-        // posR is only blocked on left, right is open -> FREE
         assertTrue("R is blocked on left", BoardSolvabilityGenerator.isBlockedLeft(posR, positions))
         assertFalse("R is not blocked on right", BoardSolvabilityGenerator.isBlockedRight(posR, positions))
         assertTrue("R should BE free", BoardSolvabilityGenerator.isTileFree(posR, positions))
 
-        // Now place a tile T on layer 1 covering posL: (0, 0, 1)
+        // T on layer 1 covers L
         val posT = TilePosition(0f, 0f, 1)
         val coveredPositions = listOf(posL, posC, posR, posT)
 
@@ -159,19 +146,16 @@ class MahjongEngineTest {
         assertTrue("Initial state must have active tiles", initialState.tiles.isNotEmpty())
         assertTrue("Must have at least one available pair to start", initialState.availablePairsCount > 0)
 
-        // Find a matching pair among free tiles
         val availablePair = MahjongGameEngine.findAvailablePairs(initialState.tiles).firstOrNull()
         assertNotNull("Available pair should exist", availablePair)
 
         val id1 = availablePair!!.first
         val id2 = availablePair.second
 
-        // Tap first tile -> selected
         val (stateAfter1, result1) = MahjongGameEngine.handleTileTap(initialState, id1)
         assertTrue(result1 is TileTapResult.Selected)
         assertEquals(id1, stateAfter1.selectedTileId)
 
-        // Tap second matching tile -> match & removal
         val (stateAfter2, result2) = MahjongGameEngine.handleTileTap(stateAfter1, id2)
         assertTrue(result2 is TileTapResult.Matched)
         assertEquals(null, stateAfter2.selectedTileId)
@@ -183,7 +167,6 @@ class MahjongEngineTest {
         assertTrue("Tile 1 should be removed", tile1.isRemoved)
         assertTrue("Tile 2 should be removed", tile2.isRemoved)
 
-        // Test Undo
         val stateAfterUndo = MahjongGameEngine.undo(stateAfter2)
         assertEquals(0, stateAfterUndo.moveHistory.size)
         assertEquals(0, stateAfterUndo.moveHistory.size)
@@ -196,7 +179,6 @@ class MahjongEngineTest {
 
     @Test
     fun testBlockedTileCannotBeSelected() {
-        // Build a state with a blocked tile
         val tileL = BoardTile(id = 1, tile = Tile(TileSuit.BAMBOO, 1), position = TilePosition(0f, 0f, 0))
         val tileC = BoardTile(id = 2, tile = Tile(TileSuit.BAMBOO, 2), position = TilePosition(2f, 0f, 0))
         val tileR = BoardTile(id = 3, tile = Tile(TileSuit.BAMBOO, 3), position = TilePosition(4f, 0f, 0))
@@ -243,8 +225,7 @@ class MahjongEngineTest {
         assertEquals(12 + ConstellationRepository.mahConstellations.size + ConstellationRepository.journeyConstellations.size, levels.size)
         assertEquals("Total levels count should match", levels.size, ConstellationRepository.totalLevels)
 
-        // Every layout has been measured, and the levels run from the most often cleared to the
-        // least, their labels never easier then harder again
+        // Every layout measured; levels run most to least often cleared, labels never getting easier
         val rates = ConstellationRepository.constellations.drop(1).associate { it.id to LayoutDifficulty.clearRate[it.id] }
         assertTrue("Not measured: ${rates.filterValues { it == null }.keys}", rates.values.all { it != null })
         for (i in 1 until levels.size) {
@@ -254,9 +235,8 @@ class MahjongEngineTest {
             )
         }
 
-        // Levels 1 to 4 are the layouts they were before the Mah layouts joined; Paper Boat, made
-        // for the Journey (2026-11-14), measured among the easiest, so it comes 5th and the rest of
-        // the first eight follow it (levelsBeforeJourney100 carries progress over)
+        // Levels 1-4 as before the Mah layouts joined; Paper Boat (Journey, 2026-11-14) measured
+        // among the easiest, so it comes 5th (levelsBeforeJourney100 carries progress over)
         assertEquals(
             listOf("jade_pillar", "bamboo_spire", "dragon_saber", "celestial_lantern", "paper_boat", "torii_arch", "celadon_hourglass", "cascading_falls"),
             levels.take(8).map { it.id },
@@ -279,7 +259,6 @@ class MahjongEngineTest {
             assertEquals(id, classic.id)
         }
 
-        // Verify classic turtle is indeed wide (> 30 units wide, aspect ratio > 1.0)
         val turtle = ConstellationRepository.getById("classic_turtle")!!
         val turtleW = (turtle.positions.maxOf { it.x } - turtle.positions.minOf { it.x }) + 2f
         val turtleH = ((turtle.positions.maxOf { it.y } - turtle.positions.minOf { it.y }) + 2f) * 1.333f
@@ -294,7 +273,6 @@ class MahjongEngineTest {
         val initialPairs = MahjongGameEngine.findAvailablePairs(initialState.tiles)
         assertTrue(initialPairs.isNotEmpty())
 
-        // Make one match
         val firstPair = initialPairs.first()
         val (stateAfterMatch, matchResult) = MahjongGameEngine.handleTileTap(initialState, firstPair.first)
         assertTrue(matchResult is TileTapResult.Selected)
@@ -306,12 +284,10 @@ class MahjongEngineTest {
         assertEquals(1, simulatedState.moveHistory.size)
         assertEquals(34, simulatedState.remainingTilesCount)
 
-        // Serialize
         val saved = SavedGameState.fromGameState(simulatedState, levelIndex = 1)
         val raw = saved.serialize()
         assertTrue(raw.contains("jade_pillar"))
 
-        // Deserialize
         val restoredSaved = SavedGameState.deserialize(raw)
         assertNotNull(restoredSaved)
         assertEquals("jade_pillar", restoredSaved!!.constellationId)
@@ -320,7 +296,6 @@ class MahjongEngineTest {
         assertEquals(1, restoredSaved.moveHistory.size)
         assertEquals(simulatedState.tiles.size, restoredSaved.tiles.size)
 
-        // Convert back to GameState
         val restoredGameState = restoredSaved.toGameState()
         assertNotNull(restoredGameState)
         assertEquals("jade_pillar", restoredGameState.constellation.id)
@@ -328,7 +303,7 @@ class MahjongEngineTest {
         assertEquals(34, restoredGameState.remainingTilesCount)
         assertFalse(restoredGameState.isWon)
 
-        // Verify that undo still works seamlessly on the restored state!
+        // Undo works on the restored state
         val stateAfterUndo = MahjongGameEngine.undo(restoredGameState)
         assertEquals(0, stateAfterUndo.moveHistory.size)
         assertEquals(0, stateAfterUndo.moveHistory.size)
@@ -358,16 +333,14 @@ class MahjongEngineTest {
     @Test
     fun testPlaylistCyclingLogic() {
         val playlistSize = 3
-        var currentIndex = 1 // Start at middle song
+        var currentIndex = 1
         val sequence = mutableListOf<Int>()
 
-        // Simulate 7 song completions
         repeat(7) {
             currentIndex = (currentIndex + 1) % playlistSize
             sequence.add(currentIndex)
         }
 
-        // Expected sequence starting from 1: 2, 0, 1, 2, 0, 1, 2
         assertEquals(listOf(2, 0, 1, 2, 0, 1, 2), sequence)
     }
 
@@ -399,7 +372,7 @@ class MahjongEngineTest {
                         problems.add("${constellation.name} (${constellation.id}) tile $p has ZERO supporting tiles at layer ${p.z - 1}")
                         continue
                     }
-                    // Test 10x10 grid across tile footprint (offset by eps to stay inside boundaries)
+                    // 10x10 sample grid, inset by eps
                     val steps = 10
                     val eps = 0.05f
                     var unvisitedPoints = 0
@@ -424,10 +397,7 @@ class MahjongEngineTest {
         }
     }
 
-    /**
-     * Two free East Winds plus two Bamboo tiles stacked on top of each other: a pair is still
-     * available, but the board can no longer be cleared.
-     */
+    /** Two free East Winds and two stacked Bamboos: a pair is left, but the board can't be cleared. */
     private fun stackedDeadEndState(): GameState {
         val east = Tile(TileSuit.WIND, Tile.WIND_EAST)
         val bamboo = Tile(TileSuit.BAMBOO, 3)
@@ -448,8 +418,7 @@ class MahjongEngineTest {
         return GameState(constellation = constellation, tiles = refreshed)
     }
 
-    // Play only stops when no pair can be taken: a board that can't be cleared in the end
-    // still lets the player take the pairs that are left
+    // Play stops only when no pair is left, even on a board that can no longer be cleared
     @Test
     fun testPlayContinuesWhileAnyPairIsLeft() {
         val state = stackedDeadEndState()
@@ -484,8 +453,7 @@ class MahjongEngineTest {
         assertTrue(reshuffled.moveHistory.isEmpty())
     }
 
-    // Restart's "Same deal": every tile back with the face it was dealt, even after a reshuffle,
-    // and it survives a save
+    // Restart's "Same deal": every tile back with its dealt face, even after a reshuffle and a save
     @Test
     fun testReplayRestoresTheOriginalDeal() {
         val start = MahjongGameEngine.startNewGame(ConstellationRepository.getLevel(5), kotlin.random.Random(9))
@@ -503,10 +471,8 @@ class MahjongEngineTest {
         assertTrue(MahjongGameEngine.planHolds(replayed.tiles, replayed.plan))
     }
 
-    // After a reorder no layout a player could play is locked: whatever level they had reached in
-    // the old numbering, every layout up to it is open in today's (the measured order of 1.3.7, and
-    // again when Mah's wide boards joined in 1.4.16, and when the Journey reached 100); one who had cleared them all goes on past
-    // the furthest of them
+    // After each reorder (1.3.7's measured order, Mah's wide boards in 1.4.16, the Journey at 100)
+    // every layout up to a player's old level stays open; one who cleared them all goes past the furthest
     @Test
     fun testUnlockedLevelsCarryOverToTheMeasuredOrder() {
         val newLevel = { id: String -> ConstellationRepository.levelIndexOf(id) }

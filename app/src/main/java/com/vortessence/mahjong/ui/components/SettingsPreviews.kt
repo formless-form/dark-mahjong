@@ -7,18 +7,17 @@ import com.vortessence.mahjong.data.model.TileSet
 import kotlinx.coroutines.delay
 
 /**
- * Settings' pictures, made ahead of time a little after the app opens, so Settings opens without
- * a pause (Gareth, 2026-11-15): every tile set's sample tiles ([SampleStrip]) and every table's
- * swatch ([TableSurfaceRenderer.prerenderSwatch]). One at a time, a frame apart, on the main
- * thread: the tiles' drawing shares the board's state, so it never runs alongside it.
+ * Pre-renders Settings' sample strips and table swatches soon after launch so Settings opens
+ * without a pause (Gareth, 2026-11-15). One per frame on the main thread: tile drawing shares the
+ * board's state.
  */
 object SettingsPreviews {
-    /** The height of every sample strip and swatch in Settings. */
+    /** Height of every Settings sample strip and swatch. */
     val HEIGHT = 76.dp
 
     private var made = false
 
-    /** Makes them all, once, swatches [width] x [height] pixels (the screen's width, [HEIGHT]). */
+    /** Once only; swatches are [width] x [height] px. */
     suspend fun make(width: Int, height: Int) {
         if (made) return
         made = true
@@ -33,6 +32,6 @@ object SettingsPreviews {
         }
     }
 
-    // Long enough for the title screen to settle first
+    // Lets the title screen settle first
     private const val START_DELAY_MS = 1500L
 }

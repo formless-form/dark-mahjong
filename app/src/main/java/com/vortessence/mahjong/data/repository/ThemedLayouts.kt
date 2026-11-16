@@ -5,13 +5,9 @@ import com.vortessence.mahjong.data.model.Difficulty
 import com.vortessence.mahjong.data.model.TilePosition
 
 /**
- * Themed layouts (2026-10-31, ten more 2026-11-11), for Layouts (not the levels): ten wide
- * boards and seventeen to play upright. Each raised layer sits half a tile off the one below, which
- * is why their x and y run odd and even by turn; so stacks always leave tiles in pairs, and every
- * deal works first time.
- * Each row is a layer ([z]), a row of the board ([y]) and the tiles along it ([x]), in the
- * half-tile units of every layout. Their difficulty labels come from measuring them
- * (LayoutDifficulty), like every layout's.
+ * Layouts only (not levels), 2026-10-31 and 2026-11-11. Each raised layer sits half a tile off the
+ * one below (hence x and y alternate odd and even), so stacks leave tiles in pairs and every deal
+ * works first time. Rows are [z], [y], [x...] in half-tile units; difficulty is measured.
  */
 internal object ThemedLayouts {
     val layouts: List<Constellation> by lazy {
@@ -33,7 +29,6 @@ internal object ThemedLayouts {
             bonsaiTree(),
             hotAirBalloon(),
             treasureChest(),
-            // 2026-11-11: ten more
             koiCarp(),
             moonBridge(),
             threeTierPagoda(),
@@ -703,7 +698,7 @@ internal object ThemedLayouts {
         Constellation(
             id = id,
             name = name,
-            // Provisional: replaced by the measured label
+            // Replaced by the measured label
             difficulty = Difficulty.HARD,
             description = description,
             positions = mutableListOf<TilePosition>().apply(rows),

@@ -7,9 +7,8 @@ import com.vortessence.mahjong.R
 import java.util.concurrent.Executors
 
 /**
- * The fireplace's soft crackle, looping for as long as the fire burns. The recording's ends are
- * crossfaded into each other (tools/make-fire-sound.py), and two players hand over to each other
- * with setNextMediaPlayer, so the loop point has neither a gap nor a jump.
+ * Looping fire crackle. The recording's ends are crossfaded (tools/make-fire-sound.py) and two
+ * players hand over via setNextMediaPlayer, so the loop has neither gap nor jump.
  */
 class FireplaceSound(private val context: Context) {
 
@@ -18,15 +17,15 @@ class FireplaceSound(private val context: Context) {
     private var volume = 0f
     private var playing = false
     private var paused = false
-    // Counts stops, so players made for a play that has since stopped are let go, not started
+    // Counts stops, so players made for a since-stopped play are let go, not started
     private var generation = 0
     private val lock = Any()
 
-    // The players are made (each decodes the start of the recording) off the main thread, and
-    // outside the lock, so neither opening a menu screen nor pausing ever waits on them
+    // Players are made (decoding the start) off the main thread and outside the lock, so neither
+    // opening a menu nor pausing waits on them
     private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "fireplace").apply { isDaemon = true } }
 
-    /** Plays at [level] (0..1), or stops when it is 0. */
+    /** [level] 0..1; 0 stops. */
     fun play(level: Float) {
         val gen: Int
         synchronized(lock) {
@@ -43,7 +42,7 @@ class FireplaceSound(private val context: Context) {
         loader.execute { begin(gen) }
     }
 
-    // On the loader: the pair made, then started if this play is still wanted
+    // On the loader; starts only if this play is still wanted
     private fun begin(gen: Int) {
         val first = create()
         val second = first?.let { create() }
@@ -52,7 +51,7 @@ class FireplaceSound(private val context: Context) {
             if (first == null || second == null || !wanted) {
                 runCatching { first?.release() }
                 runCatching { second?.release() }
-                // Couldn't be made: no longer counted as playing, so the next play() tries again
+                // So the next play() tries again
                 if (wanted) playing = false
                 return
             }
@@ -60,11 +59,11 @@ class FireplaceSound(private val context: Context) {
                 players[0] = first
                 players[1] = second
                 current = 0
-                // The volume may have changed while they were made
+                // Volume may have changed meanwhile
                 first.setVolume(volume, volume)
                 second.setVolume(volume, volume)
                 first.setNextMediaPlayer(second)
-                // Made while the app was going to the background: resume() starts it
+                // Else resume() starts it
                 if (!paused) first.start()
             } catch (_: Exception) {
                 stop()
@@ -97,8 +96,7 @@ class FireplaceSound(private val context: Context) {
         }
     }
 
-    // One round of the recording is over and the other player has taken over. Called on the main
-    // thread (the players are made on the loader, which has no looper of its own)
+    // On the main thread (the loader has no looper); the other player has already taken over
     private fun onRoundEnded(done: MediaPlayer) {
         val gen: Int
         val slot: Int
@@ -110,11 +108,10 @@ class FireplaceSound(private val context: Context) {
             runCatching { done.release() }
             gen = generation
         }
-        // The next round's player is made on the loader too, while the other plays its round
         loader.execute { rearm(gen, slot) }
     }
 
-    // On the loader: a fresh player for [slot], set to follow the one now playing
+    // On the loader: a fresh player for [slot] to follow the one now playing
     private fun rearm(gen: Int, slot: Int) {
         val fresh = create()
         synchronized(lock) {
@@ -122,16 +119,14 @@ class FireplaceSound(private val context: Context) {
                 runCatching { fresh?.release() }
                 return
             }
-            // Couldn't be made: the round now playing plays out, and the loop ends with it (the
-            // next round's rearm finds nothing playing)
+            // Couldn't be made: the loop ends after this round (the next rearm finds nothing playing)
             if (fresh == null || players[slot] != null) {
                 runCatching { fresh?.release() }
                 return
             }
             val other = players[1 - slot]
             if (other == null) {
-                // Nothing left playing to follow: no longer counted as playing, so the next
-                // play() starts the loop afresh
+                // Nothing to follow: the next play() starts afresh
                 runCatching { fresh.release() }
                 stop()
                 return
@@ -152,8 +147,6 @@ class FireplaceSound(private val context: Context) {
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
         val player = runCatching { MediaPlayer.create(context, R.raw.fireplace, attributes, 0) }.getOrNull() ?: return null
-        // When one finishes, the other has already taken over: the finished one is replaced by a
-        // fresh player that follows it, so they keep handing over for ever
         player.setOnCompletionListener { onRoundEnded(it) }
         return player
     }

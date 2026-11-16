@@ -33,11 +33,9 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * Imperial on a real board, drawn by the game itself from the Imperial images (ImperialImages):
- * Quad on the green mat by the lamp, and on walnut by the fire: there with the stone keeping the
- * light its pictures were made in (to compare), and with the fire's light turning with its relief,
- * as in the game. Into build/imperial-tile/board-*.png. The images come with the
- * Play build only, so this does nothing where they are absent (the open-source build's tests).
+ * Imperial on a real board, drawn by the game from ImperialImages: Quad on the mat by the lamp, and
+ * on walnut by the fire, with the stone's light as made (to compare) and turning with its relief (as
+ * in the game). build/imperial-tile/board-*.png. Play build only: the images are absent elsewhere.
  * Run: ./gradlew testPlayDebugUnitTest --tests '*ImperialBoardPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -52,8 +50,7 @@ class ImperialBoardPreview {
         TableSurfaceRenderer.tileRelief = true
     }
 
-    // A table, the fire lit or not, and whether the fire's light turns with the stone's relief (as
-    // it does in the game) or the stone keeps the light its pictures were made in (to compare)
+    // relief: the fire's light turns with the stone's relief (as in the game), or not (as made)
     private data class Scene(val surface: TableSurface, val fire: Boolean, val name: String, val relief: Boolean = true)
 
     @Test

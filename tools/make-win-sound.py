@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Builds the win sound: app/src/main/res/raw/win_fireworks.ogg (Opus, 80 kbps, mono), heard while
-the fireworks light show plays when a board is cleared.
+Builds the win sound, app/src/main/res/raw/win_fireworks.ogg (Opus, 80 kbps, mono), under the
+fireworks when a board is cleared.
 
-Source: "Fireworks - Annapolis Royal, NS" by greysound (Freesound 769030, CC0), a small-town
-fireworks show recorded at 96 kHz / 24-bit. The repo keeps its first 10 seconds as FLAC in
-sounds/freesound/ (the full recording is 47.5 s); the sound is its first 5.5 seconds, about as
-long as the show, mixed to mono, levelled, and faded out over the last second.
+Source: "Fireworks - Annapolis Royal, NS" by greysound (Freesound 769030, CC0). The repo keeps the
+first 10 s of 47.5 as FLAC in sounds/freesound/; the sound is the first 5.5 s, mono, levelled, faded
+over the last second.
 
 Needs ffmpeg (with libopus). Run from the repo root:
     python3 tools/make-win-sound.py

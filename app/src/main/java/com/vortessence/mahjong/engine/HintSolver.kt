@@ -6,18 +6,13 @@ import com.vortessence.mahjong.data.model.TilePosition
 import java.util.BitSet
 
 /**
- * Finds a way to clear the tiles left on a board, for hints when no plan from the deal still
- * holds (a restored game, or a player who paired tiles differently): a depth-first search over
- * free matching pairs, the most promising first, that takes moves that can't be wrong without
- * trying alternatives, remembers dead ends, and gives up after [budget] positions.
+ * Clears the remaining tiles for hints when the deal's plan no longer holds (restored game, or
+ * different pairings): depth-first, most promising pair first, safe moves taken outright, dead ends
+ * remembered, giving up after a budget of positions.
  */
 object HintSolver {
 
-    /**
-     * The pairs to take, in order, to clear [tiles]; null if none was found within [budget].
-     * [hint] is a plan that no longer holds but still knows the board: tiles it takes early are
-     * tried first.
-     */
+    /** Null if no way is found within [budget]. Tiles that the stale plan [hint] takes early are tried first. */
     fun solve(tiles: List<BoardTile>, budget: Int = 20_000, hint: List<Move> = emptyList()): List<Move>? {
         val activeAt = tiles.indices.filter { !tiles[it].isRemoved }
         val active = activeAt.map { tiles[it] }
@@ -27,7 +22,6 @@ object HintSolver {
 
         val present = BitSet(n).apply { set(0, n) }
         val deadEnds = HashSet<BitSet>()
-        // The tiles taken so far, two by two
         val path = IntArray(n)
         var depth = 0
         var explored = 0
@@ -68,7 +62,7 @@ object HintSolver {
         return (0 until depth step 2).map { Move(active[path[it]].id, active[path[it + 1]].id) }
     }
 
-    /** The free pairs of [tiles], the most promising first: the best guess when no plan is found. */
+    /** Free pairs, most promising first: the best guess when no plan is found. */
     fun rank(tiles: List<BoardTile>): List<Pair<Int, Int>> {
         val activeAt = tiles.indices.filter { !tiles[it].isRemoved }
         val active = activeAt.map { tiles[it] }
@@ -88,11 +82,8 @@ object HintSolver {
     }
 
     /**
-     * Which tiles of a whole layout lie on each tile, and flank it on the left and on the right
-     * (by index in its tile list): the same however many tiles are left, so worked out once per
-     * layout rather than for every search. A deal checks each of its openings with a search of
-     * the same layout (BoardSolvabilityGenerator.openingIsSafe), and each would otherwise scan
-     * every pair of tiles again.
+     * Per layout tile index: tiles above it and flanking it. Independent of tiles left, so worked out
+     * once per layout, not per search (openingIsSafe searches the same layout once per opening).
      */
     private class Relations(val positions: List<TilePosition>) {
         val above: Array<IntArray>
@@ -120,8 +111,7 @@ object HintSolver {
         }
 
         companion object {
-            // The last layout's, kept for the next search (hints and deals search from more than
-            // one thread, each reading or replacing the whole entry)
+            // The last layout's; searches run on several threads, each reading or replacing the whole entry
             @Volatile
             private var last: Relations? = null
 
@@ -136,30 +126,28 @@ object HintSolver {
     private class Board(active: List<BoardTile>, activeAt: List<Int>, relations: Relations, turns: Map<Int, Int>) {
         private val n = active.size
 
-        // Each tile's turn in an old plan (later than all for tiles it doesn't have)
+        // Turn in the old plan; MAX_TURN for tiles it doesn't have
         private val turn = IntArray(n) { (turns[active[it].id] ?: MAX_TURN).coerceAtMost(MAX_TURN) }
 
-        // For each tile, the tiles lying on it, and those beside it on the left and on the right
         private val above = Array(n) { IntArray(0) }
         private val left = Array(n) { IntArray(0) }
         private val right = Array(n) { IntArray(0) }
 
-        // How many tiles each tile holds down (lies on, or flanks): taking it frees the most
+        // Tiles each one lies on or flanks
         private val holds = IntArray(n)
         private val z = IntArray(n) { active[it].position.z }
 
-        // Tiles that match each other share a kind (any two Flowers, any two Seasons, or the same
-        // face), numbered from 0
+        // Matching tiles share a kind (any Flowers, any Seasons, or the same face)
         private val kind = IntArray(n)
         private val kinds: Int
 
-        // Scratch space, reused: a search finishes with one position before moving to the next
+        // Reused scratch: a search finishes one position before the next
         private val free = IntArray(n)
         private val presentOfKind: IntArray
         private val freeOfKind: IntArray
 
         init {
-            // The layout's relations, kept to the tiles left and renumbered as they are here
+            // Layout relations narrowed to the tiles left, renumbered
             val here = IntArray(relations.positions.size) { -1 }
             activeAt.forEachIndexed { i, at -> here[at] = i }
             fun mapped(of: IntArray) = of.map { here[it] }.filter { it >= 0 }.toIntArray()
@@ -189,7 +177,7 @@ object HintSolver {
         private fun isFree(i: Int, present: BitSet) =
             noneIn(present, above[i]) && (noneIn(present, left[i]) || noneIn(present, right[i]))
 
-        // Fills [free] with the free tiles of [present], and counts them and all tiles by kind
+        // Fills [free] and counts present and free tiles by kind
         private fun survey(present: BitSet): Int {
             presentOfKind.fill(0)
             freeOfKind.fill(0)
@@ -207,9 +195,8 @@ object HintSolver {
         }
 
         /**
-         * Takes from [present] every kind whose tiles left are all free: they can only pair with
-         * each other, and taking tiles never blocks one, so it can't be a wrong move. Repeats until
-         * none is left, writing the tiles taken into [path] from [depth]; returns the new depth.
+         * Repeatedly takes every kind whose remaining tiles are all free (never a wrong move), writing
+         * them into [path] from [depth]; returns the new depth.
          */
         fun takeSafe(present: BitSet, path: IntArray, depth: Int): Int {
             var d = depth
@@ -219,7 +206,7 @@ object HintSolver {
                 for (f in 0 until count) {
                     val k = kind[free[f]]
                     if (presentOfKind[k] != freeOfKind[k] || freeOfKind[k] % 2 != 0) continue
-                    // The whole kind at once, so the path pairs its tiles with each other
+                    // Whole kind at once, so the path pairs them with each other
                     for (g in f until count) {
                         val t = free[g]
                         if (kind[t] != k) continue
@@ -232,10 +219,7 @@ object HintSolver {
             }
         }
 
-        /**
-         * The free matching pairs, the most promising first: those the old plan takes soonest, then
-         * higher tiles, then those holding down most.
-         */
+        /** Old plan's soonest first, then higher tiles, then those holding down most. */
         fun rankedPairs(present: BitSet): List<Long> {
             val count = survey(present)
             val pairs = ArrayList<Long>()

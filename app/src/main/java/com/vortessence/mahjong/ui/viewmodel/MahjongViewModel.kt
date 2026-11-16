@@ -70,8 +70,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val prefsRepo = PreferencesRepository(application)
     val audioManager = AudioManager(application)
 
-    // Dark Mahjong is portrait-only, so levels use upstream's tall, phone-shaped layouts
-    // (most mahjong layouts are taller than wide); the wide classics stay under Layouts
+    // Portrait-only, so levels use upstream's tall layouts; the wide classics stay under Layouts
     val currentLevelConstellations: List<Constellation>
         get() = ConstellationRepository.levelConstellations
 
@@ -84,16 +83,15 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _currentLevelIndex = MutableStateFlow<Int?>(null)
     val currentLevelIndex: StateFlow<Int?> = _currentLevelIndex.asStateFlow()
 
-    // The day (an epoch day) whose Today's Puzzle is on the table, null for any other board
+    // Epoch day of the Today's Puzzle on the table; null for any other board
     private val _puzzleDay = MutableStateFlow<Long?>(null)
     val puzzleDay: StateFlow<Long?> = _puzzleDay.asStateFlow()
 
-    // Today's Puzzle's day (an epoch day), kept current: moved on at 4 am, and looked at again
-    // whenever the app comes back (a delay doesn't run on while the phone sleeps)
+    // Moved on at 4 am, and rechecked on resume (a delay doesn't run while the phone sleeps)
     private val _today = MutableStateFlow(TodaysPuzzle.today())
     val today: StateFlow<Long> = _today.asStateFlow()
 
-    // Index into TutorialScript.steps while the guided tutorial runs, null otherwise
+    // Into TutorialScript.steps; null outside the guided tutorial
     private val _tutorialStepIndex = MutableStateFlow<Int?>(null)
     val tutorialStep: StateFlow<TutorialStep?> = _tutorialStepIndex
         .map { index -> index?.let { TutorialScript.steps.getOrNull(it) } }
@@ -104,24 +102,22 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     private val _settings = MutableStateFlow(GameSettings())
     val settings: StateFlow<GameSettings> = _settings.asStateFlow()
 
-    // Congratulations for the board just cleared; null until it has been chosen
+    // Null until chosen
     private val _winMessage = MutableStateFlow<String?>(null)
     val winMessage: StateFlow<String?> = _winMessage.asStateFlow()
 
-    // This win was the player's first clean clear: its card introduces the gold ribbon
+    // First clean clear: its card introduces the gold ribbon
     private val _firstRibbon = MutableStateFlow(false)
     val firstRibbon: StateFlow<Boolean> = _firstRibbon.asStateFlow()
 
-    // The first-game performance check, as stored (null until read)
+    // Null until read
     private val _perfCheck = MutableStateFlow<PerfCheckState?>(null)
-    // A test build's perf scene is on the table: never part of the check
+    // Test build's perf scene: never part of the check
     private val _perfScene = MutableStateFlow(false)
 
     /**
-     * Whether the frames now being drawn count towards the first-game check: a real game in play
-     * with a full board's worth of tiles standing (never the tutorial, a small board any phone
-     * draws smoothly, which would pass a phone that lags on a full one), the check still to run,
-     * and the effects on (Low-performance mode and the phone's Remove animations both off).
+     * Frames count towards the first-game check only for a real game with a full board standing
+     * (small boards like the tutorial would pass a phone that lags on a full one) and effects on.
      */
     val measuringFrames: StateFlow<Boolean> = combine(
         _perfCheck, _currentScreen, _gameState, _settings,
@@ -132,14 +128,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /**
-     * The board on the table was dealt (or carried on) since the check's verdict and hasn't been
-     * touched: the question may open over it, as the board comes up, but never while it is being
-     * looked at or played, under a finger about to tap.
+     * Untouched since dealt or carried on: the check's question may open only then, never under a
+     * finger about to tap.
      */
     private val _boardFresh = MutableStateFlow(true)
     val boardFresh: StateFlow<Boolean> = _boardFresh.asStateFlow()
 
-    /** A new deal (or the same one again): counted, so the board starts afresh (its zoom too). */
+    /** Bumped per deal (or replay), so the board and its zoom start afresh. */
     private val _deal = MutableStateFlow(0)
     val deal: StateFlow<Int> = _deal.asStateFlow()
 
@@ -149,16 +144,12 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _boardFresh.value = true
     }
 
-    /**
-     * The fire's shadows traced lighter (FireShadows), by itself: on a phone the check found near
-     * the line, or struggling (before its question is answered, and after a no thanks). A phone
-     * with a decent margin keeps the full trace.
-     */
+    /** Lighter FireShadows trace on a phone the check found near the line or struggling. */
     val lightFireShadows: StateFlow<Boolean> = _perfCheck
         .map { it?.check == PerfCheck.PASSED_CLOSE || it?.check == PerfCheck.SLOW || it?.check == PerfCheck.DECLINED }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    /** The check found this phone struggling: the question of Low-performance mode is due. */
+    /** Struggling: the Low-performance mode question is due. */
     val perfQuestion: StateFlow<Boolean> = _perfCheck
         .map { it?.check == PerfCheck.SLOW }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -167,20 +158,18 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     val progress: StateFlow<Progress> = _progress.asStateFlow()
 
     private val _savedGame = MutableStateFlow<SavedGameState?>(null)
-    // The play clock, for each deal's best-clear time: it runs while a game in play is on the table
-    // and the app is in front, and stops whenever the board is away (a menu, Settings, another
-    // app). [clockSince] is when it last started (elapsedRealtime; 0 while stopped), for the deal
-    // [clockDeal]; time up to then is in GameState.playMillis
+    // Play clock for best-clear times: runs only while a game in play is on the table and in front.
+    // [clockSince]: elapsedRealtime it started (0 stopped), for [clockDeal]; earlier time is in
+    // GameState.playMillis
     private val _resumed = MutableStateFlow(true)
     private var clockSince = 0L
     private var clockDeal = -1
 
-    /** Time spent playing [state] so far, counting the clock now running. */
+    /** Including the clock now running. */
     private fun playedMillis(state: GameState): Long =
         state.playMillis + if (clockSince > 0L && clockDeal == _deal.value) SystemClock.elapsedRealtime() - clockSince else 0L
 
-    // Stops the clock, adding the time since it started to the deal it was running for (if that
-    // deal is still on the table: a new one has its own)
+    // Credits the run to its deal only if that deal is still on the table
     private fun settleClock() {
         if (clockSince == 0L) return
         val ran = SystemClock.elapsedRealtime() - clockSince
@@ -188,17 +177,15 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         if (clockDeal == _deal.value) _gameState.update { it?.copy(playMillis = it.playMillis + ran) }
     }
 
-    // The game has saved or cleared its save itself since launch (savedGameFlow's collector);
-    // declared before init, which starts that collector
+    // Saved or cleared locally since launch; declared before init, which starts savedGameFlow's collector
     private var savedLocally = false
 
-    /** Today's Puzzle started (a move made) and not yet solved: Continue rather than Play. */
+    /** A move made and not yet solved: Continue rather than Play. */
     val todaysPuzzleStarted: StateFlow<Boolean> = combine(_gameState, _puzzleDay, _savedGame, _today) { state, day, saved, today ->
         (day == today && state != null && !state.isWon && state.moveHistory.isNotEmpty()) ||
             (state == null && saved?.puzzleDay == today && saved.moveHistory.isNotEmpty())
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    // A day's puzzle left unfinished is gone once its day is over
     private fun puzzleGone(day: Long?, today: Long = TodaysPuzzle.today()) = day != null && day != today
 
     val continueInfo: StateFlow<ContinueInfo?> = combine(
@@ -219,9 +206,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    // The phone's Remove animations (Settings > Accessibility) sets its animator scale to 0; the
-    // game's own motion (match bursts, fireworks, the hint pulse, zoom glides) follows it, and
-    // changes with it while the game is open
+    // Remove animations (Accessibility) sets animator scale to 0; the game's motion follows it live
     private val resolver = application.contentResolver
     private fun readPhoneAnimates() =
         Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
@@ -240,14 +225,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         listOfNotNull(levelLabel(level), name).distinct().joinToString(": ")
 
     init {
-        // Levels were reordered by measured difficulty: carry the highest level over, once
+        // Levels were reordered by measured difficulty
         viewModelScope.launch { prefsRepo.migrateLevelOrder() }
-        // Hints became earned: players from before start with 2
+        // Hints became earned: earlier players start with 2
         viewModelScope.launch { prefsRepo.migrateHints() }
-        // The check's verdict and Low-performance mode belong to this phone, not one restored from
+        // Verdict and Low-performance mode belong to this phone, not one restored from
         viewModelScope.launch { prefsRepo.namePerfPhone() }
-        // Collect settings. While the player's own changes are still being written, what's read
-        // back is older than what they see, so it waits until the writes are done
+        // Ignored while the player's own writes are pending: what's read back is older
         viewModelScope.launch {
             prefsRepo.settingsFlow.distinctUntilChanged().collect { s ->
                 if (settingsWrites == 0) {
@@ -256,7 +240,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 }
             }
         }
-        // The fireplace is heard at the table, and softly on the menu screens
         viewModelScope.launch {
             currentScreen.collect { screen ->
                 audioManager.setFireRoom(
@@ -271,26 +254,22 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             prefsRepo.perfCheckFlow.collect {
                 if (BuildConfig.PERF_HOOKS) android.util.Log.i("FrameWatch", "check: $it")
-                // A test build's reset is on its way: what's stored is about to go
+                // A test build's reset is on its way
                 if (!perfCheckResetting) _perfCheck.value = it
             }
         }
-        // Collect progress
         viewModelScope.launch {
             prefsRepo.progressFlow.collect { p ->
                 _progress.value = p
             }
         }
-        // Collect saved game
         viewModelScope.launch {
             prefsRepo.savedGameFlow.collect { saved ->
-                // Read from storage only until the game first saves or clears it itself: from then
-                // on the game's own copy is the newest, and a read back of an earlier write (parsed
-                // off the main thread, so it can land late) must not bring back a board just won
+                // Only until the game first saves itself: a late read-back of an earlier write must
+                // not bring back a board just won
                 if (!savedLocally) _savedGame.value = saved
             }
         }
-        // The play clock follows the board: on the table, in play and in front
         viewModelScope.launch {
             combine(
                 _currentScreen, _resumed, _deal, _gameState.map { it != null && !it.isWon }.distinctUntilChanged(),
@@ -303,7 +282,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
         }
-        // Today's Puzzle moves on at 4 am, even with the app left open on a menu
+        // Even with the app left open on a menu
         viewModelScope.launch {
             while (true) {
                 val wait = Duration.between(LocalDateTime.now(), TodaysPuzzle.nextDayStarts(_today.value)).toMillis()
@@ -313,14 +292,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Where the game on the table was started from, which Back returns to: Levels, Layouts, or the
-    // title (Continue)
+    // Where Back returns to from the table
     private val _gameOrigin = MutableStateFlow<Screen>(Screen.MainMenu)
     val gameOrigin: StateFlow<Screen> = _gameOrigin.asStateFlow()
 
     fun navigateTo(screen: Screen) {
         perfAutoplay?.cancel()
-        // Leaving for another screen drops a deal still being worked out
+        // Drops a deal still being worked out
         cancelDeal()
         if (screen != Screen.Game) {
             saveCurrentGame()
@@ -328,7 +306,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         _currentScreen.value = screen
     }
 
-    // A level game saved before the levels were reordered keeps its layout; its number follows it
+    // A save from before the reorder keeps its layout; its number follows it
     private fun savedLevelIndex(saved: SavedGameState): Int? =
         saved.levelIndex?.let { ConstellationRepository.levelIndexOf(saved.constellationId) ?: it }
 
@@ -360,7 +338,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         beginLevel(levelIndex, origin = Screen.LevelSelect)
     }
 
-    // Also the next level from the win card, which keeps where the first was started from
+    // [origin] null (next level from the win card) keeps the first's
     private fun beginLevel(levelIndex: Int, origin: Screen? = null) {
         val constellation = ConstellationRepository.getLevel(levelIndex)
         dealThen({ MahjongGameEngine.startNewGame(constellation) }) { state ->
@@ -371,17 +349,14 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Today's Puzzle: carried on if it's on the table or saved unfinished, otherwise dealt (again,
-     * once solved: the same deal, ticked only once).
-     */
+    /** Carried on if on the table or saved unfinished, else dealt (once solved: the same deal again, ticked once). */
     fun startTodaysPuzzle() {
         perfAutoplay?.cancel()
         cancelDeal()
         val today = TodaysPuzzle.today()
         val current = _gameState.value
         val saved = _savedGame.value
-        // Puts [state] on the table (null: carries on with the one there)
+        // [state] null carries on with the one there
         fun open(state: GameState?) {
             _gameOrigin.value = Screen.TodaysPuzzle
             if (state != null) {
@@ -391,7 +366,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 _tutorialStepIndex.value = null
                 newDeal()
             }
-            // Today's Puzzle, not a Quick Game: its win card offers no "Another?"
+            // Its win card offers no "Another?"
             _quickGame.value = false
             _currentLevelIndex.value = null
             _puzzleDay.value = today
@@ -405,14 +380,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // The last Quick Game's layout, so the next one is different
     private var lastQuickGame: String? = null
 
-    // Playing a Quick Game: its win card offers another, of the same difficulty
+    // Its win card offers another of the same difficulty
     private val _quickGame = MutableStateFlow(false)
     val quickGame: StateFlow<Boolean> = _quickGame.asStateFlow()
 
-    /** Quick Game: a random layout of [difficulty] (any, if null), never the one just played. */
+    /** Random layout of [difficulty] (any if null), never the one just played. */
     fun startQuickGame(difficulty: Difficulty?) {
         val pool = ConstellationRepository.constellations
             .filter { it.id != ConstellationRepository.tutorialConstellation.id }
@@ -428,7 +402,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** From a Quick Game's win card: another random layout as hard as the one just cleared. */
     fun anotherQuickGame() {
         startQuickGame(_gameState.value?.constellation?.difficulty)
     }
@@ -442,17 +415,13 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Test builds only (BuildConfig.PERF_HOOKS): the same deal of [layoutName] every time, with the
-     * fireplace lit or not on [surface], so frame timings before and after a change compare alike.
-     */
+    /** Test builds only (PERF_HOOKS): a fixed deal, so frame timings before and after a change compare. */
     fun startPerfScene(
         layoutName: String, fireplace: Boolean, surface: TableSurface?, autoplay: Boolean = false, countsForCheck: Boolean = false,
         tiles: TileSet? = null, fireIntensity: Float? = null,
     ) {
         val constellation = ConstellationRepository.constellations.firstOrNull { it.name.equals(layoutName, ignoreCase = true) } ?: return
-        // From the saved settings, which may not have loaded yet (a scene opens with the app), so
-        // that only the fire and the table change
+        // From stored settings (may not have loaded yet), so only the fire and table change
         viewModelScope.launch {
             val saved = prefsRepo.settingsFlow.first()
             prefsRepo.updateSettings(
@@ -463,14 +432,14 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 ),
             )
         }
-        // Kept out of the first-game check, unless the check is what's being tried
+        // Out of the first-game check unless that's what's being tried
         _perfScene.value = !countsForCheck
         dealThen({ MahjongGameEngine.startNewGame(constellation, Random(7)) }) { state ->
             _currentLevelIndex.value = null
             _gameOrigin.value = Screen.MainMenu
             beginGame(state)
             _currentScreen.value = Screen.Game
-            // Matches a free pair every two seconds, so match animations can be timed alike
+            // A pair every two seconds, so match animations time alike
             if (autoplay) perfAutoplay = viewModelScope.launch {
                 delay(3000.milliseconds)
                 while (true) {
@@ -487,10 +456,8 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     private var perfAutoplay: Job? = null
 
-    // A deal being worked out. Dealing can take a moment (a layout that opens with few free pairs
-    // has each opening checked, BoardSolvabilityGenerator.openingIsSafe), so it's done off the main
-    // thread, and nothing changes until it's ready: the screen the player is on stays responsive.
-    // A newer deal, or leaving for another screen or game, drops it
+    // Dealing can be slow (openingIsSafe), so done off the main thread with nothing changing until
+    // ready. A newer deal or leaving drops it
     private var dealJob: Job? = null
 
     private fun cancelDeal() {
@@ -498,7 +465,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         dealJob = null
     }
 
-    /** Works out a new game with [make] off the main thread, then hands it to [start] on it. */
+    /** [make] off the main thread, then [start] on it. */
     private fun dealThen(make: () -> GameState, start: (GameState) -> Unit) {
         perfAutoplay?.cancel()
         cancelDeal()
@@ -507,11 +474,10 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             dealJob = null
             start(state)
         }
-        // Dealt inline (tests), it's already done
+        // Dealt inline (tests): already done
         if (job.isActive) dealJob = job
     }
 
-    /** A fresh deal on the table, nothing chosen yet, and saved. */
     private fun beginGame(state: GameState) {
         _puzzleDay.value = null
         _quickGame.value = false
@@ -527,7 +493,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val current = _gameState.value ?: return
         if (current.isWon || current.remainingTilesCount == 0) return
         val step = if (TutorialScript.isTutorial(current)) _tutorialStepIndex.value ?: SavedGameState.FREE_PLAY else null
-        // With the time played up to now, the clock still running
+        // Including the clock still running
         val saved = SavedGameState.fromGameState(current.copy(playMillis = playedMillis(current)), _currentLevelIndex.value, step, _puzzleDay.value)
         savedLocally = true
         _savedGame.value = saved
@@ -544,12 +510,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Finishing a board whose tiles are all free: the pairs are taken one by one, as taps would
+    // Auto-finish of an all-free board, pair by pair as taps would
     private val _finishing = MutableStateFlow(false)
     val finishing: StateFlow<Boolean> = _finishing.asStateFlow()
     private var finishJob: Job? = null
 
-    // A new deal stops a finish still taking the old one's pairs
     private fun stopFinishing() {
         finishJob?.cancel()
         finishJob = null
@@ -566,7 +531,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 for (pair in plan) {
                     val state = _gameState.value ?: break
                     if (state.isWon || _currentScreen.value != Screen.Game) break
-                    // A tile the player had picked is put down first
+                    // Put down the player's picked tile first
                     if (state.selectedTileId != null && state.selectedTileId != pair.first) tap(state.selectedTileId)
                     tap(pair.first)
                     delay(FINISH_PICK)
@@ -580,7 +545,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onTileTapped(tileId: Int) {
-        // The player's taps wait while the board finishes itself
         if (_finishing.value) return
         tap(tileId)
     }
@@ -603,7 +567,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         when (result) {
             is TileTapResult.Blocked -> {
                 audioManager.playTileBlocked()
-                // One clear at a time, so an earlier tap's can't cut this flash short
+                // So an earlier tap's clear can't cut this flash short
                 blockedClear?.cancel()
                 blockedClear = viewModelScope.launch {
                     delay(350.milliseconds)
@@ -623,7 +587,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
             }
             is TileTapResult.Matched -> {
                 audioManager.playTileSelect()
-                // Without the smash there's no moment of contact to play it at
+                // Without the smash there's no contact moment to play it at
                 if (!_settings.value.matchSmash) {
                     audioManager.playTileMatch()
                 }
@@ -631,10 +595,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                     clearSavedGame()
                     val levelIndex = _currentLevelIndex.value
                     val day = _puzzleDay.value
-                    // The best-clear record (none for the tutorial, whose hints are free)
+                    // None for the tutorial, whose hints are free
                     val record = if (TutorialScript.isTutorial(current)) null else LevelRecord(
-                        // From the board as it is now: the win just stopped the clock (its collector
-                        // runs at once) and added its time there, not to newState
+                        // Current board, not newState: the win's clock stop added its time there
                         millis = playedMillis(_gameState.value ?: newState),
                         hints = newState.hintsUsed,
                         reshuffles = newState.reshufflesUsed,
@@ -645,8 +608,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                         _firstRibbon.value = prefsRepo.recordGameWon(
                             constellationId = current.constellation.id,
                             levelIndex = levelIndex,
-                            // Clean (the gold ribbon): no hints, no reshuffles and no undos (one mark
-                            // for all three, Gareth 2026-11-13; before 1.4.16 undo was allowed)
+                            // Gold ribbon: no hints, reshuffles or undos (Gareth 2026-11-13; undo allowed before 1.4.16)
                             clean = !newState.usedHelp && newState.undosUsed == 0 && !TutorialScript.isTutorial(current),
                             puzzleDay = day,
                             record = record,
@@ -668,21 +630,18 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         audioManager.playTileMatch()
     }
 
-    /** The celebration has appeared over a cleared board (not one fading out behind the menu). */
+    /** Not for a board fading out behind the menu. */
     fun playWin() {
         if (_currentScreen.value == Screen.Game) audioManager.playWin()
     }
 
-    /** The board was zoomed in or back out: the tutorial's zoom steps wait on this. */
+    /** The tutorial's zoom steps wait on this. */
     fun onBoardZoom(zoomedIn: Boolean) {
         val step = currentTutorialStep ?: return
         if (TutorialScript.isZoomStepComplete(step, zoomedIn)) advanceTutorial()
     }
 
-    /**
-     * The button on the tutorial card showing [step]: it moves on only from that step, so a second
-     * tap on a card already fading out can't skip the one after.
-     */
+    /** Only from [step], so a second tap on a fading card can't skip the next. */
     fun continueTutorial(step: TutorialStep) {
         if (step == currentTutorialStep) advanceTutorial()
     }
@@ -691,15 +650,15 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val index = _tutorialStepIndex.value ?: return
         val state = _gameState.value ?: return
         _tutorialStepIndex.value = TutorialScript.nextStep(index, state)
-        // Saved with the step, so Continue picks up where the player was
+        // So Continue resumes at this step
         saveCurrentGame()
     }
 
     fun undo() {
-        // Undo and hints would get in the way of the guided tutorial steps
+        // Would get in the way of the guided steps
         if (_tutorialStepIndex.value != null) return
         val current = _gameState.value ?: return
-        // A cleared board stays cleared: Replay or Play again deal afresh
+        // Replay or Play again deal afresh
         if (current.isWon) return
         if (current.moveHistory.isNotEmpty()) {
             val updated = MahjongGameEngine.undo(current).copy(undosUsed = current.undosUsed + 1)
@@ -710,7 +669,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private var hintSearch: Job? = null
-    // The tiles the search under way is for
     private var hintSearchTiles: List<BoardTile>? = null
 
     fun requestHint() {
@@ -718,22 +676,19 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         val current = _gameState.value ?: return
         if (current.isWon) return
         _boardFresh.value = false
-        // The pair already shown is shown again, free; a new one costs a hint (the screen
-        // doesn't ask with none left). The tutorial's free play gives them free, as it promises
+        // The pair already shown is free; so are the tutorial's free-play hints, as it promises
         if (current.hintPair != null) return
         val free = TutorialScript.isTutorial(current)
         if (!free && _progress.value.hints <= 0) return
-        // A second tap while the same board's hint is still being found is the same request
+        // Same board still being searched: same request
         if (hintSearch?.isActive == true && hintSearchTiles === current.tiles) return
         audioManager.playTileSelect()
-        // Finding a plan can take a moment on a big board, so it's done in the background, and
-        // shown only if the board hasn't changed meanwhile
         hintSearch?.cancel()
         hintSearchTiles = current.tiles
         hintSearch = viewModelScope.launch {
             val hint = withContext(Dispatchers.Default) { MahjongGameEngine.findHint(current) } ?: return@launch
-            // Shown first, then paid for: a hint is never spent on a board that changed while it
-            // was being found (nothing suspends between this check and the hint appearing)
+            // Shown, then paid for: never spent on a board that changed meanwhile (nothing suspends
+            // between this check and the hint appearing)
             val state = _gameState.value
             if (state == null || state.tiles !== current.tiles) return@launch
             _gameState.value = state.copy(
@@ -741,10 +696,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                 hintsUsed = state.hintsUsed + 1,
             )
             if (free) return@launch
-            // Paid for even if a new deal comes meanwhile: it was seen
+            // Even if a new deal comes meanwhile: it was seen
             val paid = withContext(NonCancellable) { prefsRepo.spendHint() }
-            // None left after all (two boards' requests racing for the last one): taken back
-            // (and the board no longer counts as helped, so a clean clear keeps its ribbon)
+            // Lost a race for the last hint: taken back, unhelped, so a clean clear keeps its ribbon
             if (!paid) _gameState.update { s ->
                 if (s?.hintPair == hint.pair) s.copy(hintPair = null, usedHelp = state.usedHelp, hintsUsed = state.hintsUsed) else s
             }
@@ -753,7 +707,7 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
 
     fun restartGame() {
         val current = _gameState.value ?: return
-        // Today's Puzzle is one deal: starting again is that deal again
+        // Today's Puzzle is one deal
         if (_puzzleDay.value != null) {
             replayDeal()
         } else {
@@ -761,7 +715,6 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Restart with the same deal: the tiles back as they were first laid out. */
     fun replayDeal() {
         val current = _gameState.value ?: return
         cancelDeal()
@@ -792,19 +745,18 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // The settings as last written (or read), which each change is told apart from; and how many
-    // writes are on their way
+    // Last written (or read), to diff each change against; and writes in flight
     private var savedSettings = GameSettings()
     private var settingsWrites = 0
 
     private fun showSettings(s: GameSettings) {
-        // Low-performance mode stills everything the phone's Remove animations does
+        // Low-performance mode stills what the phone's Remove animations does
         val shown = s.copy(animationsEnabled = phoneAnimates && !s.lowPerformance, phoneAnimates = phoneAnimates)
         _settings.value = shown
         audioManager.updateSettings(shown)
     }
 
-    /** A setting changed: shown and heard at once, and only what changed is saved. */
+    /** Shown and heard at once; only what changed is saved. */
     fun updateSettings(newSettings: GameSettings) {
         showSettings(newSettings)
         val from = savedSettings
@@ -819,22 +771,19 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** A slider being dragged: shown and heard as it moves, saved when it's let go. */
+    /** While a slider is dragged: not saved until [commitSettings]. */
     fun previewSettings(newSettings: GameSettings) {
         showSettings(newSettings)
     }
 
-    /** The Fire sound slider is being dragged, so the fire is heard at table loudness. */
     fun auditionFire(on: Boolean) {
         audioManager.auditionFire(on)
     }
 
-    /** The slider is let go: what it shows is saved. */
     fun commitSettings() {
         updateSettings(_settings.value)
     }
 
-    /** The first-game check is done: a phone that kept up is left alone; one that didn't gets its card. */
     fun onFrameVerdict(verdict: FrameVerdict) {
         if (_perfCheck.value?.check != PerfCheck.PENDING) return
         val state = when {
@@ -844,12 +793,11 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         }
         val stutterPercent = (verdict.stutterShare * 100).roundToInt()
         _perfCheck.value = PerfCheckState(state, stutterPercent)
-        // Reached on the board being played: the question waits for the next
+        // The question waits for the next board
         if (verdict.struggling) _boardFresh.value = false
         viewModelScope.launch { prefsRepo.setPerfCheck(state, stutterPercent) }
     }
 
-    /** The question is answered: Low-performance mode on if [turnOn], otherwise left as it is. */
     fun perfQuestionAnswered(turnOn: Boolean) {
         val state = if (turnOn) PerfCheck.SWITCHED else PerfCheck.DECLINED
         if (turnOn) updateSettings(_settings.value.copy(lowPerformance = true))
@@ -857,10 +805,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { prefsRepo.setPerfCheck(state) }
     }
 
-    // A test build's reset of the check is being written
     private var perfCheckResetting = false
 
-    /** Test builds: the check as on a first install, with nothing stored shown meanwhile. */
+    /** Test builds: as on a first install, showing nothing stored meanwhile. */
     fun resetPerfCheck() {
         perfCheckResetting = true
         _perfCheck.value = null
@@ -890,20 +837,17 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
     }
 
     companion object {
-        /** Where new deals are worked out: off the main thread; tests deal inline (EmptyCoroutineContext). */
+        /** Tests deal inline (EmptyCoroutineContext). */
         @Volatile
         internal var dealContext: CoroutineContext = Dispatchers.Default
     }
 }
 
-// The first-game check counts frames only while at least this many tiles stand: a full board's
-// work, not the last few pairs of one
+// Frames count only while this many tiles stand: a full board's work, not the last pairs
 private const val PERF_CHECK_MIN_TILES = 60
 
-/** What Today's Puzzle is called wherever it's named. */
 const val TODAYS_PUZZLE = "Today's Puzzle"
 
-// Auto-finish: the pause between a pair's two picks, and between pairs (long enough for each
-// match's animation to be seen)
+// Auto-finish pauses: within a pair, and between pairs (long enough to see each match)
 private val FINISH_PICK = 140.milliseconds
 private val FINISH_STEP = 420.milliseconds

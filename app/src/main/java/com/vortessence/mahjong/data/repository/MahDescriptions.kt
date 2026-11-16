@@ -1,10 +1,6 @@
 package com.vortessence.mahjong.data.repository
 
-/**
- * A line for each layout from Mah, shown under its name in Layouts (Mah's own boards carry none).
- * Kept apart from [MahLayouts], which tools/import-mah-layouts.py writes, so a fresh import keeps
- * them.
- */
+/** Mah carries no descriptions. Kept out of [MahLayouts] so tools/import-mah-layouts.py keeps them. */
 internal val MahDescriptions: Map<String, String> = mapOf(
     "mah_1843357205" to "Four rounded leaves meeting at a stem, for a little luck at the table.",
     "mah_828570775" to "Long rails and sturdy posts, built in rows across the table.",
@@ -35,7 +31,7 @@ internal val MahDescriptions: Map<String, String> = mapOf(
     "mah_450647981" to "A small plant in a sturdy pot, leaves reaching for the window.",
     "mah_773823936" to "Four matching blocks around a centre, each one a puzzle of its own.",
     "mah_702162641" to "The Red Dragon, fierce and bold, the tile of the centre.",
-    // Boards kept since 1.4.16, played on their side
+    // On their side (kept since 1.4.16)
     "mah_2951481859" to "A great round blaze, its embers stacked at the heart.",
     "mah_709938609" to "High walls closing round an open court, with paths across it.",
     "mah_1830783848" to "Four wide wings held out from a long, bright body.",

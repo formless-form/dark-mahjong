@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-Builds Dark Mahjong's blocked-tile knock: a dull, muted wooden knock (40 ms), synthesised the same
-way the game used to make it at every blocked tap (a 240 Hz tone with its octave, decaying fast).
-
-Writes app/src/main/res/raw/tile_blocked.ogg.
+Builds the blocked-tile knock, app/src/main/res/raw/tile_blocked.ogg: a muted wooden knock (40 ms),
+synthesised as the game once did at every blocked tap (240 Hz with its octave, decaying fast).
 
 Needs Python 3 and ffmpeg (with libvorbis). Run from the repo root:
     python3 tools/make-knock-sound.py

@@ -21,7 +21,7 @@ class HintTest {
         return MahjongGameEngine.handleTileTap(selected, pair.second).first
     }
 
-    // Plays [state] to the end by hints alone; true if the board was cleared
+    // Plays by hints alone; true if the board was cleared
     private fun followHints(start: GameState): Boolean {
         var state = start
         while (!state.isWon) {
@@ -42,9 +42,8 @@ class HintTest {
         }
     }
 
-    // A player who paired tiles their own way breaks the deal's plan, and a restored game has none:
-    // the solver finds one again. Whether the board can still be cleared at all is checked with a
-    // long search
+    // Own play breaks the deal's plan and an old save has none: the solver finds one again.
+    // A long search checks the board is still clearable at all
     private fun recovery(keepPlan: Boolean): Triple<Int, Int, Long> {
         var won = 0
         var clearable = 0
@@ -52,7 +51,7 @@ class HintTest {
         for (layout in layouts) {
             val random = Random(100)
             var state = MahjongGameEngine.startNewGame(layout, random)
-            // Ten matches of the player's own, any free pair
+            // Ten of the player's own matches
             repeat(10) {
                 val pairs = MahjongGameEngine.findAvailablePairs(state.tiles)
                 if (pairs.isNotEmpty() && !state.isWon) state = take(state, pairs.random(random))

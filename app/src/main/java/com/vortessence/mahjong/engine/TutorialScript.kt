@@ -5,15 +5,11 @@ import com.vortessence.mahjong.data.model.SavedGameState
 import com.vortessence.mahjong.data.repository.ConstellationRepository
 
 enum class TutorialAction {
-    // Player reads the text and presses the continue button
     CONTINUE,
-    // Player taps the blocked target tile to see that it can't be selected
     TAP_BLOCKED,
-    // Player matches the target tiles
     MATCH_PAIR,
-    // Player pinches the board to zoom in
     PINCH_ZOOM,
-    // Player goes back to the whole board (the zoom-out button, or pinching back out)
+    // Zoom-out button, or pinching back out
     ZOOM_OUT,
 }
 
@@ -28,10 +24,7 @@ data class TutorialStep(
     val continueLabel: String = "Next",
 )
 
-/**
- * Guided walkthrough for the tutorial constellation. Tile ids refer to the position order in
- * ConstellationRepository.createTutorial().
- */
+/** Tile ids are position order in ConstellationRepository.createTutorial(). */
 object TutorialScript {
 
     private const val TOP_LEFT_BAMBOO = 0
@@ -119,11 +112,7 @@ object TutorialScript {
     fun isTutorial(state: GameState): Boolean =
         state.constellation.id == ConstellationRepository.TUTORIAL_ID
 
-    /**
-     * The step to resume a restored tutorial game at, or null for free play: the step it was saved
-     * on, if that agrees with the tiles gone (the guided pairs before it, and no others), else
-     * worked out from the tiles.
-     */
+    /** The saved step if the tiles gone agree with it, else worked out from the tiles; null for free play. */
     fun resumeStep(state: GameState, savedStep: Int?): Int? {
         if (!isTutorial(state)) return null
         if (savedStep == SavedGameState.FREE_PLAY) return null
@@ -139,8 +128,8 @@ object TutorialScript {
     }
 
     /**
-     * The step after [index], passing over any pair step whose tiles are already gone (they can be
-     * matched out of order in free play, then undone back into the guided part), or null at the end.
+     * Skips pair steps whose tiles are gone (matched in free play, then undone back into the guided
+     * part); null at the end.
      */
     fun nextStep(index: Int, state: GameState): Int? = skipMatched(index + 1, state)
 
@@ -154,14 +143,12 @@ object TutorialScript {
         return index.takeIf { it < steps.size }
     }
 
-    /**
-     * Picks the step to resume at for a restored tutorial game, or null if the guided part is over.
-     */
+    /** Null if the guided part is over. */
     fun resumeStepFor(state: GameState): Int? {
         if (!isTutorial(state)) return null
         val removed = state.tiles.filter { it.isRemoved }.map { it.id }.toSet()
         if (removed.isEmpty()) return 0
-        // Tiles outside the guided pairs are only removable in free play
+        // Only free play removes other tiles
         if (!guidedPairs.containsAll(removed)) return null
 
         val nextMatch = steps.indexOfFirst {
@@ -174,15 +161,9 @@ object TutorialScript {
         }
     }
 
-    /**
-     * Whether the player may tap [tileId] while [step] is shown.
-     */
     fun isTapAllowed(step: TutorialStep, tileId: Int): Boolean =
         step.action != TutorialAction.CONTINUE && tileId in step.targetTileIds
 
-    /**
-     * Whether the tap that produced [result] and [newState] completes [step].
-     */
     fun isStepComplete(step: TutorialStep, result: TileTapResult, newState: GameState): Boolean =
         when (step.action) {
             TutorialAction.CONTINUE -> false
@@ -193,10 +174,6 @@ object TutorialScript {
             TutorialAction.PINCH_ZOOM, TutorialAction.ZOOM_OUT -> false
         }
 
-    /**
-     * Whether the board's zoom completes [step]: zoomed in for the pinch, back to the whole board
-     * for the zoom out.
-     */
     fun isZoomStepComplete(step: TutorialStep, zoomedIn: Boolean): Boolean =
         when (step.action) {
             TutorialAction.PINCH_ZOOM -> zoomedIn
