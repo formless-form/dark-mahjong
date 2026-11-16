@@ -50,7 +50,7 @@ to time, so trust what the Console shows over this page where they differ.
 | Content rating | Category **Game**. Answer **No** to everything: violence, fear, sexuality, language, controlled substances, crude humour, gambling (tile matching isn't gambling: no betting, no prizes), user interaction or chat, sharing location, digital purchases. Expect **Everyone / PEGI 3** |
 | Target audience | **13 and over** (13–15, 16–17, 18+). Including under-13s brings in Google's Families policy, which this release doesn't need |
 | News app | No |
-| Data safety | Collects or shares user data: **No**. (No internet permission, no analytics or crash reporting, no accounts; progress stays on the device) |
+| Data safety | Collects or shares user data: **No**. (No analytics or crash reporting, no accounts, no servers; progress stays on the device. The Play build's internet permission comes from Google's billing library for tips: Google's Data safety FAQ exempts payment data a service like Google Play's billing system collects directly under its own terms, when the app never accesses it. Rechecked 2026-11-16) |
 | Advertising ID | **No**, the app doesn't use it |
 | Government app | No |
 | Financial features | None |
