@@ -3,6 +3,10 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- The portrait lock would otherwise make Play require a portrait screen and hide the game from
+         devices without one (some desktops, Play Games on PC, XR); they run it letterboxed instead -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <!-- A game, so large screens (tablets, unfolded foldables) keep its portrait lock. Predictive
          back is opted into for Android 14 and 15; Android 16 turns it on itself for this target -->
     <application
