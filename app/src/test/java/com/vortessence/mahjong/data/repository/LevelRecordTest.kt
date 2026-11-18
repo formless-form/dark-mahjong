@@ -57,7 +57,48 @@ class LevelRecordTest {
 
     // First test build's bug: the win stopped the clock and lost its time (0:00)
     @Test
-    fun aWinRecordsTheTimePlayed() {
+    fun aWinRecordsTheTimePlayed() = playToWin({ it.startLevel(1) }) { _, repo, id, looper ->
+        // Written in the background; the main thread is let run while it's awaited
+        var record: LevelRecord? = null
+        repeat(100) {
+            if (record == null) {
+                looper.idle()
+                record = runBlocking { kotlinx.coroutines.withTimeoutOrNull(100) { repo.progressFlow.first { p -> p.records.containsKey(id) } } }?.records?.get(id)
+            }
+        }
+        val found = record!!
+        assertTrue("recorded ${found.millis} ms", found.millis >= 42_000)
+        assertTrue(found.clean)
+    }
+
+    // Ribboned per day, so it sets no record on the layout either
+    @Test
+    fun todaysPuzzleSetsNoLayoutRecord() {
+        var before: LevelRecord? = null
+        playToWin({ vm ->
+            before = runBlocking { PreferencesRepository(ApplicationProvider.getApplicationContext()).progressFlow.first() }
+                .records[com.vortessence.mahjong.engine.TodaysPuzzle.layoutOn(com.vortessence.mahjong.engine.TodaysPuzzle.today()).id]
+            vm.startTodaysPuzzle()
+        }) { vm, repo, id, looper ->
+            // The win card's message comes after the win's writes, made on a real thread
+            repeat(100) {
+                if (vm.winMessage.value == null) {
+                    looper.idle()
+                    Thread.sleep(100)
+                }
+            }
+            assertTrue(vm.winMessage.value != null)
+            val progress = runBlocking { repo.progressFlow.first() }
+            assertTrue(com.vortessence.mahjong.engine.TodaysPuzzle.today() in progress.puzzleDaysSolved)
+            assertEquals(before, progress.records[id])
+        }
+    }
+
+    /** Plays the board [start] opens to a win, 42 s in, then [check]s with the layout's id. */
+    private fun playToWin(
+        start: (com.vortessence.mahjong.ui.viewmodel.MahjongViewModel) -> Unit,
+        check: (com.vortessence.mahjong.ui.viewmodel.MahjongViewModel, PreferencesRepository, String, org.robolectric.shadows.ShadowLooper) -> Unit,
+    ) {
         com.vortessence.mahjong.ui.viewmodel.MahjongViewModel.dealContext = kotlin.coroutines.EmptyCoroutineContext
         // Store cleared at the end so the view model's work stops: left running, it hung PerfPhoneTest's
         // writes in the full suite
@@ -71,7 +112,7 @@ class LevelRecordTest {
                     com.vortessence.mahjong.ui.viewmodel.MahjongViewModel(app) as T
             })[com.vortessence.mahjong.ui.viewmodel.MahjongViewModel::class.java]
             looper.idle()
-            vm.startLevel(1)
+            start(vm)
             looper.idle()
             looper.idleFor(java.time.Duration.ofSeconds(42))
             val state = vm.gameState.value!!
@@ -81,19 +122,7 @@ class LevelRecordTest {
                 looper.idle()
             }
             assertTrue(vm.gameState.value!!.isWon)
-            val id = state.constellation.id
-            // Written in the background; the main thread is let run while it's awaited
-            val repo = PreferencesRepository(app)
-            var record: LevelRecord? = null
-            repeat(100) {
-                if (record == null) {
-                    looper.idle()
-                    record = runBlocking { kotlinx.coroutines.withTimeoutOrNull(100) { repo.progressFlow.first { p -> p.records.containsKey(id) } } }?.records?.get(id)
-                }
-            }
-            val found = record!!
-            assertTrue("recorded ${found.millis} ms", found.millis >= 42_000)
-            assertTrue(found.clean)
+            check(vm, PreferencesRepository(app), state.constellation.id, looper)
         } finally {
             store.clear()
             looper.idle()
@@ -108,5 +137,18 @@ class LevelRecordTest {
         val back = SavedGameState.deserialize(SavedGameState.fromGameState(state, 1).serialize())!!.toGameState()
         assertEquals(listOf(1, 2, 3), listOf(back.hintsUsed, back.reshufflesUsed, back.undosUsed))
         assertEquals(45_000L, back.playMillis)
+    }
+
+    // Saves before 1.4.16 kept no time or counts, so the game sets no record, and keeps not setting one
+    @Test
+    fun aSaveFromBefore1416SetsNoRecord() {
+        val layout = com.vortessence.mahjong.data.repository.ConstellationRepository.levelConstellations.first()
+        val state = MahjongGameEngine.startNewGame(layout, Random(1))
+        val now = SavedGameState.fromGameState(state, 1).serialize()
+        assertFalse(SavedGameState.deserialize(now)!!.toGameState().noRecord)
+        val old = now.split("|").take(12).joinToString("|")
+        val restored = SavedGameState.deserialize(old)!!.toGameState()
+        assertTrue(restored.noRecord)
+        assertTrue(SavedGameState.deserialize(SavedGameState.fromGameState(restored, 1).serialize())!!.toGameState().noRecord)
     }
 }

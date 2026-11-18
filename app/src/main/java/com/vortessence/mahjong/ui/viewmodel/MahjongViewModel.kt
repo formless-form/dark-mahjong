@@ -595,8 +595,9 @@ class MahjongViewModel(application: Application) : AndroidViewModel(application)
                     clearSavedGame()
                     val levelIndex = _currentLevelIndex.value
                     val day = _puzzleDay.value
-                    // None for the tutorial, whose hints are free
-                    val record = if (TutorialScript.isTutorial(current)) null else LevelRecord(
+                    // None for the tutorial (free hints), Today's Puzzle (ribboned per day, not on the layout) or a
+                    // game from a save before 1.4.16 (no time or counts)
+                    val record = if (TutorialScript.isTutorial(current) || day != null || newState.noRecord) null else LevelRecord(
                         // Current board, not newState: the win's clock stop added its time there
                         millis = playedMillis(_gameState.value ?: newState),
                         hints = newState.hintsUsed,

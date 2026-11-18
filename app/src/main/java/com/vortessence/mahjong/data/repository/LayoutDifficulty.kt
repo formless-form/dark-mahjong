@@ -169,7 +169,8 @@ internal object LayoutDifficulty {
 
     /**
      * [highest] in the old numbering -> the furthest any layout they could play moved to (maybe opening
-     * levels between). Past the last level (all cleared) stays so.
+     * levels between). All cleared -> one past the furthest any old level moved to (never lower), so
+     * levels added beyond it stay ahead.
      */
     fun highestAfterReorder(highest: Int, newLevelOf: (String) -> Int?, before: List<String> = levelsBeforeMeasuredOrder): Int {
         // All cleared: one past the furthest any moved to

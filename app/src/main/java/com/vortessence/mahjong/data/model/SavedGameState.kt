@@ -36,6 +36,8 @@ data class SavedGameState(
     val reshufflesUsed: Int = 0,
     val undosUsed: Int = 0,
     val playMillis: Long = 0L,
+    // GameState.noRecord
+    val noRecord: Boolean = false,
 ) {
     // deserialize only accepts existing layouts
     fun toGameState(): GameState {
@@ -53,6 +55,7 @@ data class SavedGameState(
             .copy(
                 dealt = dealt.takeIf { it.size == boardTiles.size } ?: emptyList(), dealtPlan = dealtPlan, usedHelp = usedHelp,
                 hintsUsed = hintsUsed, reshufflesUsed = reshufflesUsed, undosUsed = undosUsed, playMillis = playMillis,
+                noRecord = noRecord,
             )
     }
 
@@ -82,6 +85,7 @@ data class SavedGameState(
             reshufflesUsed.toString(),
             undosUsed.toString(),
             playMillis.toString(),
+            if (noRecord) "1" else "",
         ).joinToString("|")
     }
 
@@ -112,6 +116,7 @@ data class SavedGameState(
                 reshufflesUsed = state.reshufflesUsed,
                 undosUsed = state.undosUsed,
                 playMillis = state.playMillis,
+                noRecord = state.noRecord,
             )
         }
 
@@ -186,6 +191,8 @@ data class SavedGameState(
                     reshufflesUsed = parts.getOrNull(13)?.toIntOrNull() ?: 0,
                     undosUsed = parts.getOrNull(14)?.toIntOrNull() ?: 0,
                     playMillis = parts.getOrNull(15)?.toLongOrNull() ?: 0L,
+                    // Saves before 1.4.16 end at field 11
+                    noRecord = parts.getOrNull(16) == "1" || parts.size <= 15,
                 )
             } catch (_: Exception) {
                 return null

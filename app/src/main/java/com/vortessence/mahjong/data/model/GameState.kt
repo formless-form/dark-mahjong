@@ -23,6 +23,8 @@ data class GameState(
     val reshufflesUsed: Int = 0,
     val undosUsed: Int = 0,
     val playMillis: Long = 0L,
+    // Restored from a save before 1.4.16, which kept no time or counts: its win sets no best clear
+    val noRecord: Boolean = false,
     // A clearing order hints follow (from the deal, reshuffle or hint solver). Not saved; a restored
     // game finds one again
     val plan: List<Move> = emptyList(),

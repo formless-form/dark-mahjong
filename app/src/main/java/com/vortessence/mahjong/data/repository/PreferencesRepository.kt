@@ -279,7 +279,7 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    /** Records a win; true on the first gold ribbon. */
+    /** Best clears by layout id. */
     private fun records(prefs: Preferences): Map<String, LevelRecord> =
         prefs[Keys.LEVEL_RECORDS].orEmpty().mapNotNull { entry ->
             val at = entry.lastIndexOf('=')
@@ -287,6 +287,7 @@ class PreferencesRepository(private val context: Context) {
             LevelRecord.decode(entry.substring(at + 1))?.let { entry.substring(0, at) to it }
         }.toMap()
 
+    /** Records a win; true on the first gold ribbon. */
     suspend fun recordGameWon(
         constellationId: String, levelIndex: Int?, clean: Boolean = false, puzzleDay: Long? = null, record: LevelRecord? = null,
     ): Boolean {
