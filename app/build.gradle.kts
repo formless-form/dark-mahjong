@@ -15,8 +15,8 @@ android {
         // Android 13: AGSL RuntimeShader
         minSdk = 33
         targetSdk = 37
-        versionCode = 32
-        versionName = "1.4.19"
+        versionCode = 33
+        versionName = "1.4.20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // -PperfHooks=true (tools/deploy-to-phone.sh): adb can open fixed scenes for measuring
