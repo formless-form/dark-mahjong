@@ -74,22 +74,30 @@ class AudioManager(private val context: Context) {
         soundPool.load(context.applicationContext, R.raw.tile_match_4, 1),
     )
 
-    // Imperial's stone sounds: the same tools with --stone
-    private val stonePickSoundIds = intArrayOf(
-        soundPool.load(context.applicationContext, R.raw.stone_tap_1, 1),
-        soundPool.load(context.applicationContext, R.raw.stone_tap_2, 1),
-    )
-    private val stoneMatchSoundIds = intArrayOf(
-        soundPool.load(context.applicationContext, R.raw.stone_match_1, 1),
-        soundPool.load(context.applicationContext, R.raw.stone_match_2, 1),
-        soundPool.load(context.applicationContext, R.raw.stone_match_3, 1),
-        soundPool.load(context.applicationContext, R.raw.stone_match_4, 1),
-    )
+    // Imperial's stone sounds (the same tools with --stone): loaded only once Imperial is chosen,
+    // since most players never have it and open-source builds never can
+    private var stonePickSoundIds: IntArray? = null
+    private var stoneMatchSoundIds: IntArray? = null
 
-    // Only where the build has the Imperial images
+    private fun loadStoneSounds() {
+        if (stonePickSoundIds != null) return
+        val app = context.applicationContext
+        stonePickSoundIds = intArrayOf(
+            soundPool.load(app, R.raw.stone_tap_1, 1),
+            soundPool.load(app, R.raw.stone_tap_2, 1),
+        )
+        stoneMatchSoundIds = intArrayOf(
+            soundPool.load(app, R.raw.stone_match_1, 1),
+            soundPool.load(app, R.raw.stone_match_2, 1),
+            soundPool.load(app, R.raw.stone_match_3, 1),
+            soundPool.load(app, R.raw.stone_match_4, 1),
+        )
+    }
+
+    // Only where the build has the Imperial images; the usual sounds until the stone ones are loaded
     private val stone get() = currentSettings?.tileSet == TileSet.IMPERIAL && ImperialImages.available
-    private val pickSounds get() = if (stone) stonePickSoundIds else pickSoundIds
-    private val matchSounds get() = if (stone) stoneMatchSoundIds else matchSoundIds
+    private val pickSounds get() = (if (stone) stonePickSoundIds else null) ?: pickSoundIds
+    private val matchSounds get() = (if (stone) stoneMatchSoundIds else null) ?: matchSoundIds
 
     // Built by tools/make-knock-sound.py
     private val blockedSoundIds = intArrayOf(soundPool.load(context.applicationContext, R.raw.tile_blocked, 1))
@@ -111,6 +119,7 @@ class AudioManager(private val context: Context) {
         val previousSettings = currentSettings
         currentSettings = settings
         syncFocus()
+        if (stone) loadStoneSounds()
 
         if (musicOn(settings)) {
             musicPlayer.setVolume(loudness(settings.musicVolume))

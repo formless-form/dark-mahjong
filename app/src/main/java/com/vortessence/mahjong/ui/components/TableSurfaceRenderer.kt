@@ -601,14 +601,18 @@ half4 main(float2 p) {
      */
     fun prerenderSwatch(surface: TableSurface, width: Int, height: Int) {
         if (surface in swatchImages || width <= 0 || height <= 0) return
-        val shader = RuntimeShader(swatchAgsl(surface))
-        setSwatchUniforms(shader, surface, width.toFloat(), height.toFloat())
-        val reader = ImageReader.newInstance(
-            width, height, PixelFormat.RGBA_8888, 1,
-            HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE or HardwareBuffer.USAGE_GPU_COLOR_OUTPUT,
-        )
-        val renderer = HardwareRenderer()
+        // All of it guarded, shader and buffers included: this runs soon after launch, so a failure
+        // here must only leave Settings to draw the swatch itself
+        var reader: ImageReader? = null
+        var renderer: HardwareRenderer? = null
         try {
+            val shader = RuntimeShader(swatchAgsl(surface))
+            setSwatchUniforms(shader, surface, width.toFloat(), height.toFloat())
+            reader = ImageReader.newInstance(
+                width, height, PixelFormat.RGBA_8888, 1,
+                HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE or HardwareBuffer.USAGE_GPU_COLOR_OUTPUT,
+            )
+            renderer = HardwareRenderer()
             val node = RenderNode("swatch").apply { setPosition(0, 0, width, height) }
             node.beginRecording().drawRect(0f, 0f, width.toFloat(), height.toFloat(), android.graphics.Paint().apply { this.shader = shader })
             node.endRecording()
@@ -624,8 +628,8 @@ half4 main(float2 p) {
         } catch (e: RuntimeException) {
             // Left to Settings to draw
         } finally {
-            renderer.destroy()
-            reader.close()
+            renderer?.destroy()
+            reader?.close()
         }
     }
 

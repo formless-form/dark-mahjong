@@ -432,17 +432,21 @@ private const val SOURCE_CODE_URL = "https://github.com/formless-form/dark-mahjo
 private const val PLAY_APP_ID = "com.formlessform.darkmahjong"
 private const val PLAY_LISTING_URL = "https://play.google.com/store/apps/details?id=$PLAY_APP_ID"
 
-/** Play Store app, or the web page if there's no store app. */
+/** Play Store app, or the web page if there's no store app; nothing if there's neither. */
 private fun rateOnGooglePlay(context: android.content.Context) {
     val market = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$PLAY_APP_ID"))
         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
         context.startActivity(market)
     } catch (_: android.content.ActivityNotFoundException) {
-        context.startActivity(
-            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(PLAY_LISTING_URL))
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
+        try {
+            context.startActivity(
+                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(PLAY_LISTING_URL))
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        } catch (_: android.content.ActivityNotFoundException) {
+            // No store and no browser (a kiosk or a locked-down work profile)
+        }
     }
 }
 
@@ -625,65 +629,25 @@ private fun TableSurfaceChoice(surface: TableSurface, chosen: Boolean, modifier:
     }
 }
 
-// Until earned: lightly dimmed under a lock in Imperial's gold, with this month's daily puzzles so far
+// The silk brocade table, with this month's daily puzzles so far until earned
 @Composable
 private fun BrocadeChoice(progress: BrocadeProgress, chosen: Boolean, onSelect: () -> Unit) {
     val earned = progress.earned
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val monthName = progress.month.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
     val nextName = progress.month.plusMonths(1).month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = panel(MaterialTheme.colorScheme.surfaceContainerHighest, atLeast = 0.4f),
-        border = if (chosen && earned) BorderStroke(2.dp, IMPERIAL_GOLD) else null,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .then(
-                if (earned) {
-                    Modifier.selectable(selected = chosen, role = Role.RadioButton, onClick = onSelect)
-                } else {
-                    Modifier.semantics(mergeDescendants = true) { stateDescription = "Locked" }
-                },
-            ),
+    LockedRewardChoice(
+        earned = earned,
+        chosen = chosen,
+        onSelect = onSelect,
+        title = TableSurface.BROCADE.displayName,
+        description = if (earned) "Earned with a month of daily puzzles" else "An elegant silk tablecloth, earned by solving every daily puzzle in a month",
+        progress = if (progress.missed) 0f else progress.solved.toFloat() / progress.days.coerceAtLeast(1),
+        caption = if (progress.missed) "A day was missed in $monthName. $nextName starts afresh"
+        else "${progress.solved} of ${progress.days} days in $monthName",
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxWidth().height(SettingsPreviews.HEIGHT).clip(MaterialTheme.shapes.medium)) {
-                    drawSwatch(TableSurface.BROCADE)
-                    if (!earned) drawRect(Color.Black.copy(alpha = 0.15f))
-                }
-                if (!earned) {
-                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
-                        Icon(Icons.Rounded.Lock, null, tint = IMPERIAL_GOLD, modifier = Modifier.padding(10.dp).size(26.dp))
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                TableSurface.BROCADE.displayName,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (!earned || chosen) IMPERIAL_GOLD else MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                if (earned) "Earned with a month of daily puzzles" else "An elegant silk tablecloth, earned by solving every daily puzzle in a month",
-                style = MaterialTheme.typography.bodySmall, color = muted, textAlign = TextAlign.Center,
-            )
-            if (!earned) {
-                Spacer(Modifier.height(10.dp))
-                LinearProgressIndicator(
-                    progress = { if (progress.missed) 0f else progress.solved.toFloat() / progress.days.coerceAtLeast(1) },
-                    color = IMPERIAL_GOLD,
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(0.7f),
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    if (progress.missed) "A day was missed in $monthName. $nextName starts afresh"
-                    else "${progress.solved} of ${progress.days} days in $monthName",
-                    style = MaterialTheme.typography.labelSmall, color = muted, textAlign = TextAlign.Center,
-                )
-            }
+        Canvas(Modifier.fillMaxWidth().height(SettingsPreviews.HEIGHT).clip(MaterialTheme.shapes.medium)) {
+            drawSwatch(TableSurface.BROCADE)
+            if (!earned) drawRect(Color.Black.copy(alpha = 0.15f))
         }
     }
 }
@@ -696,10 +660,39 @@ data class ImperialProgress(val cleared: Int, val levels: Int) {
 // As painted into its engravings
 private val IMPERIAL_GOLD = Color(0xFFE2BA71)
 
-// Until earned: dimmed under a gold lock with Journey progress, and not choosable
+// The Imperial tile set, with Journey progress until earned
 @Composable
 private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect: () -> Unit) {
     val earned = progress.earned
+    LockedRewardChoice(
+        earned = earned,
+        chosen = chosen,
+        onSelect = onSelect,
+        title = TileSet.IMPERIAL.shortName,
+        description = if (earned) "Earned by finishing the Journey" else "A deluxe set, earned by finishing the Journey",
+        progress = progress.cleared.toFloat() / progress.levels.coerceAtLeast(1),
+        caption = "${progress.cleared} of ${progress.levels} levels",
+    ) {
+        // A ready-made picture: the set itself isn't loaded to show it
+        TileSamples(TileKits.of(TileSet.IMPERIAL), Modifier.fillMaxWidth().height(SettingsPreviews.HEIGHT), SampleStrip.IMPERIAL_TILES, dim = !earned)
+    }
+}
+
+/**
+ * A reward card, Imperial and the brocade alike: until earned it is dimmed under a gold lock with
+ * a progress bar, and can't be chosen; once earned it is chosen like the others, in gold.
+ */
+@Composable
+private fun LockedRewardChoice(
+    earned: Boolean,
+    chosen: Boolean,
+    onSelect: () -> Unit,
+    title: String,
+    description: String,
+    progress: Float,
+    caption: String,
+    preview: @Composable () -> Unit,
+) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -718,8 +711,7 @@ private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                // A ready-made picture: the set itself isn't loaded to show it
-                TileSamples(TileKits.of(TileSet.IMPERIAL), Modifier.fillMaxWidth().height(76.dp), SampleStrip.IMPERIAL_TILES, dim = !earned)
+                preview()
                 if (!earned) {
                     Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
                         Icon(Icons.Rounded.Lock, null, tint = IMPERIAL_GOLD, modifier = Modifier.padding(10.dp).size(26.dp))
@@ -728,24 +720,21 @@ private fun ImperialChoice(progress: ImperialProgress, chosen: Boolean, onSelect
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                TileSet.IMPERIAL.shortName,
+                title,
                 style = MaterialTheme.typography.labelLarge,
                 color = if (!earned || chosen) IMPERIAL_GOLD else MaterialTheme.colorScheme.onSurface,
             )
-            Text(
-                if (earned) "Earned by finishing the Journey" else "A deluxe set, earned by finishing the Journey",
-                style = MaterialTheme.typography.bodySmall, color = muted, textAlign = TextAlign.Center,
-            )
+            Text(description, style = MaterialTheme.typography.bodySmall, color = muted, textAlign = TextAlign.Center)
             if (!earned) {
                 Spacer(Modifier.height(10.dp))
                 LinearProgressIndicator(
-                    progress = { progress.cleared.toFloat() / progress.levels.coerceAtLeast(1) },
+                    progress = { progress },
                     color = IMPERIAL_GOLD,
                     trackColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(0.7f),
                 )
                 Spacer(Modifier.height(4.dp))
-                Text("${progress.cleared} of ${progress.levels} levels", style = MaterialTheme.typography.labelSmall, color = muted)
+                Text(caption, style = MaterialTheme.typography.labelSmall, color = muted, textAlign = TextAlign.Center)
             }
         }
     }

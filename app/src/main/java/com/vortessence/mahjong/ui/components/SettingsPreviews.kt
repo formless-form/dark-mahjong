@@ -16,19 +16,29 @@ object SettingsPreviews {
     val HEIGHT = 76.dp
 
     private var made = false
+    private var running = false
 
-    /** Once only; swatches are [width] x [height] px. */
+    /**
+     * Once per process; swatches are [width] x [height] px. Marked made only when finished, so a
+     * run cancelled part-way (the activity recreated soon after launch) is picked up by the next
+     * call. A failed preview is skipped: Settings then draws it itself.
+     */
     suspend fun make(width: Int, height: Int) {
-        if (made) return
-        made = true
-        delay(START_DELAY_MS)
-        for (set in TileSet.entries) {
-            SampleStrip.of(TileKits.of(set), SampleStrip.SETTINGS_TILES)
-            withFrameNanos { }
-        }
-        for (surface in TableSurface.entries) {
-            TableSurfaceRenderer.prerenderSwatch(surface, width, height)
-            withFrameNanos { }
+        if (made || running) return
+        running = true
+        try {
+            delay(START_DELAY_MS)
+            for (set in TileSet.entries) {
+                runCatching { SampleStrip.of(TileKits.of(set), SampleStrip.SETTINGS_TILES) }
+                withFrameNanos { }
+            }
+            for (surface in TableSurface.entries) {
+                runCatching { TableSurfaceRenderer.prerenderSwatch(surface, width, height) }
+                withFrameNanos { }
+            }
+            made = true
+        } finally {
+            running = false
         }
     }
 

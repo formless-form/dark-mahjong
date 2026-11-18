@@ -37,9 +37,10 @@ internal object ImperialImages {
             availableCache = null
         }
 
+    @Volatile
     private var availableCache: Boolean? = null
 
-    /** [present], cached once the assets are known. */
+    /** [present], cached once the assets are known; false for good if the images fail to load. */
     val available: Boolean
         get() = availableCache ?: present().also { if (assets != null) availableCache = it }
 
@@ -58,11 +59,17 @@ internal object ImperialImages {
     /** Null until loaded. */
     val ready: Images? get() = images
 
-    /** Whether this build has the images (Play does, open-source not), without loading them. */
-    fun present(): Boolean = try {
-        assets?.list(FOLDER)?.contains(bodyName(0)) == true
-    } catch (e: IOException) {
-        false
+    /**
+     * Whether this build has every image [load] needs (Play does, open-source not), without loading
+     * them. One missing would leave the set with nothing to draw.
+     */
+    fun present(): Boolean {
+        val names = try {
+            assets?.list(FOLDER)?.toHashSet()
+        } catch (e: IOException) {
+            null
+        } ?: return false
+        return (0 until BODIES).all { bodyName(it) in names } && faces.all { engravingName(it) in names }
     }
 
     fun bodyName(look: Int) = "body-$look.webp"
@@ -80,8 +87,12 @@ internal object ImperialImages {
 
     /** Loads once, on the calling (non-main) thread; null if any is missing. */
     @Synchronized
-    fun load(): Images? {
-        images?.let { return it }
+    fun load(): Images? = images ?: read().also {
+        // An image that won't decode: drop the set, so tiles fall back rather than vanish
+        if (it == null && assets != null) availableCache = false
+    }
+
+    private fun read(): Images? {
         val from = assets ?: return null
         fun decode(name: String): Bitmap? = try {
             from.open("$FOLDER/$name").use { BitmapFactory.decodeStream(it) }
