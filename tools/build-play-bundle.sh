@@ -43,7 +43,12 @@ VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts)
 mkdir -p dist
 OUT="dist/DarkMahjong-$VERSION.aab"
 cp app/build/outputs/bundle/playRelease/app-play-release.aab "$OUT"
-"$JARSIGNER" -keystore "$KEYSTORE" -storetype PKCS12 -storepass:env DARK_MAHJONG_UPLOAD_KEY_PASS \
-    -sigalg SHA256withRSA -digestalg SHA-256 "$OUT" upload >/dev/null
+# jarsigner reports errors on stdout: show them, and leave no unsigned bundle behind
+if ! signed=$("$JARSIGNER" -keystore "$KEYSTORE" -storetype PKCS12 -storepass:env DARK_MAHJONG_UPLOAD_KEY_PASS \
+    -sigalg SHA256withRSA -digestalg SHA-256 "$OUT" upload 2>&1); then
+    echo "Signing failed: $signed" >&2
+    rm -f "$OUT"
+    exit 1
+fi
 "$JARSIGNER" -verify "$OUT" | tail -1
 ls -la "$OUT"
