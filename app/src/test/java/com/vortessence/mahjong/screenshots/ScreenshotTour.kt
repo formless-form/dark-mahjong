@@ -348,7 +348,7 @@ class ScreenshotTour {
         shoot("predictive_back")
     }
 
-    // Nine Dragon Pagoda on walnut, with the given wide-board setting
+    // Nine Dragon Pagoda on elm, with the given wide-board setting
     private fun wideGame(wideBoards: WideBoards, animations: Boolean = true, won: Boolean = false, fireplace: Boolean = false) {
         TileWear.prepareNow()
         val dealt = MahjongGameEngine.startNewGame(ConstellationRepository.getById("pagoda")!!)

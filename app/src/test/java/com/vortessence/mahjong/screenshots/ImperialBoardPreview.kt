@@ -34,7 +34,7 @@ import kotlin.random.Random
 
 /**
  * Imperial on a real board, drawn by the game from ImperialImages: Quad on the mat by the lamp, and
- * on walnut by the fire, with the stone's light as made (to compare) and turning with its relief (as
+ * on elm by the fire, with the stone's light as made (to compare) and turning with its relief (as
  * in the game). build/imperial-tile/board-*.png. Play build only: the images are absent elsewhere.
  * Run: ./gradlew testPlayDebugUnitTest --tests '*ImperialBoardPreview*'
  */
@@ -66,8 +66,8 @@ class ImperialBoardPreview {
         val state = MahjongGameEngine.startNewGame(layout).copy(tiles = tiles)
         val scenes = listOf(
             Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp"),
-            Scene(TableSurface.ELM_WOOD, true, "board-walnut-fire-as-made", relief = false),
-            Scene(TableSurface.ELM_WOOD, true, "board-walnut-fire"),
+            Scene(TableSurface.ELM_WOOD, true, "board-elm-fire-as-made", relief = false),
+            Scene(TableSurface.ELM_WOOD, true, "board-elm-fire"),
         )
         var scene by mutableStateOf(scenes.first())
         compose.mainClock.autoAdvance = false

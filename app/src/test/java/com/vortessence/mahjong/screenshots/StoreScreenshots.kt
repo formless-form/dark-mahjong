@@ -82,7 +82,7 @@ class StoreScreenshots {
         shoot("1-title")
     }
 
-    @Test fun s2Walnut() { game(TableSurface.ELM_WOOD, "pillar_of_heaven"); shoot("2-walnut") }
+    @Test fun s2Elm() { game(TableSurface.ELM_WOOD, "pillar_of_heaven"); shoot("2-elm") }
 
     @Test
     fun s3Zoomed() {

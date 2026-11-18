@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * The lamp at several colour temperatures (2000 K chosen) on one deal: mat and walnut by the fire,
+ * The lamp at several colour temperatures (2000 K chosen) on one deal: mat and elm by the fire,
  * mat by the lamp alone. build/lamp-colour-preview/<kelvin>/. Run: ./gradlew testFossDebugUnitTest --tests '*LampColourPreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -68,11 +68,11 @@ class LampColourPreview {
     @Test fun feltFire2100() = shoot(TableSurface.GREEN_MAT, true, 2100f)
     @Test fun feltFire2000() = shoot(TableSurface.GREEN_MAT, true, 2000f)
     @Test fun feltFire1800() = shoot(TableSurface.GREEN_MAT, true, 1800f)
-    @Test fun walnutFire2700() = shoot(TableSurface.ELM_WOOD, true, 2700f)
-    @Test fun walnutFire2400() = shoot(TableSurface.ELM_WOOD, true, 2400f)
-    @Test fun walnutFire2100() = shoot(TableSurface.ELM_WOOD, true, 2100f)
-    @Test fun walnutFire2000() = shoot(TableSurface.ELM_WOOD, true, 2000f)
-    @Test fun walnutFire1800() = shoot(TableSurface.ELM_WOOD, true, 1800f)
+    @Test fun elmFire2700() = shoot(TableSurface.ELM_WOOD, true, 2700f)
+    @Test fun elmFire2400() = shoot(TableSurface.ELM_WOOD, true, 2400f)
+    @Test fun elmFire2100() = shoot(TableSurface.ELM_WOOD, true, 2100f)
+    @Test fun elmFire2000() = shoot(TableSurface.ELM_WOOD, true, 2000f)
+    @Test fun elmFire1800() = shoot(TableSurface.ELM_WOOD, true, 1800f)
     @Test fun feltLamp2700() = shoot(TableSurface.GREEN_MAT, false, 2700f)
     @Test fun feltLamp2400() = shoot(TableSurface.GREEN_MAT, false, 2400f)
     @Test fun feltLamp2100() = shoot(TableSurface.GREEN_MAT, false, 2100f)

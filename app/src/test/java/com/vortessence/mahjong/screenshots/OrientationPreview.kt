@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * Nine Dragon Pagoda upright and on its side, by lamp and fire, on walnut and mat, to compare
+ * Nine Dragon Pagoda upright and on its side, by lamp and fire, on elm and mat, to compare
  * brightness; each again with no tiles ("-bare") to tell tile pixels from table.
  * build/orientation-preview/<set> (-PperfSet, default "current"), -PperfOff stages off.
  * Run: ./gradlew testFossDebugUnitTest --tests '*OrientationPreview*' [-PperfSet=name]
@@ -70,23 +70,23 @@ class OrientationPreview {
         compose.onRoot().captureRoboImage("build/orientation-preview/$set/$name.png")
     }
 
-    @Test fun walnutPortraitLamp() = shoot(TableSurface.ELM_WOOD, false, false, false)
-    @Test fun walnutPortraitFire() = shoot(TableSurface.ELM_WOOD, true, false, false)
+    @Test fun elmPortraitLamp() = shoot(TableSurface.ELM_WOOD, false, false, false)
+    @Test fun elmPortraitFire() = shoot(TableSurface.ELM_WOOD, true, false, false)
     @Test fun feltPortraitFire() = shoot(TableSurface.GREEN_MAT, true, false, false)
-    @Test fun walnutPortraitLampBare() = shoot(TableSurface.ELM_WOOD, false, false, true)
-    @Test fun walnutPortraitFireBare() = shoot(TableSurface.ELM_WOOD, true, false, true)
+    @Test fun elmPortraitLampBare() = shoot(TableSurface.ELM_WOOD, false, false, true)
+    @Test fun elmPortraitFireBare() = shoot(TableSurface.ELM_WOOD, true, false, true)
     @Test fun feltPortraitFireBare() = shoot(TableSurface.GREEN_MAT, true, false, true)
 
     @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
-    fun walnutLandscapeLamp() = shoot(TableSurface.ELM_WOOD, false, true, false)
+    fun elmLandscapeLamp() = shoot(TableSurface.ELM_WOOD, false, true, false)
     @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
-    fun walnutLandscapeFire() = shoot(TableSurface.ELM_WOOD, true, true, false)
+    fun elmLandscapeFire() = shoot(TableSurface.ELM_WOOD, true, true, false)
     @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
     fun feltLandscapeFire() = shoot(TableSurface.GREEN_MAT, true, true, false)
     @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
-    fun walnutLandscapeLampBare() = shoot(TableSurface.ELM_WOOD, false, true, true)
+    fun elmLandscapeLampBare() = shoot(TableSurface.ELM_WOOD, false, true, true)
     @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
-    fun walnutLandscapeFireBare() = shoot(TableSurface.ELM_WOOD, true, true, true)
+    fun elmLandscapeFireBare() = shoot(TableSurface.ELM_WOOD, true, true, true)
     @Test @Config(qualifiers = "w952dp-h427dp-land-360dpi")
     fun feltLandscapeFireBare() = shoot(TableSurface.GREEN_MAT, true, true, true)
 }

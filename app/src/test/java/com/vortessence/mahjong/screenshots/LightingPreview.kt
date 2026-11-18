@@ -46,14 +46,14 @@ class LightingPreview {
         compose.onRoot().captureRoboImage("build/lighting-preview/${surface.name.lowercase()}-${name ?: if (fireplace) "fireplace" else "lamp"}.png")
     }
 
-    @Test fun walnutLamp() = shoot(TableSurface.ELM_WOOD, false)
-    @Test fun walnutFireplace() = shoot(TableSurface.ELM_WOOD, true)
+    @Test fun elmLamp() = shoot(TableSurface.ELM_WOOD, false)
+    @Test fun elmFireplace() = shoot(TableSurface.ELM_WOOD, true)
     @Test fun greenMatLamp() = shoot(TableSurface.GREEN_MAT, false)
     @Test fun greenMatFireplace() = shoot(TableSurface.GREEN_MAT, true)
     @Test fun strawLamp() = shoot(TableSurface.THAI_STRAW, false)
     @Test fun strawFireplace() = shoot(TableSurface.THAI_STRAW, true)
-    @Test fun walnutDimLamp() = shoot(TableSurface.ELM_WOOD, false, lamp = 0f, name = "lamp-dim")
-    @Test fun walnutBrightLamp() = shoot(TableSurface.ELM_WOOD, false, lamp = 1f, name = "lamp-bright")
-    @Test fun walnutDimLampFire() = shoot(TableSurface.ELM_WOOD, true, lamp = 0f, name = "fireplace-dim-lamp")
-    @Test fun walnutBlaze() = shoot(TableSurface.ELM_WOOD, true, lamp = 1f, fire = 1f, name = "blaze")
+    @Test fun elmDimLamp() = shoot(TableSurface.ELM_WOOD, false, lamp = 0f, name = "lamp-dim")
+    @Test fun elmBrightLamp() = shoot(TableSurface.ELM_WOOD, false, lamp = 1f, name = "lamp-bright")
+    @Test fun elmDimLampFire() = shoot(TableSurface.ELM_WOOD, true, lamp = 0f, name = "fireplace-dim-lamp")
+    @Test fun elmBlaze() = shoot(TableSurface.ELM_WOOD, true, lamp = 1f, fire = 1f, name = "blaze")
 }

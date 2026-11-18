@@ -31,7 +31,7 @@ import org.robolectric.annotation.Config
 import kotlin.random.Random
 
 /**
- * Tile set candidates: a close look (the tutorial's big tiles) and a full board, by fire on walnut
+ * Tile set candidates: a close look (the tutorial's big tiles) and a full board, by fire on elm
  * and lamp on the mat. build/tile-kits/<kit>-<scene>.png.
  * Run: ./gradlew testFossDebugUnitTest --tests '*TileKitPreview*'
  */
@@ -49,8 +49,8 @@ class TileKitPreview {
     private data class Scene(val layout: String, val surface: TableSurface, val fire: Boolean, val name: String)
 
     private val scenes = listOf(
-        Scene(ConstellationRepository.TUTORIAL_ID, TableSurface.ELM_WOOD, true, "1-close-walnut-fire"),
-        Scene("pagoda", TableSurface.ELM_WOOD, true, "2-board-walnut-fire"),
+        Scene(ConstellationRepository.TUTORIAL_ID, TableSurface.ELM_WOOD, true, "1-close-elm-fire"),
+        Scene("pagoda", TableSurface.ELM_WOOD, true, "2-board-elm-fire"),
         Scene("pagoda", TableSurface.GREEN_MAT, false, "3-board-felt-lamp"),
     )
 

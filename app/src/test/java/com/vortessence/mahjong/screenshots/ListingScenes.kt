@@ -73,8 +73,8 @@ class ListingScenes {
         compose.onRoot().captureRoboImage("build/listing/$name.png")
     }
 
-    @Test fun fireIvoryWalnut() = board("fire-ivory-walnut")
-    @Test fun fireIvoryWalnutZoomed() = board("fire-ivory-walnut-zoomed", zoom = 260f)
+    @Test fun fireIvoryElm() = board("fire-ivory-elm")
+    @Test fun fireIvoryElmZoomed() = board("fire-ivory-elm-zoomed", zoom = 260f)
 
     // The Journey: best clears with times and help, gold ribbons on the clean ones
     @Test @Config(qualifiers = "w427dp-h952dp-port-360dpi")

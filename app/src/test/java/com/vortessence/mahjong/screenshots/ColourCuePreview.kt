@@ -48,7 +48,7 @@ import kotlin.random.Random
 
 /**
  * Ways to bring colour back to Charcoal so colour-only faces stay apart: every face on a sheet, and
- * Quad on the mat by the lamp and walnut by the fire. build/colour-cues/<variant>-<what>.png.
+ * Quad on the mat by the lamp and elm by the fire. build/colour-cues/<variant>-<what>.png.
  * Run: ./gradlew testFossDebugUnitTest --tests '*ColourCuePreview*'
  */
 @RunWith(RobolectricTestRunner::class)
@@ -123,7 +123,7 @@ class ColourCuePreview {
         val layout = ConstellationRepository.getById("mah_773823936")!!
         val tiles = MahjongGameEngine.recalculateFreedom(BoardSolvabilityGenerator.generateSolvableBoard(layout, Random(7)))
         val state = MahjongGameEngine.startNewGame(layout).copy(tiles = tiles)
-        val scenes = listOf(Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp"), Scene(TableSurface.ELM_WOOD, true, "board-walnut-fire"))
+        val scenes = listOf(Scene(TableSurface.GREEN_MAT, false, "board-felt-lamp"), Scene(TableSurface.ELM_WOOD, true, "board-elm-fire"))
         var scene by mutableStateOf(scenes.first())
         compose.mainClock.autoAdvance = false
         compose.setContent {
