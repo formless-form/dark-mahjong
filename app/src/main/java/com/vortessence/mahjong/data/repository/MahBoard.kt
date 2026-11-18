@@ -25,6 +25,7 @@ internal class MahBoard(
         positions = positions(),
         category = category,
         onSide = onSide,
+        safeMoves = SAFE_MOVES[id] ?: 1,
     )
 
     fun positions(): List<TilePosition> {
@@ -50,6 +51,10 @@ internal class MahBoard(
     private fun pos(x: Int, y: Int, z: Int) = TilePosition(x.toFloat(), y.toFloat(), z)
 
     private companion object {
+        // Kept out of MahLayouts.kt, which is generated. Quad opens with about 3 pairs, and a quarter
+        // of its deals had a second match that loses (2026-11-18)
+        val SAFE_MOVES = mapOf("mah_773823936" to 2)
+
         // Just enough JSON for nested arrays of whole numbers
         fun parse(text: String): Any {
             var i = 0

@@ -95,7 +95,9 @@ object BoardSolvabilityGenerator {
         // are redealt (a quarter of Quad deals had one)
         var assigned = assignSolvable(constellation.positions, tilePairs, random)
         var tries = 1
-        while (assigned != null && tries < SAFE_OPENING_TRIES && !openingIsSafe(constellation.positions, assigned)) {
+        while (assigned != null && tries < SAFE_OPENING_TRIES &&
+            !openingIsSafe(constellation.positions, assigned, constellation.safeMoves)
+        ) {
             assigned = assignSolvable(constellation.positions, generateTilePairs(pairCount, random), random)
             tries++
         }
@@ -120,22 +122,32 @@ object BoardSolvabilityGenerator {
     }
 
     /**
-     * Whether every opening match leaves a clearable board (checked only when at most
-     * [NARROW_OPENING] are open). The deal's order guides the search; running out of [budget]
-     * counts as lost.
+     * Whether the first [moves] matches, whichever are made, leave a clearable board. With one move
+     * it's checked only when at most [NARROW_OPENING] are open. The deal's order guides the search;
+     * running out of [budget] counts as lost.
      */
-    internal fun openingIsSafe(positions: List<TilePosition>, assignment: Assignment, budget: Int = OPENING_BUDGET): Boolean {
+    internal fun openingIsSafe(
+        positions: List<TilePosition>,
+        assignment: Assignment,
+        moves: Int = 1,
+        budget: Int = OPENING_BUDGET,
+    ): Boolean {
         val ids = positions.withIndex().associate { (index, pos) -> pos to index }
         val tiles = MahjongGameEngine.recalculateFreedom(
             positions.mapIndexed { index, pos -> BoardTile(id = index, tile = assignment.tiles.getValue(pos), position = pos) },
         )
         val plan = assignment.order.map { (a, b) -> Move(ids.getValue(a), ids.getValue(b)) }
-        val openings = MahjongGameEngine.findAvailablePairs(tiles)
-        // With many open, a poor first choice is rarely fatal; the search is kept for narrow ones like Quad
-        if (openings.size > NARROW_OPENING) return true
-        for ((a, b) in openings) {
-            val after = tiles.map { if (it.id == a || it.id == b) it.copy(isRemoved = true) else it }
-            if (HintSolver.solve(MahjongGameEngine.recalculateFreedom(after), budget, hint = plan) == null) return false
+        // With many open, a poor first choice is rarely fatal; the search is kept for narrow ones
+        if (moves <= 1 && MahjongGameEngine.findAvailablePairs(tiles).size > NARROW_OPENING) return true
+        return noMatchLoses(tiles, plan, moves, budget)
+    }
+
+    private fun noMatchLoses(tiles: List<BoardTile>, plan: List<Move>, moves: Int, budget: Int): Boolean {
+        for ((a, b) in MahjongGameEngine.findAvailablePairs(tiles)) {
+            val after = MahjongGameEngine.recalculateFreedom(tiles.map { if (it.id == a || it.id == b) it.copy(isRemoved = true) else it })
+            if (after.all { it.isRemoved }) continue
+            if (HintSolver.solve(after, budget, hint = plan) == null) return false
+            if (moves > 1 && !noMatchLoses(after, plan, moves - 1, budget)) return false
         }
         return true
     }
